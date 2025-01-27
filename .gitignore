@@ -182,6 +182,9 @@ jnj_outputs/
 
 # dependencies
 /react_app/node_modules
+/frontend/node_modules
+/frontend/.vite
+/frontend/dist
 
 # production
 /react_app/build
