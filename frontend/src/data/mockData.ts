@@ -1,9 +1,9 @@
 import { Message, Finding } from '../types';
 
 export const trials = [
-  'TRIAL-001-2024',
-  'TRIAL-002-2024',
-  'TRIAL-003-2024'
+  'CNTO1275PUC3001',
+  'RIVAROXHFA3001',
+  '90014496LYM1001'
 ];
 
 type Site = {
@@ -16,21 +16,17 @@ type Sites = {
 };
 
 export const sites: Sites = {
-  'TRIAL-001-2024': [
-    { id: 'SITE-001-US', status: 'completed' },
-    { id: 'SITE-002-UK', status: 'pending' },
-    { id: 'SITE-003-FR', status: 'pending' },
-    { id: 'SITE-004-DE', status: 'completed' }
+  'CNTO1275PUC3001': [
+    { id: 'P73-PL10007', status: 'completed' },
+    { id: 'P73-PL10008', status: 'pending' },
+    { id: 'U4-JP1002', status: 'pending' },
+    { id: 'U4-JP1003', status: 'completed' }
   ],
-  'TRIAL-002-2024': [
-    { id: 'SITE-005-JP', status: 'completed' },
-    { id: 'SITE-006-CN', status: 'pending' },
-    { id: 'SITE-007-KR', status: 'pending' }
+  'RIVAROXHFA3001': [
+    { id: 'AR00091', status: 'completed' }
   ],
-  'TRIAL-003-2024': [
-    { id: 'SITE-008-BR', status: 'pending' },
-    { id: 'SITE-009-MX', status: 'completed' },
-    { id: 'SITE-010-AR', status: 'pending' }
+  '90014496LYM1001': [
+    { id: 'BV7-US10007', status: 'pending' }
   ]
 };
 

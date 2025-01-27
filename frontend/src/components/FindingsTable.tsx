@@ -47,14 +47,19 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
   };
 
   const filteredFindings = useMemo(() => {
-    const category = tabToCategoryMap[selectedFindingTab];
-    return findings.filter(finding => finding.category === category);
+    // Original code with tabs filtering
+    // const category = tabToCategoryMap[selectedFindingTab];
+    // return findings.filter(finding => finding.category === category);
+    
+    // New code: Return all findings without filtering
+    return findings;
   }, [findings, selectedFindingTab]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm h-[600px] flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm h-[680px] flex flex-col">
       <div className="p-4 border-b space-y-4">
         <FindingsSummary findings={findings} />
+        {/* Original tabs code
         <Tabs value={selectedFindingTab} onValueChange={setSelectedFindingTab}>
           <TabsList className="grid grid-cols-3">
             <TabsTrigger value="pd">Protocol Deviations</TabsTrigger>
@@ -62,6 +67,14 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
             <TabsTrigger value="sgr">Site Generated Reports</TabsTrigger>
           </TabsList>
         </Tabs>
+        */}
+        
+        {/* for single  */}
+        {/* <Tabs value={selectedFindingTab} onValueChange={setSelectedFindingTab}>
+          <TabsList>
+            <TabsTrigger value="all">Findings</TabsTrigger>
+          </TabsList>
+        </Tabs> */}
       </div>
 
       <div className="h-[520px] overflow-y-auto">

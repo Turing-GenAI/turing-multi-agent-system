@@ -1,13 +1,21 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Send, User, Lightbulb } from 'lucide-react';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Message } from '../types';
 import { ProgressSteps, Step } from './ProgressSteps';
+import { ToolUI } from './ToolUI';
 
 interface ToolMessage {
-  type: 'progress_steps';
-  steps: Step[];
+  type: 'progress_steps' | 'tool_ui';
+  steps?: Step[];
+  tool?: {
+    type: 'trial' | 'site' | 'date' | 'button';
+    message: string;
+    options?: {
+      buttonText?: string;
+    };
+  };
 }
 
 interface AgentWindowProps {
@@ -15,15 +23,26 @@ interface AgentWindowProps {
   userInput: string;
   updateUserInput: (value: string) => void;
   handleSendMessage: (e: React.FormEvent) => void;
-  suggestionText?: string;
+  trials: string[];
+  sites: {
+    [key: string]: Array<{ id: string; status: string }>;
+  };
+  onInputComplete: (data: {
+    selectedTrial: string;
+    selectedSite: string;
+    dateRange: { from: Date | undefined; to: Date | undefined };
+  }) => void;
+  handleRunClick: () => void;
+  addAgentMessage: (message: string, toolType?: 'trial' | 'site' | 'date' | 'button') => void;
 }
 
 const isToolMessage = (content: string): ToolMessage | null => {
   try {
     const parsed = JSON.parse(content);
-    console.log('Parsed message:', parsed);
-    if (parsed.type === 'progress_steps' && Array.isArray(parsed.steps)) {
-      console.log('Valid tool message:', parsed);
+    if (
+      (parsed.type === 'progress_steps' && Array.isArray(parsed.steps)) ||
+      (parsed.type === 'tool_ui' && parsed.tool)
+    ) {
       return parsed as ToolMessage;
     }
   } catch (e) {
@@ -37,31 +56,145 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   userInput,
   updateUserInput,
   handleSendMessage,
-  suggestionText,
+  trials,
+  sites,
+  onInputComplete,
+  handleRunClick,
+  addAgentMessage,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dateButtonRef = useRef<HTMLButtonElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  const [selectedTrial, setSelectedTrial] = useState<string>('');
+  const [selectedSite, setSelectedSite] = useState<string>('');
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGreeting, setShowGreeting] = useState(true);
+  const [currentStep, setCurrentStep] = useState<'greeting' | 'trial' | 'site' | 'date' | 'confirm'>('greeting');
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const renderMessageContent = (message: Message) => {
-    if (!message.isUser) {
-      console.log('Checking message content:', message.content);
-      const toolMessage = isToolMessage(message.content);
-      if (toolMessage && toolMessage.type === 'progress_steps') {
-        console.log('Rendering progress steps:', toolMessage.steps);
-        return <ProgressSteps steps={toolMessage.steps} />;
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        (!dateButtonRef.current || !dateButtonRef.current.contains(event.target as Node)) &&
+        (!datePickerRef.current || !datePickerRef.current.contains(event.target as Node))
+      ) {
+        setShowDatePicker(false);
       }
     }
 
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleToolInput = (type: 'trial' | 'site' | 'date' | 'button', value: any) => {
+    switch (type) {
+      case 'button':
+        if (currentStep === 'greeting') {
+          setShowGreeting(false);
+          setCurrentStep('trial');
+          addAgentMessage('Please select the Trial ID from the options below', 'trial');
+        } else if (currentStep === 'confirm') {
+          handleRunClick();
+        }
+        break;
+      case 'trial':
+        setSelectedTrial(value);
+        setCurrentStep('site');
+        addAgentMessage('Please select the Site ID', 'site');
+        break;
+      case 'site':
+        setSelectedSite(value);
+        setCurrentStep('date');
+        addAgentMessage('Please select the date range', 'date');
+        break;
+      case 'date':
+        setDateRange(value);
+        if (value.from && value.to) {
+          setCurrentStep('confirm');
+          addAgentMessage(
+            `Please confirm to proceed Analysis with Trial ID: ${selectedTrial}, Site ID: ${selectedSite}, Date: ${value.from.toLocaleDateString()} - ${value.to.toLocaleDateString()}`,
+            'button'
+          );
+          onInputComplete({
+            selectedTrial,
+            selectedSite,
+            dateRange: value,
+          });
+        }
+        break;
+    }
+  };
+
+  const renderMessage = (message: Message) => {
+    if (typeof message.content === 'string') {
+      const toolMessage = isToolMessage(message.content);
+      if (toolMessage) {
+        if (toolMessage.type === 'progress_steps') {
+          return <ProgressSteps steps={toolMessage.steps || []} />;
+        } else if (toolMessage.type === 'tool_ui' && toolMessage.tool) {
+          const { type, message: toolMsg, options } = toolMessage.tool;
+          return (
+            <>
+              <p className="text-sm mb-2">{toolMsg}</p>
+              <ToolUI
+                type={type}
+                value={
+                  type === 'trial'
+                    ? selectedTrial
+                    : type === 'site'
+                    ? selectedSite
+                    : type === 'date'
+                    ? dateRange
+                    : false
+                }
+                onChange={(value) => handleToolInput(type, value)}
+                options={{
+                  trials,
+                  sites: selectedTrial ? sites[selectedTrial] : [],
+                  datePickerProps:
+                    type === 'date'
+                      ? {
+                          ref: datePickerRef,
+                          targetRef: dateButtonRef,
+                          isOpen: showDatePicker,
+                          setIsOpen: setShowDatePicker,
+                        }
+                      : undefined,
+                  buttonText: options?.buttonText,
+                }}
+              />
+            </>
+          );
+        }
+      }
+    }
+
+    // Split content by newlines and filter out empty lines
+    const contentLines = message.content.split('\n').filter(line => line.trim().length > 0);
+
     return (
       <>
-        <p className="text-sm">{message.content}</p>
+        <div className="whitespace-pre-line">
+          {contentLines.map((line, index) => (
+            <p key={index} className="text-sm text-gray-600 mb-2 last:mb-0">
+              {line.trim()}
+            </p>
+          ))}
+        </div>
         <p className="text-xs mt-1 opacity-70">
           {format(message.timestamp, 'p')}
         </p>
@@ -70,17 +203,31 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm h-[600px] flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm h-[680px] flex flex-col">
       <div className="p-4 border-b">
         <h2 className="text-lg font-semibold">Audit Agent</h2>
       </div>
 
-      <div className="h-[480px] overflow-y-auto">
+      <div className="h-[560px] overflow-y-auto">
         <div className="p-4 space-y-4">
-          {(!messages || messages.length === 0) && suggestionText && (
-            <div className="flex items-center space-x-2 text-gray-500 bg-gray-50 p-4 rounded-lg">
-              <Lightbulb className="h-5 w-5" />
-              <p className="text-sm">{suggestionText}</p>
+          {(!messages || messages.length === 0) && showGreeting && (
+            <div className="flex items-start space-x-2">
+              <Avatar className="h-8 w-8 bg-gray-100">
+                <AvatarFallback className="text-gray-700">
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">
+                <p className="text-sm mb-2">Greetings! Would you like to start a Trial Analysis?</p>
+                <ToolUI
+                  type="button"
+                  value={false}
+                  onChange={() => handleToolInput('button', true)}
+                  options={{
+                    buttonText: 'Yes, Proceed',
+                  }}
+                />
+              </div>
             </div>
           )}
           {messages.map((message) => (
@@ -100,7 +247,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
                     : 'bg-gray-100 text-gray-900'
                 }`}
               >
-                {renderMessageContent(message)}
+                {renderMessage(message)}
               </div>
             </div>
           ))}
@@ -114,7 +261,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
             type="text"
             value={userInput}
             onChange={(e) => updateUserInput(e.target.value)}
-            placeholder={suggestionText || "Type your message..."}
+            placeholder="Type your message..."
             className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
