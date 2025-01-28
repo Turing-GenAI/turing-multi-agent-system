@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AgentWindow } from '../components/AgentWindow';
 import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
+import { auditService } from '../api/services/auditService'; // Import the audit service
 
 export const AuditPage: React.FC = () => {
   const SUGGESTION_TEXT = "Try asking about audit findings, specific trials, or inspection details...";
@@ -59,6 +60,35 @@ export const AuditPage: React.FC = () => {
     ae: [],
     sgr: []
   });
+
+  const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
+  const previousAIMessagesRef = useRef<string>('');
+
+  const isMessageProcessed = (content: string, nodeName: string) => {
+    const messageId = `${nodeName}-${content}`.trim();
+    return processedMessageIds.has(messageId);
+  };
+
+  const markMessageAsProcessed = (content: string, nodeName: string) => {
+    const messageId = `${nodeName}-${content}`.trim();
+    setProcessedMessageIds(prev => new Set([...prev, messageId]));
+  };
+
+  const getNewMessages = (currentMessages: string, previousMessages: string): string => {
+    console.log("newMessages check - previous:", previousMessages ? previousMessages.length : 0, "current:", currentMessages.length);
+    // If previous messages is empty, all messages are new
+    if (!previousMessages) return currentMessages;
+    
+    // Find the point where the strings start to differ
+    let i = 0;
+    while (i < previousMessages.length && previousMessages[i] === currentMessages[i]) {
+      i++;
+    }
+    
+    console.log("currentMessages slice:", currentMessages.slice(i).length);
+    // Return the new content
+    return currentMessages.slice(i);
+  };
 
   const availableSites = useMemo(() => {
     return sites[selectedTrial]?.map(site => site.id) || [];
@@ -175,74 +205,87 @@ export const AuditPage: React.FC = () => {
 
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
-      const response = await fetch('/mockMessages.txt');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const mockData = await response.text();
-      const data = { ai_messages: mockData };
+      const response = await auditService.getAIMessages(jobId, withFindings);
+      const data = response.data;
       
       if (data.ai_messages === "Agent is processing!") {
-        addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
-      } else {
-        const split_delimiters = [
-          "================================== Ai Message ==================================", 
-          "================================= Tool Message ================================="
-        ];
-        
-        // Create a regex pattern that matches either delimiter
-        const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
-        const splittedMessages = data.ai_messages.split(splitPattern);
+        if (!isMessageProcessed(data.ai_messages, '')) {
+          addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
+          markMessageAsProcessed(data.ai_messages, '');
+        }
+        return;
+      }
 
-        // Process messages sequentially with delay
-        for (const message of splittedMessages) {
-          if (message.length > 0) {
-            await delay(1000); // 1 second delay between messages
+      console.log("Received new messages, current length:", data.ai_messages.length);
+      console.log("Previous messages length:", previousAIMessagesRef.current.length);
+
+      // Get only the new messages by comparing with previous state
+      const newContent = getNewMessages(data.ai_messages, previousAIMessagesRef.current);
+      
+      // Update previous messages for next comparison
+      previousAIMessagesRef.current = data.ai_messages;
+      
+      // If there's no new content, return early
+      if (!newContent) {
+        console.log("No new content found");
+        return;
+      }
+
+      console.log("Processing new content, length:", newContent.length);
+      // Get only the new messages by comparing with previous state
+      const newContentLength = newContent.length;
+      
+      // If there's no new content, return early
+      if (!newContentLength) {
+        return;
+      }
+
+      const split_delimiters = [
+        "================================== Ai Message ==================================", 
+        "================================= Tool Message ================================="
+      ];
+      
+      const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+      const splittedMessages = newContent.split(splitPattern);
+
+      for (const message of splittedMessages) {
+        if (message.length > 0) {
+          await delay(1000);
+          
+          if (message.includes("Name:")) {
+            const messageNode = message.split("Name: ")[1];
+            const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
+            const agentPrefix = agentNode.split('-')[0]?.trim()??'';
+            const nodeName = agentNode.split('-')[1]?.trim()?? '';
+            const timestamp = new Date().toISOString();
             
-            if (message.includes("Name:")) {
-              const messageNode = message.split("Name: ")[1];
-              // Split on first occurrence of either ":", ".", or newline
-              const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
-              const agentPrefix = agentNode.split('-')[0]?.trim()??'';
-              const nodeName = agentNode.split('-')[1]?.trim()?? '';
-              const timestamp = new Date().toISOString();
+            if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
+              continue;
+            }
 
-              
-              
-              console.log("agentNode:", agentNode);
-
-              // Skip processing if agentPrefix contains CRM or Trial Master
-              if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
-                continue;
+            let content = messageNode || '';
+            
+            if (content.includes("content=")) {
+              const parts = content.split("content=");
+              if (parts.length > 1) {
+                const contentParts = parts[1].split("additional_kwargs=");
+                content = contentParts[0] || '';
+                content = content.replace(/^['"]|['"]$/g, '');
               }
-
-              // Extract actual message content
-              let content = messageNode || '';
+            }
+            
+            content = content.replace(/\{[^}]+\}/g, '')
+                           .replace(/response_metadata=.*?(?=\n|$)/g, '')
+                           .replace(/id='.*?'/g, '')
+                           .replace(/usage_metadata=.*?(?=\n|$)/g, '')
+                           .replace(/<class '.*?'>/g, '')
+                           .trim();
+            
+            if (agentNode.includes("generate_response_agent") || 
+                agentNode.includes("generate_findings_agent")) {
               
-              // Remove metadata and response info
-              if (content.includes("content=")) {
-                const parts = content.split("content=");
-                if (parts.length > 1) {
-                  const contentParts = parts[1].split("additional_kwargs=");
-                  content = contentParts[0] || '';
-                  // Remove quotes if present
-                  content = content.replace(/^['"]|['"]$/g, '');
-                }
-              }
-              
-              // Clean up any remaining metadata
-              content = content.replace(/\{[^}]+\}/g, '') // Remove JSON objects
-                             .replace(/response_metadata=.*?(?=\n|$)/g, '') // Remove response metadata
-                             .replace(/id='.*?'/g, '') // Remove IDs
-                             .replace(/usage_metadata=.*?(?=\n|$)/g, '') // Remove usage metadata
-                             .replace(/<class '.*?'>/g, '') // Remove class info
-                             .trim();
-              
-              // Check if the message should go to findings table
-              if (agentNode.includes("generate_response_agent") || 
-                  agentNode.includes("generate_findings_agent")) {
-                
+              const findingId = `${nodeName}-${content}`.trim();
+              if (!isMessageProcessed(findingId, nodeName)) {
                 setFindings(prev => ({
                   ...prev,
                   pd: [...prev.pd, {
@@ -252,71 +295,84 @@ export const AuditPage: React.FC = () => {
                     timestamp
                   }]
                 }));
-              } 
-              // All other messages go to the chat window
-              else {
-                let cleanedContent = content;
-                
-                // Clean prefixes if present
-                if (content.startsWith("trial supervisor - ")) {
-                  cleanedContent = content.replace("trial supervisor - ", "").trim();
-                } else if (content.startsWith("CRM - ")) {
-                  cleanedContent = content.replace("CRM - ", "").trim();
-                }
-                
-                addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
+                markMessageAsProcessed(findingId, nodeName);
               }
             } else {
+              let cleanedContent = content;
+              
+              if (content.startsWith("trial supervisor - ")) {
+                cleanedContent = content.replace("trial supervisor - ", "").trim();
+              } else if (content.startsWith("CRM - ")) {
+                cleanedContent = content.replace("CRM - ", "").trim();
+              }
+              
+              if (!isMessageProcessed(cleanedContent, nodeName)) {
+                addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
+                markMessageAsProcessed(cleanedContent, nodeName);
+              }
+            }
+          } else {
+            if (!isMessageProcessed(message, '')) {
               addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
+              markMessageAsProcessed(message, '');
             }
           }
         }
+      }
 
-        if (withFindings) {
-          await delay(1500); // 1.5 second delay before final findings
-          
-          const timestamp = new Date().toISOString();
-          const mockFindings = {
-            PD: [
-              {
-                id: crypto.randomUUID(),
-                agent: "inspection",
-                content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
-                timestamp
-              }
-            ],
-            AE: [
-              {
-                id: crypto.randomUUID(),
-                agent: "inspection",
-                content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
-                timestamp
-              }
-            ],
-            SGR: []
-          };
+      if (withFindings) {
+        await delay(1500);
+        
+        const timestamp = new Date().toISOString();
+        const mockFindings = {
+          PD: [
+            {
+              id: crypto.randomUUID(),
+              agent: "inspection",
+              content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
+              timestamp
+            }
+          ],
+          AE: [
+            {
+              id: crypto.randomUUID(),
+              agent: "inspection",
+              content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
+              timestamp
+            }
+          ],
+          SGR: []
+        };
 
-          // Add findings one by one
-          for (const finding of mockFindings.PD) {
-            await delay(800); // 0.8 second delay between findings
+        for (const finding of mockFindings.PD) {
+          if (!isMessageProcessed(finding.content, finding.agent)) {
+            await delay(800);
             setFindings(prev => ({
               ...prev,
               pd: [...prev.pd, finding]
             }));
+            markMessageAsProcessed(finding.content, finding.agent);
           }
-          
-          for (const finding of mockFindings.AE) {
+        }
+        
+        for (const finding of mockFindings.AE) {
+          if (!isMessageProcessed(finding.content, finding.agent)) {
             await delay(800);
             setFindings(prev => ({
               ...prev,
               ae: [...prev.ae, finding]
             }));
+            markMessageAsProcessed(finding.content, finding.agent);
           }
         }
       }
     } catch (error) {
       console.error("Error fetching mock messages:", error);
-      addAgentMessage(`Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
+      const errorMessage = `Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+      if (!isMessageProcessed(errorMessage, '')) {
+        addAgentMessage(errorMessage, undefined, { agentPrefix: '', nodeName: '' });
+        markMessageAsProcessed(errorMessage, '');
+      }
     }
   };
 
@@ -368,7 +424,7 @@ export const AuditPage: React.FC = () => {
         } else {
           fetchAIMessages(jobId, false); 
         }
-      }, 800000); 
+      }, 8000); 
     }
 
     return () => {
