@@ -60,6 +60,18 @@ export const AuditPage: React.FC = () => {
     sgr: []
   });
 
+  const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
+
+  const isMessageProcessed = (content: string, nodeName: string) => {
+    const messageId = `${nodeName}-${content}`.trim();
+    return processedMessageIds.has(messageId);
+  };
+
+  const markMessageAsProcessed = (content: string, nodeName: string) => {
+    const messageId = `${nodeName}-${content}`.trim();
+    setProcessedMessageIds(prev => new Set([...prev, messageId]));
+  };
+
   const availableSites = useMemo(() => {
     return sites[selectedTrial]?.map(site => site.id) || [];
   }, [selectedTrial]);
@@ -78,96 +90,93 @@ export const AuditPage: React.FC = () => {
       const data = { ai_messages: mockData };
       
       if (data.ai_messages === "Agent is processing!") {
-        addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
+        if (!isMessageProcessed(data.ai_messages, '')) {
+          addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
+          markMessageAsProcessed(data.ai_messages, '');
+        }
       } else {
         const split_delimiters = [
           "================================== Ai Message ==================================", 
           "================================= Tool Message ================================="
         ];
         
-        // Create a regex pattern that matches either delimiter
         const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
         const splittedMessages = data.ai_messages.split(splitPattern);
 
-        // Process messages sequentially with delay
         for (const message of splittedMessages) {
           if (message.length > 0) {
-            await delay(100); // 1 second delay between messages
+            await delay(100);
             
             if (message.includes("Name:")) {
               const messageNode = message.split("Name: ")[1];
-              // Split on first occurrence of either ":", ".", or newline
               const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
               const agentPrefix = agentNode.split('-')[0]?.trim()??'';
               const nodeName = agentNode.split('-')[1]?.trim()?? '';
               const timestamp = new Date().toISOString();
-
               
-              
-              console.log("agentNode:", agentNode);
-
-              // Skip processing if agentPrefix contains CRM or Trial Master
               if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
                 continue;
               }
 
-              // Extract actual message content
               let content = messageNode || '';
               
-              // Remove metadata and response info
               if (content.includes("content=")) {
                 const parts = content.split("content=");
                 if (parts.length > 1) {
                   const contentParts = parts[1].split("additional_kwargs=");
                   content = contentParts[0] || '';
-                  // Remove quotes if present
                   content = content.replace(/^['"]|['"]$/g, '');
                 }
               }
               
-              // Clean up any remaining metadata
-              content = content.replace(/\{[^}]+\}/g, '') // Remove JSON objects
-                             .replace(/response_metadata=.*?(?=\n|$)/g, '') // Remove response metadata
-                             .replace(/id='.*?'/g, '') // Remove IDs
-                             .replace(/usage_metadata=.*?(?=\n|$)/g, '') // Remove usage metadata
-                             .replace(/<class '.*?'>/g, '') // Remove class info
+              content = content.replace(/\{[^}]+\}/g, '')
+                             .replace(/response_metadata=.*?(?=\n|$)/g, '')
+                             .replace(/id='.*?'/g, '')
+                             .replace(/usage_metadata=.*?(?=\n|$)/g, '')
+                             .replace(/<class '.*?'>/g, '')
                              .trim();
               
-              // Check if the message should go to findings table
               if (agentNode.includes("generate_response_agent") || 
                   agentNode.includes("generate_findings_agent")) {
                 
-                setFindings(prev => ({
-                  ...prev,
-                  pd: [...prev.pd, {
-                    id: crypto.randomUUID(),
-                    agent: nodeName || "findings",
-                    content: content.trim(),
-                    timestamp
-                  }]
-                }));
-              } 
-              // All other messages go to the chat window
-              else {
+                const findingId = `${nodeName}-${content}`.trim();
+                if (!isMessageProcessed(findingId, nodeName)) {
+                  setFindings(prev => ({
+                    ...prev,
+                    pd: [...prev.pd, {
+                      id: crypto.randomUUID(),
+                      agent: nodeName || "findings",
+                      content: content.trim(),
+                      timestamp
+                    }]
+                  }));
+                  markMessageAsProcessed(findingId, nodeName);
+                }
+              } else {
                 let cleanedContent = content;
                 
-                // Clean prefixes if present
                 if (content.startsWith("trial supervisor - ")) {
                   cleanedContent = content.replace("trial supervisor - ", "").trim();
                 } else if (content.startsWith("CRM - ")) {
                   cleanedContent = content.replace("CRM - ", "").trim();
                 }
                 
-                addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
+                if (!isMessageProcessed(cleanedContent, nodeName)) {
+                  addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
+                  markMessageAsProcessed(cleanedContent, nodeName);
+                }
               }
             } else {
-              addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
+              if (!isMessageProcessed(message, '')) {
+                addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
+                markMessageAsProcessed(message, '');
+              }
             }
           }
         }
 
         if (withFindings) {
-          await delay(1500); // 1.5 second delay before final findings
+          await delay(1500);
           
           const timestamp = new Date().toISOString();
           const mockFindings = {
@@ -190,27 +199,36 @@ export const AuditPage: React.FC = () => {
             SGR: []
           };
 
-          // Add findings one by one
           for (const finding of mockFindings.PD) {
-            await delay(800); // 0.8 second delay between findings
-            setFindings(prev => ({
-              ...prev,
-              pd: [...prev.pd, finding]
-            }));
+            if (!isMessageProcessed(finding.content, finding.agent)) {
+              await delay(800);
+              setFindings(prev => ({
+                ...prev,
+                pd: [...prev.pd, finding]
+              }));
+              markMessageAsProcessed(finding.content, finding.agent);
+            }
           }
           
           for (const finding of mockFindings.AE) {
-            await delay(800);
-            setFindings(prev => ({
-              ...prev,
-              ae: [...prev.ae, finding]
-            }));
+            if (!isMessageProcessed(finding.content, finding.agent)) {
+              await delay(800);
+              setFindings(prev => ({
+                ...prev,
+                ae: [...prev.ae, finding]
+              }));
+              markMessageAsProcessed(finding.content, finding.agent);
+            }
           }
         }
       }
     } catch (error) {
       console.error("Error fetching mock messages:", error);
-      addAgentMessage(`Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
+      const errorMessage = `Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+      if (!isMessageProcessed(errorMessage, '')) {
+        addAgentMessage(errorMessage, undefined, { agentPrefix: '', nodeName: '' });
+        markMessageAsProcessed(errorMessage, '');
+      }
     }
   };
 
