@@ -530,7 +530,6 @@ export const AuditPage: React.FC = () => {
 
     try {
       await scheduleAnalysisJob();
-      addAgentMessage('Please select the Trial ID from the options below', 'trial', { agentPrefix: '', nodeName: '' });
       setIsProcessing(false);
     } catch (error) {
       console.error('Error running analysis:', error);
