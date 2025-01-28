@@ -34,6 +34,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showGreeting, setShowGreeting] = useState(true);
   const [currentStep, setCurrentStep] = useState<'greeting' | 'trial' | 'site' | 'date' | 'confirm'>('greeting');
+  const [isAnalysisStarted, setIsAnalysisStarted] = useState(false);
 
   const isScrolledToBottom = () => {
     const container = messageContainerRef.current;
@@ -88,7 +89,8 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           setShowGreeting(false);
           setCurrentStep('trial');
           addAgentMessage('Please select the Trial ID from the options below', 'trial');
-        } else if (currentStep === 'confirm') {
+        } else if (currentStep === 'confirm' && !isAnalysisStarted) {
+          setIsAnalysisStarted(true);
           handleRunClick();
         }
         break;
@@ -163,6 +165,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
               dateButtonRef={dateButtonRef}
               showDatePicker={showDatePicker}
               setShowDatePicker={setShowDatePicker}
+              isAnalysisStarted={isAnalysisStarted}
             />
           ))}
           <div ref={messagesEndRef} />

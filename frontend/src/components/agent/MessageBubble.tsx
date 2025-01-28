@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   dateButtonRef: React.RefObject<HTMLButtonElement>;
   showDatePicker: boolean;
   setShowDatePicker: (show: boolean) => void;
+  isAnalysisStarted: boolean;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -31,6 +32,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   dateButtonRef,
   showDatePicker,
   setShowDatePicker,
+  isAnalysisStarted,
 }) => {
   // Get background color based on message type
   const backgroundStyle = getMessageBackgroundColor(message);
@@ -80,6 +82,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           dateButtonRef={dateButtonRef}
           showDatePicker={showDatePicker}
           setShowDatePicker={setShowDatePicker}
+          isAnalysisStarted={isAnalysisStarted}
         />
       </div>
     </div>

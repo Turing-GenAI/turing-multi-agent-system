@@ -17,6 +17,7 @@ interface ToolUIProps {
       setIsOpen: (value: boolean) => void;
     };
     buttonText?: string;
+    isAnalysisStarted?: boolean;
   };
 }
 
@@ -27,10 +28,13 @@ export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }
         <div className="mt-4">
           <button
             onClick={() => onChange(true)}
+            disabled={options?.isAnalysisStarted}
             className="w-full p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg 
             hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 
             focus:ring-offset-2 transform transition-all duration-200 ease-in-out hover:scale-[1.02] 
-            shadow-sm hover:shadow-md font-medium"
+            shadow-sm hover:shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed 
+            disabled:hover:scale-100 disabled:hover:shadow-sm disabled:hover:from-blue-500 
+            disabled:hover:to-blue-600"
           >
             {options?.buttonText || 'Proceed'}
           </button>

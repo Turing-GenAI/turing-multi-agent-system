@@ -18,6 +18,7 @@ interface MessageContentProps {
   dateButtonRef: React.RefObject<HTMLButtonElement>;
   showDatePicker: boolean;
   setShowDatePicker: (show: boolean) => void;
+  isAnalysisStarted: boolean;
 }
 
 const isToolMessage = (content: string): ToolMessage | null => {
@@ -47,6 +48,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   dateButtonRef,
   showDatePicker,
   setShowDatePicker,
+  isAnalysisStarted,
 }) => {
   if (typeof message.content === 'string') {
     const toolMessage = isToolMessage(message.content);
@@ -84,6 +86,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
                         }
                       : undefined,
                   buttonText: options?.buttonText,
+                  isAnalysisStarted,
                 }}
               />
             </div>
