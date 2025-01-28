@@ -483,37 +483,23 @@ export const AuditPage: React.FC = () => {
     try {
       const formattedDateRange = `${dateRange.from.toISOString().split('T')[0]} - ${dateRange.to.toISOString().split('T')[0]}`;
       
-      // Commenting out actual API call
-      /*const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/schedule-job/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            site_id: selectedSite,
-            trial_id: selectedTrial,
-            date: formattedDateRange,
-          }),
-        }
-      );*/
+      const response = await auditService.scheduleJob(
+        selectedSite,
+        selectedTrial,
+        formattedDateRange
+      );
       
-      // Mock response
-      const mockResponse = {
-        ok: true,
-        json: async () => ({ job_id: "mock-job-" + Date.now() })
-      };
+      const { job_id } = response.data;
+      setJobId(job_id);
+      setJobStatus('queued');
       
-      if (mockResponse.ok) {
-        const data = await mockResponse.json();
-        setJobId(data.job_id);
-        setIsProcessing(true);
-      }
+      addAgentMessage(`I've scheduled the Job for analysis! Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      
+      return job_id;
     } catch (error) {
       console.error('Error scheduling analysis job:', error);
       
-      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
       
       throw error;
     }

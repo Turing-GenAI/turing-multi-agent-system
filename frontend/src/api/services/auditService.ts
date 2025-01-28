@@ -101,9 +101,6 @@ const mockAuditService = {
     return {
       data: mockResponse,
       status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {}
     };
   },
 
@@ -122,9 +119,6 @@ const mockAuditService = {
         message: 'Job scheduled successfully'
       },
       status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {}
     };
   },
 };
