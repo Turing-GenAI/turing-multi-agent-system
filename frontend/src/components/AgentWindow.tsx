@@ -202,6 +202,21 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     );
   };
 
+  const getMessageBackgroundColor = (message: Message) => {
+    if (message.isUser) return 'bg-blue-500 text-white';
+    
+    switch (message.nodeName) {
+      case 'critique_agent':
+        return 'bg-red-100 text-gray-900';
+      case 'reflection_agent':
+        return 'bg-green-100 text-gray-900';
+      case 'feedback_agent':
+        return 'bg-yellow-100 text-gray-900';
+      default:
+        return 'bg-gray-100 text-gray-900';
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm h-[680px] flex flex-col">
       <div className="p-4 border-b">
@@ -242,9 +257,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
               </Avatar>
               <div
                 className={`max-w-[80%] rounded-lg p-3 ${
-                  message.isUser
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                  getMessageBackgroundColor(message)
                 }`}
               >
                 {renderMessage(message)}

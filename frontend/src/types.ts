@@ -21,3 +21,14 @@ export interface Finding {
   lastUpdated: Date;
   attachments?: string[];
 }
+
+export type AgentType = 'trial_master' | 'inspection_master' | 'crm_master';
+
+export interface Message {
+  id: string;
+  agent: AgentType;
+  content: string;
+  timestamp: Date;
+  isUser: boolean;
+  nodeName?: string;
+}

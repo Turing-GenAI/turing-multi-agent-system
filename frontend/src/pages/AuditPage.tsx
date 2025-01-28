@@ -3,9 +3,7 @@ import { AgentWindow } from '../components/AgentWindow';
 import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
-import { Message } from '../types';
-
-type AgentType = 'trial_master' | 'inspection_master' | 'crm_master';
+import { Finding, Message, AgentType } from '../types';
 
 export const AuditPage: React.FC = () => {
   const SUGGESTION_TEXT = "Try asking about audit findings, specific trials, or inspection details...";
@@ -79,7 +77,7 @@ export const AuditPage: React.FC = () => {
       const data = { ai_messages: mockData };
       
       if (data.ai_messages === "Agent is processing!") {
-        addAgentMessage(data.ai_messages);
+        addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
       } else {
         const split_delimiters = [
           "================================== Ai Message ==================================", 
@@ -159,10 +157,10 @@ export const AuditPage: React.FC = () => {
                   cleanedContent = content.replace("CRM - ", "").trim();
                 }
                 
-                addAgentMessage(cleanedContent.trim());
+                addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
               }
             } else {
-              addAgentMessage(message.trim());
+              addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
             }
           }
         }
@@ -211,7 +209,7 @@ export const AuditPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching mock messages:", error);
-      addAgentMessage(`Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+      addAgentMessage(`Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
     }
   };
 
@@ -257,7 +255,7 @@ export const AuditPage: React.FC = () => {
           if (status === 'completed') {
             fetchAIMessages(jobId, true); 
           } else {
-            addAgentMessage(`Analysis failed! Error: ${status}`);
+            addAgentMessage(`Analysis failed! Error: ${status}`, undefined, { agentPrefix: '', nodeName: '' });
             setIsProcessing(false);
           }
         } else {
@@ -300,13 +298,13 @@ export const AuditPage: React.FC = () => {
       setJobId(data.job_id);
       setJobStatus('queued');
       
-      addAgentMessage(`I've scheduled the Job for analysis! Job ID: ${data.job_id}`);
+      addAgentMessage(`I've scheduled the Job for analysis! Job ID: ${data.job_id}`, undefined, { agentPrefix: '', nodeName: '' });
       
       return data.job_id;
     } catch (error) {
       console.error('Error scheduling analysis job:', error);
       
-      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
       
       throw error;
     }
@@ -323,7 +321,7 @@ export const AuditPage: React.FC = () => {
 
     try {
       await scheduleAnalysisJob();
-
+      addAgentMessage('Please select the Trial ID from the options below', 'trial', { agentPrefix: '', nodeName: '' });
       setIsProcessing(false);
     } catch (error) {
       console.error('Error running analysis:', error);
@@ -381,7 +379,14 @@ export const AuditPage: React.FC = () => {
     return [...findings.pd, ...findings.ae, ...findings.sgr];
   };
 
-  const addAgentMessage = (message: string, toolType?: 'trial' | 'site' | 'date' | 'button') => {
+  const addAgentMessage = (
+    message: string, 
+    toolType?: 'trial' | 'site' | 'date' | 'button',
+    options?: { 
+      agentPrefix?: string;
+      nodeName?: string;
+    }
+  ) => {
     const newMessage: Message = {
       id: Date.now().toString(),
       agent: 'trial_master_agent',
@@ -397,6 +402,8 @@ export const AuditPage: React.FC = () => {
         : message,
       timestamp: new Date(),
       isUser: false,
+      agentPrefix: options?.agentPrefix || '',
+      nodeName: options?.nodeName || '',
     };
 
     setMessagesByAgent(prev => ({
