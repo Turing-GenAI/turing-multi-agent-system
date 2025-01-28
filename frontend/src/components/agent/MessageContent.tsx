@@ -94,6 +94,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   }
 
   const contentLines = message.content.split('\n').filter(line => line.trim().length > 0);
+  const isTyping = message.content === '';
 
   return (
     <div className="space-y-2">
@@ -108,7 +109,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         </div>
       )}
       <div className="space-y-2">
-        {contentLines.slice(1).map((line, index) => (
+        {contentLines.map((line, index) => (
           <p 
             key={index} 
             className={`
@@ -118,6 +119,9 @@ export const MessageContent: React.FC<MessageContentProps> = ({
             `}
           >
             {line.trim()}
+            {index === contentLines.length - 1 && isTyping && (
+              <span className="animate-pulse ml-0.5">▋</span>
+            )}
           </p>
         ))}
       </div>

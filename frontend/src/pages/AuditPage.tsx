@@ -67,6 +67,112 @@ export const AuditPage: React.FC = () => {
   // Helper function to add delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // Queue to store pending messages
+  const [messageQueue, setMessageQueue] = useState<{
+    message: string;
+    toolType?: 'trial' | 'site' | 'date' | 'button';
+    options?: { 
+      agentPrefix?: string;
+      nodeName?: string;
+    }
+  }[]>([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+
+  // Process messages in queue
+  useEffect(() => {
+    const processQueue = async () => {
+      if (messageQueue.length > 0 && !isProcessingQueue) {
+        setIsProcessingQueue(true);
+        const { message, toolType, options } = messageQueue[0];
+
+        // For tool UI messages, add them instantly
+        if (toolType) {
+          const newMessage: Message = {
+            id: Date.now().toString(),
+            agent: 'trial_master_agent',
+            content: JSON.stringify({
+              type: 'tool_ui',
+              tool: {
+                type: toolType,
+                message,
+                options: toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined,
+              },
+            }),
+            timestamp: new Date(),
+            isUser: false,
+            nodeName: options?.nodeName || '',
+          };
+
+          setMessagesByAgent(prev => ({
+            ...prev,
+            [selectedAgentTab]: [...prev[selectedAgentTab], newMessage],
+          }));
+
+          setMessageQueue(prev => prev.slice(1));
+          setIsProcessingQueue(false);
+          return;
+        }
+
+        // For regular messages, stream them character by character
+        const messageId = Date.now().toString();
+        const newMessage: Message = {
+          id: messageId,
+          agent: 'trial_master_agent',
+          content: '',
+          timestamp: new Date(),
+          isUser: false,
+          nodeName: options?.nodeName || '',
+        };
+
+        setMessagesByAgent(prev => ({
+          ...prev,
+          [selectedAgentTab]: [...prev[selectedAgentTab], newMessage],
+        }));
+
+        // Calculate dynamic typing speed to complete within 800ms
+        const ANIMATION_DURATION = 800; // Fixed duration for typing animation
+        const FIXED_MESSAGE_DELAY = 1000; // Fixed delay between messages
+        const chars = message.split('');
+        const delayPerChar = ANIMATION_DURATION / chars.length;
+
+        // Stream the content character by character with dynamic speed
+        let currentContent = '';
+        for (const char of chars) {
+          currentContent += char;
+          setMessagesByAgent(prev => ({
+            ...prev,
+            [selectedAgentTab]: prev[selectedAgentTab].map(msg =>
+              msg.id === messageId
+                ? { ...msg, content: currentContent }
+                : msg
+            )
+          }));
+          await delay(delayPerChar);
+        }
+
+        // Fixed delay before next message
+        await delay(FIXED_MESSAGE_DELAY);
+
+        setMessageQueue(prev => prev.slice(1));
+        setIsProcessingQueue(false);
+      }
+    };
+
+    processQueue();
+  }, [messageQueue, isProcessingQueue, selectedAgentTab]);
+
+  const addAgentMessage = async (
+    message: string, 
+    toolType?: 'trial' | 'site' | 'date' | 'button',
+    options?: { 
+      agentPrefix?: string;
+      nodeName?: string;
+    }
+  ) => {
+    // Add message to queue instead of processing immediately
+    setMessageQueue(prev => [...prev, { message, toolType, options }]);
+  };
+
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
       const response = await fetch('/mockMessages.txt');
@@ -92,7 +198,7 @@ export const AuditPage: React.FC = () => {
         // Process messages sequentially with delay
         for (const message of splittedMessages) {
           if (message.length > 0) {
-            await delay(100); // 1 second delay between messages
+            await delay(1000); // 1 second delay between messages
             
             if (message.includes("Name:")) {
               const messageNode = message.split("Name: ")[1];
@@ -272,11 +378,57 @@ export const AuditPage: React.FC = () => {
     };
   }, [jobId]);
 
+  const handleSendMessage = (agent: AgentType, e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInput[agent].trim()) return;
+
+    const newMessage: Message = {
+      id: crypto.randomUUID(),
+      agent,
+      content: userInput[agent],
+      timestamp: new Date(),
+      isUser: true
+    };
+
+    setMessagesByAgent(prev => ({
+      ...prev,
+      [agent]: [...prev[agent], newMessage]
+    }));
+
+    setUserInput(prev => ({
+      ...prev,
+      [agent]: ''
+    }));
+    
+    setTimeout(() => {
+      const responses = mockResponses[`${agent}_agent`].responses;
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      
+      // Add AI response to queue
+      setMessageQueue(prev => [...prev, { 
+        message: randomResponse,
+        options: { nodeName: agent }
+      }]);
+    }, 1000);
+  };
+
+  const updateUserInput = (agent: AgentType, value: string) => {
+    setUserInput(prev => ({
+      ...prev,
+      [agent]: value
+    }));
+  };
+
+  const getCurrentFindings = () => {
+    return [...findings.pd, ...findings.ae, ...findings.sgr];
+  };
+
   const scheduleAnalysisJob = async () => {
     try {
       const formattedDateRange = `${dateRange.from.toISOString().split('T')[0]} - ${dateRange.to.toISOString().split('T')[0]}`;
       
-      const response = await fetch(
+      // Commenting out actual API call
+      /*const response = await fetch(
         `${import.meta.env.VITE_API_URL}/schedule-job/`,
         {
           method: "POST",
@@ -289,23 +441,23 @@ export const AuditPage: React.FC = () => {
             date: formattedDateRange,
           }),
         }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      );*/
+      
+      // Mock response
+      const mockResponse = {
+        ok: true,
+        json: async () => ({ job_id: "mock-job-" + Date.now() })
+      };
+      
+      if (mockResponse.ok) {
+        const data = await mockResponse.json();
+        setJobId(data.job_id);
+        setIsProcessing(true);
       }
-
-      const data = await response.json();
-      setJobId(data.job_id);
-      setJobStatus('queued');
-      
-      addAgentMessage(`I've scheduled the Job for analysis! Job ID: ${data.job_id}`, undefined, { agentPrefix: '', nodeName: '' });
-      
-      return data.job_id;
     } catch (error) {
       console.error('Error scheduling analysis job:', error);
       
-      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
       
       throw error;
     }
@@ -328,89 +480,6 @@ export const AuditPage: React.FC = () => {
       console.error('Error running analysis:', error);
       setIsProcessing(false);
     }
-  };
-
-  const handleSendMessage = (agent: AgentType, e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userInput[agent].trim()) return;
-
-    const newMessage: Message = {
-      id: crypto.randomUUID(),
-      agent,
-      content: userInput[agent],
-      timestamp: new Date(),
-      isUser: true
-    };
-
-    setMessagesByAgent(prev => ({
-      ...prev,
-      [agent]: [...prev[agent], newMessage]
-    }));
-    setUserInput(prev => ({
-      ...prev,
-      [agent]: ''
-    }));
-    
-    setTimeout(() => {
-      const responses = mockResponses[`${agent}_agent`].responses;
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const aiResponse: Message = {
-        id: crypto.randomUUID(),
-        agent,
-        content: randomResponse,
-        timestamp: new Date()
-      };
-
-      setMessagesByAgent(prev => ({
-        ...prev,
-        [agent]: [...prev[agent], aiResponse]
-      }));
-    }, 1000);
-  };
-
-  const updateUserInput = (agent: AgentType, value: string) => {
-    setUserInput(prev => ({
-      ...prev,
-      [agent]: value
-    }));
-  };
-
-  const getCurrentFindings = () => {
-    return [...findings.pd, ...findings.ae, ...findings.sgr];
-  };
-
-  const addAgentMessage = (
-    message: string, 
-    toolType?: 'trial' | 'site' | 'date' | 'button',
-    options?: { 
-      agentPrefix?: string;
-      nodeName?: string;
-    }
-  ) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      agent: 'trial_master_agent',
-      content: toolType
-        ? JSON.stringify({
-            type: 'tool_ui',
-            tool: {
-              type: toolType,
-              message,
-              options: toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined,
-            },
-          })
-        : message,
-      timestamp: new Date(),
-      isUser: false,
-      agentPrefix: options?.agentPrefix || '',
-      nodeName: options?.nodeName || '',
-    };
-
-    setMessagesByAgent(prev => ({
-      ...prev,
-      [selectedAgentTab]: [...prev[selectedAgentTab], newMessage],
-    }));
   };
 
   return (

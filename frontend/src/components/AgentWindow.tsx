@@ -96,12 +96,12 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm h-[680px] flex flex-col">
-      <div className="p-4 border-b">
+    <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
+      <div className="p-4 border-b flex-shrink-0">
         <h2 className="text-lg font-semibold">Audit Agent</h2>
       </div>
 
-      <div className="h-[560px] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
           {(!messages || messages.length === 0) && showGreeting && (
             <div className="flex items-start space-x-2">
