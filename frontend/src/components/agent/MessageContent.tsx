@@ -30,7 +30,7 @@ const isToolMessage = (content: string): ToolMessage | null => {
       return parsed as ToolMessage;
     }
   } catch (e) {
-    console.log('Not a valid tool message:', content);
+    // console.log('Not a valid tool message:', content);
   }
   return null;
 };

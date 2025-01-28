@@ -20,8 +20,10 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   addAgentMessage,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageContainerRef = useRef<HTMLDivElement>(null);
   const dateButtonRef = useRef<HTMLButtonElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   const [selectedTrial, setSelectedTrial] = useState<string>('');
   const [selectedSite, setSelectedSite] = useState<string>('');
@@ -33,13 +35,35 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   const [showGreeting, setShowGreeting] = useState(true);
   const [currentStep, setCurrentStep] = useState<'greeting' | 'trial' | 'site' | 'date' | 'confirm'>('greeting');
 
+  const isScrolledToBottom = () => {
+    const container = messageContainerRef.current;
+    if (!container) return true;
+    
+    const threshold = 50; // pixels from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+  };
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = () => {
+    setShouldAutoScroll(isScrolledToBottom());
   };
 
   useEffect(() => {
+    const container = messageContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, shouldAutoScroll]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -103,7 +127,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         <AuditProgressSteps currentStep={currentStep} />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div ref={messageContainerRef} className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-6">
           {(!messages || messages.length === 0) && showGreeting && (
             <div className="flex items-start space-x-2">
