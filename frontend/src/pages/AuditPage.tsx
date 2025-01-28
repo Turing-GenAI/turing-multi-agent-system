@@ -7,6 +7,21 @@ import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 
+// Set this to true to skip message streaming animation (for debugging)
+const SKIP_ANIMATION = true;
+
+// Delay settings for normal and debug modes
+const DELAYS = {
+  NORMAL: {
+    ANIMATION_DURATION: 200,
+    MESSAGE_DELAY: 1000
+  },
+  DEBUG: {
+    ANIMATION_DURATION: 0,
+    MESSAGE_DELAY: 50  // minimal delay to ensure UI updates properly
+  }
+};
+
 export const AuditPage: React.FC = () => {
   const SUGGESTION_TEXT = "Try asking about audit findings, specific trials, or inspection details...";
 
@@ -143,12 +158,12 @@ export const AuditPage: React.FC = () => {
           return;
         }
 
-        // For regular messages, stream them character by character
+        // For regular messages, either stream them or add instantly based on SKIP_ANIMATION
         const messageId = Date.now().toString();
         const newMessage: Message = {
           id: messageId,
           agent: 'trial_master_agent',
-          content: '',
+          content: SKIP_ANIMATION ? message : '', // If skipping animation, add full content immediately
           timestamp: new Date(),
           isUser: false,
           nodeName: options?.nodeName || '',
@@ -159,29 +174,31 @@ export const AuditPage: React.FC = () => {
           [selectedAgentTab]: [...prev[selectedAgentTab], newMessage],
         }));
 
-        // Calculate dynamic typing speed to complete within 800ms
-        const ANIMATION_DURATION = 800; // Fixed duration for typing animation
-        const FIXED_MESSAGE_DELAY = 1000; // Fixed delay between messages
-        const chars = message.split('');
-        const delayPerChar = ANIMATION_DURATION / chars.length;
+        if (!SKIP_ANIMATION) {
+          // Stream the content character by character with dynamic speed
+          const { ANIMATION_DURATION, MESSAGE_DELAY } = DELAYS.NORMAL;
+          const chars = message.split('');
+          const delayPerChar = ANIMATION_DURATION / chars.length;
 
-        // Stream the content character by character with dynamic speed
-        let currentContent = '';
-        for (const char of chars) {
-          currentContent += char;
-          setMessagesByAgent(prev => ({
-            ...prev,
-            [selectedAgentTab]: prev[selectedAgentTab].map(msg =>
-              msg.id === messageId
-                ? { ...msg, content: currentContent }
-                : msg
-            )
-          }));
-          await delay(delayPerChar);
+          let currentContent = '';
+          for (const char of chars) {
+            currentContent += char;
+            setMessagesByAgent(prev => ({
+              ...prev,
+              [selectedAgentTab]: prev[selectedAgentTab].map(msg =>
+                msg.id === messageId
+                  ? { ...msg, content: currentContent }
+                  : msg
+              )
+            }));
+            await delay(delayPerChar);
+          }
+
+          await delay(MESSAGE_DELAY);
+        } else {
+          // In debug mode, add minimal delay to ensure proper UI updates
+          await delay(DELAYS.DEBUG.MESSAGE_DELAY);
         }
-
-        // Fixed delay before next message
-        await delay(FIXED_MESSAGE_DELAY);
 
         setMessageQueue(prev => prev.slice(1));
         setIsProcessingQueue(false);
