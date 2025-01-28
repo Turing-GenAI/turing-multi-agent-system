@@ -4,6 +4,7 @@ import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
+import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 
 export const AuditPage: React.FC = () => {
   const SUGGESTION_TEXT = "Try asking about audit findings, specific trials, or inspection details...";
@@ -413,34 +414,99 @@ export const AuditPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto p-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-2rem)]">
-          <div className="h-full overflow-hidden">
-            <AgentWindow
-              messages={messagesByAgent[selectedAgentTab]}
-              userInput={userInput[selectedAgentTab]}
-              updateUserInput={(value) => setUserInput(prev => ({ ...prev, [selectedAgentTab]: value }))}
-              handleSendMessage={(e) => handleSendMessage(selectedAgentTab, e)}
-              trials={trials}
-              sites={sites}
-              onInputComplete={(data) => {
-                setSelectedTrial(data.selectedTrial);
-                setSelectedSite(data.selectedSite);
-                setDateRange(data.dateRange as { from: Date; to: Date });
-              }}
-              handleRunClick={handleRunClick}
-              addAgentMessage={addAgentMessage}
-            />
+    <div className="flex h-screen bg-gray-50">
+      {/* Left Sidebar */}
+      <div className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-6">
+        <div className="mb-4">
+          <img src="/icons/icon.png" alt="App Icon" className="w-10 h-10" />
+        </div>
+        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+          <Home className="w-6 h-6 text-gray-600" />
+        </div>
+        <div className="p-2 bg-blue-50 rounded-lg cursor-pointer">
+          <FileText className="w-6 h-6 text-blue-600" />
+        </div>
+        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+          <AlertCircle className="w-6 h-6 text-gray-600" />
+        </div>
+        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+          <Settings className="w-6 h-6 text-gray-600" />
+        </div>
+        <div className="mt-auto p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+          <HelpCircle className="w-6 h-6 text-gray-600" />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 py-4 px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
+              <h1 className="text-xl font-semibold text-gray-800">J & J Audit Assistant</h1>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
+                {['trial_master', 'inspection_master', 'crm_master'].map((agent) => (
+                  <button
+                    key={agent}
+                    onClick={() => setSelectedAgentTab(agent as AgentType)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      selectedAgentTab === agent
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {agent.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="h-full overflow-hidden">
-            <FindingsTable
-              findings={getCurrentFindings()}
-              expandedRows={expandedRows}
-              setExpandedRows={setExpandedRows}
-            />
+        </header>
+
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <AgentWindow
+                messages={messagesByAgent[selectedAgentTab]}
+                userInput={userInput[selectedAgentTab]}
+                updateUserInput={(value) => setUserInput(prev => ({ ...prev, [selectedAgentTab]: value }))}
+                handleSendMessage={(e) => handleSendMessage(selectedAgentTab, e)}
+                trials={trials}
+                sites={sites}
+                onInputComplete={(data) => {
+                  setSelectedTrial(data.selectedTrial);
+                  setSelectedSite(data.selectedSite);
+                  setDateRange(data.dateRange as { from: Date; to: Date });
+                }}
+                handleRunClick={handleRunClick}
+                addAgentMessage={addAgentMessage}
+              />
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <FindingsTable
+                findings={getCurrentFindings()}
+                expandedRows={expandedRows}
+                setExpandedRows={setExpandedRows}
+              />
+            </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 py-4 px-6">
+          <div className="flex justify-between items-center text-sm text-gray-600">
+            <div> 2025 Clinical Trial Audit Assistant</div>
+            <div className="flex space-x-4">
+              <a href="#" className="hover:text-gray-900">Privacy Policy</a>
+              <a href="#" className="hover:text-gray-900">Terms of Service</a>
+              <a href="#" className="hover:text-gray-900">Contact Support</a>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
