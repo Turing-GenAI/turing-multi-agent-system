@@ -112,21 +112,37 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         </div>
       )}
       <div className="space-y-2">
-        {contentLines.map((line, index) => (
+        {contentLines.length === 1 ? (
           <p 
-            key={index} 
+            key={0} 
             className={`
               text-sm leading-relaxed
               ${message.isUser ? 'text-white' : 'text-gray-700'}
-              ${line.length > 100 ? 'break-words' : ''}
+              ${contentLines[0].length > 100 ? 'break-words' : ''}
             `}
           >
-            {line.trim()}
-            {index === contentLines.length - 1 && isTyping && (
+            {contentLines[0].trim()}
+            {isTyping && (
               <span className="animate-pulse ml-0.5">▋</span>
             )}
           </p>
-        ))}
+        ) : (
+          contentLines.slice(1).map((line, index) => (
+            <p 
+              key={index + 1}
+              className={`
+                text-sm leading-relaxed
+                ${message.isUser ? 'text-white' : 'text-gray-700'}
+                ${line.length > 100 ? 'break-words' : ''}
+              `}
+            >
+              {line.trim()}
+              {index === contentLines.length - 2 && isTyping && (
+                <span className="animate-pulse ml-0.5">▋</span>
+              )}
+            </p>
+          ))
+        )}
       </div>
       {message.isUser && (
         <div className="flex justify-end">

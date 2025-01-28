@@ -571,9 +571,9 @@ export const AuditPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
-              <h1 className="text-xl font-semibold text-gray-800">J & J Audit Assistant</h1>
+              <h1 className="text-xl font-semibold text-gray-800"> Audit Copilot</h1>
             </div>
-            <div className="flex items-center space-x-2">
+            {/* <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-3">
                 {['trial_master', 'inspection_master', 'crm_master'].map((agent) => (
                   <button
@@ -589,7 +589,7 @@ export const AuditPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
         </header>
 
