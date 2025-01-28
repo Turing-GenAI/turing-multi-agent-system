@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { Message } from '../types';
 import { ProgressSteps, Step } from './ProgressSteps';
 import { ToolUI } from './ToolUI';
+import { getAgentDisplayName } from '../data/agentNames';
 
 interface ToolMessage {
   type: 'progress_steps' | 'tool_ui';
@@ -187,18 +188,30 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     const contentLines = message.content.split('\n').filter(line => line.trim().length > 0);
 
     return (
-      <>
+      <div className="flex flex-col">
+        {!message.isUser && (
+          <div className="flex items-center mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              {getAgentDisplayName(message.nodeName)}
+            </span>
+            <span className="text-xs text-gray-500 ml-2">
+              {format(message.timestamp, 'p')}
+            </span>
+          </div>
+        )}
         <div className="whitespace-pre-line">
-          {contentLines.map((line, index) => (
+          {contentLines.slice(1).map((line, index) => (
             <p key={index} className="text-sm text-gray-600 mb-2 last:mb-0">
               {line.trim()}
             </p>
           ))}
         </div>
-        <p className="text-xs mt-1 opacity-70">
-          {format(message.timestamp, 'p')}
-        </p>
-      </>
+        {message.isUser && (
+          <p className="text-xs text-gray-500 mt-1">
+            {format(message.timestamp, 'p')}
+          </p>
+        )}
+      </div>
     );
   };
 
