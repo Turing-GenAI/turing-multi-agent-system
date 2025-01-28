@@ -5,6 +5,7 @@ import { ToolUI } from './ToolUI';
 import { MessageInput } from './agent/MessageInput';
 import { MessageBubble } from './agent/MessageBubble';
 import { getMessageBackgroundColor } from './agent/utils';
+import { AuditProgressSteps } from './agent/AuditProgressSteps';
 import { AgentWindowProps } from './agent/types';
 
 export const AgentWindow: React.FC<AgentWindowProps> = ({
@@ -97,12 +98,13 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm h-[680px] flex flex-col">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold">Audit Agent</h2>
+      <div className="p-10 border-b">
+        <h2 className="text-lg font-semibold mb-6">Audit Agent</h2>
+        <AuditProgressSteps currentStep={currentStep} />
       </div>
 
       <div className="h-[560px] overflow-y-auto">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-6">
           {(!messages || messages.length === 0) && showGreeting && (
             <div className="flex items-start space-x-2">
               <Avatar className="h-8 w-8 bg-gray-100">
