@@ -5,6 +5,7 @@ import { FindingsTable } from '../components/FindingsTable';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
+import { auditService } from '../api/services/auditService'; // Import the audit service
 
 export const AuditPage: React.FC = () => {
   const SUGGESTION_TEXT = "Try asking about audit findings, specific trials, or inspection details...";
@@ -81,13 +82,8 @@ export const AuditPage: React.FC = () => {
 
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
-      const response = await fetch('/mockMessages.txt');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const mockData = await response.text();
-      const data = { ai_messages: mockData };
+      const response = await auditService.getAIMessages(jobId, withFindings);
+      const data = response.data;
       
       if (data.ai_messages === "Agent is processing!") {
         if (!isMessageProcessed(data.ai_messages, '')) {
@@ -294,26 +290,12 @@ export const AuditPage: React.FC = () => {
     try {
       const formattedDateRange = `${dateRange.from.toISOString().split('T')[0]} - ${dateRange.to.toISOString().split('T')[0]}`;
       
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/schedule-job/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            site_id: selectedSite,
-            trial_id: selectedTrial,
-            date: formattedDateRange,
-          }),
-        }
+      const { data } = await auditService.scheduleJob(
+        selectedSite,
+        selectedTrial,
+        formattedDateRange
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
       setJobId(data.job_id);
       setJobStatus('queued');
       
