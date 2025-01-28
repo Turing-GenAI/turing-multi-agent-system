@@ -81,9 +81,14 @@ export const AuditPage: React.FC = () => {
       if (data.ai_messages === "Agent is processing!") {
         addAgentMessage(data.ai_messages);
       } else {
-        const splittedMessages = data.ai_messages.split(
-          "================================== Ai Message =================================="
-        );
+        const split_delimiters = [
+          "================================== Ai Message ==================================", 
+          "================================= Tool Message ================================="
+        ];
+        
+        // Create a regex pattern that matches either delimiter
+        const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+        const splittedMessages = data.ai_messages.split(splitPattern);
 
         // Process messages sequentially with delay
         for (const message of splittedMessages) {
@@ -92,12 +97,20 @@ export const AuditPage: React.FC = () => {
             
             if (message.includes("Name:")) {
               const messageNode = message.split("Name: ")[1];
-              const agentNode = messageNode.split(":")[0]?.toLowerCase()??'';
+              // Split on first occurrence of either ":", ".", or newline
+              const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
               const agentPrefix = agentNode.split('-')[0]?.trim()??'';
               const nodeName = agentNode.split('-')[1]?.trim()?? '';
               const timestamp = new Date().toISOString();
+
               
-              console.log("agentPrefix:", agentPrefix);
+              
+              console.log("agentNode:", agentNode);
+
+              // Skip processing if agentPrefix contains CRM or Trial Master
+              if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
+                continue;
+              }
 
               // Extract actual message content
               let content = messageNode || '';
@@ -119,77 +132,34 @@ export const AuditPage: React.FC = () => {
                              .replace(/id='.*?'/g, '') // Remove IDs
                              .replace(/usage_metadata=.*?(?=\n|$)/g, '') // Remove usage metadata
                              .replace(/<class '.*?'>/g, '') // Remove class info
-                            //  .replace(/\n\s*\n/g, '\n') // Remove multiple newlines
                              .trim();
               
-              if (agentPrefix.includes("inspection") || 
-                  agentPrefix.includes("selfrag") || 
-                  messageNode.includes("self_rag_agent")) {
+              // Check if the message should go to findings table
+              if (agentNode.includes("generate_response_agent") || 
+                  agentNode.includes("generate_findings_agent")) {
                 
-                const lines = content.split("\n");
-                const regex = new RegExp("User input -> Human Feedback:", "gi");
-                
-                const matches = lines.filter(line => regex.test(line)).join("\n");
-                const nonMatches = lines.filter(line => !regex.test(line)).join("\n");
-
-                if (matches.length > 0) {
-                  // Add agent message
-                  setFindings(prev => ({
-                    ...prev,
-                    pd: [...prev.pd, {
-                      id: crypto.randomUUID(),
-                      agent: "inspection",
-                      content: nonMatches.trim(),
-                      timestamp
-                    }]
-                  }));
-                  
-                  await delay(500); // 0.5 second delay between related messages
-                  
-                  // Add user feedback
-                  const feedbackParts = matches.split(":");
-                  const feedbackContent = feedbackParts.length > 1 ? feedbackParts[1].trim() : matches.trim();
-                  
-                  setFindings(prev => ({
-                    ...prev,
-                    pd: [...prev.pd, {
-                      id: crypto.randomUUID(),
-                      agent: "user",
-                      content: feedbackContent,
-                      timestamp
-                    }]
-                  }));
-                } else {
-                  let processedContent = content;
-                  if (agentPrefix.includes("inspection")) {
-                    const prefixLength = agentPrefix.slice(0, 12);
-                    const contentParts = content.split(prefixLength);
-                    processedContent = contentParts.length > 1 ? contentParts[1].trim() : content.trim();
-                  }
-                  
-                  setFindings(prev => ({
-                    ...prev,
-                    pd: [...prev.pd, {
-                      id: crypto.randomUUID(),
-                      agent: "inspection",
-                      content: processedContent,
-                      timestamp
-                    }]
-                  }));
-                }
+                setFindings(prev => ({
+                  ...prev,
+                  pd: [...prev.pd, {
+                    id: crypto.randomUUID(),
+                    agent: nodeName || "findings",
+                    content: content.trim(),
+                    timestamp
+                  }]
+                }));
               } 
-              else if (agentPrefix.includes("trial")) {
-                const cleanedMessage = content.startsWith("trial supervisor - ")
-                  ? content.replace("trial supervisor - ", "").trim()
-                  : content.trim();
-                addAgentMessage(cleanedMessage);
-              }
-              else if (content.startsWith("CRM - ")) {
-                const cleanedMessage = content.replace("CRM - ", "").trim();
-                addAgentMessage(cleanedMessage);
-              }
+              // All other messages go to the chat window
               else {
-                addAgentMessage(content.trim());
+                let cleanedContent = content;
+                
+                // Clean prefixes if present
+                if (content.startsWith("trial supervisor - ")) {
+                  cleanedContent = content.replace("trial supervisor - ", "").trim();
+                } else if (content.startsWith("CRM - ")) {
+                  cleanedContent = content.replace("CRM - ", "").trim();
+                }
+                
+                addAgentMessage(cleanedContent.trim());
               }
             } else {
               addAgentMessage(message.trim());
