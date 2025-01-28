@@ -35,7 +35,16 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding }) => {
       <div className="p-4 whitespace-pre-line">
         {contentLines.slice(1).map((line, index) => (
           <p key={index} className="text-sm text-gray-600 mb-2 last:mb-0">
-            {line.trim()}
+            {line.trim().endsWith(':') && line.trim().length < 50 ? (
+              <span className="font-semibold text-base">{line.trim()}</span>
+            ) : line.trim().includes(':') ? (
+              <>
+                <span className="font-semibold">{line.trim().split(':')[0]}:</span>
+                {line.trim().split(':').slice(1).join(':')}
+              </>
+            ) : (
+              line.trim()
+            )}
           </p>
         ))}
       </div>
