@@ -93,7 +93,7 @@ export const AuditPage: React.FC = () => {
         // Process messages sequentially with delay
         for (const message of splittedMessages) {
           if (message.length > 0) {
-            await delay(1000); // 1 second delay between messages
+            await delay(100); // 1 second delay between messages
             
             if (message.includes("Name:")) {
               const messageNode = message.split("Name: ")[1];
