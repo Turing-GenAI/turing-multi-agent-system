@@ -8,8 +8,10 @@ import {
   JobFeedbackRequest,
   JobFeedbackResponse,
   JobCancellationResponse,
-  JobStatistics
+  JobStatistics,
+  AgentProgressResponse
 } from '../types';
+import { activities } from '../../data/activities';
 
 interface JobDetails {
   job_id: string;
@@ -112,8 +114,19 @@ const realAuditService = {
    * @returns Promise with job statistics
    */
   getJobStatistics: async (): Promise<ApiResponse<JobStatistics>> => {
-    const endpoint = '/jobs/statistics';
+    const endpoint = '/api/job-statistics';
     return apiClient.get<JobStatistics>(endpoint);
+  },
+
+  /**
+   * Get agent progress tree for a specific job
+   * @param jobId - The ID of the job to fetch progress for
+   * @returns Promise with agent progress tree
+   */
+  getAgentProgress: async (
+    jobId: string
+  ): Promise<ApiResponse<AgentProgressResponse>> => {
+    return apiClient.get<AgentProgressResponse>(`/api/jobs/${jobId}/progress`);
   }
 };
 
@@ -247,18 +260,40 @@ const mockAuditService = {
   },
 
   getJobStatistics: async (): Promise<ApiResponse<JobStatistics>> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          status: 200,
+          data: {
+            total_jobs: 100,
+            completed_jobs: 75,
+            failed_jobs: 5,
+            in_progress_jobs: 20,
+            average_completion_time: 300
+          }
+        });
+      }, 500);
+    });
+  },
 
-    return {
-      data: {
-        total_jobs: 10,
-        completed_jobs: 5,
-        failed_jobs: 2,
-        pending_jobs: 3
-      },
-      status: 200,
-    };
+  /**
+   * Get agent progress tree for a specific job
+   * @param jobId - The ID of the job to fetch progress for
+   * @returns Promise with agent progress tree
+   */
+  getAgentProgress: async (
+    jobId: string
+  ): Promise<ApiResponse<AgentProgressResponse>> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          status: 200,
+          data: {
+            activities
+          }
+        });
+      }, 500);
+    });
   }
 };
 

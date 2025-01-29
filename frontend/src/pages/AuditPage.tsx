@@ -220,14 +220,38 @@ export const AuditPage: React.FC = () => {
     setMessageQueue(prev => [...prev, { message, toolType, options }]);
   };
 
-  const processAIMessages = async (messages: string, withFindings: boolean = false) => {
+  const processAIMessages = async (data: { ai_messages: string }, previousMessages: string, withFindings: boolean = false) => {
+    // Handle processing message
+    if (data.ai_messages === "Agent is processing!") {
+      if (!isMessageProcessed(data.ai_messages, '')) {
+        addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
+        markMessageAsProcessed(data.ai_messages, '');
+      }
+      return;
+    }
+
+    console.log("Received new messages, current length:", data.ai_messages.length);
+    console.log("Previous messages length:", previousMessages.length);
+
+    // Get only the new messages by comparing with previous state
+    const newContent = getNewMessages(data.ai_messages, previousMessages);
+    
+    // If there's no new content, return early
+    if (!newContent) {
+      console.log("No new content found");
+      return;
+    }
+
+    console.log("Processing new content, length:", newContent.length);
+
+    // Process the split messages
     const split_delimiters = [
       "================================== Ai Message ==================================", 
       "================================= Tool Message ================================="
     ];
     
     const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
-    const splittedMessages = messages.split(splitPattern);
+    const splittedMessages = newContent.split(splitPattern);
 
     for (const message of splittedMessages) {
       if (message.length > 0) {
@@ -363,35 +387,12 @@ export const AuditPage: React.FC = () => {
       if (jobData.status === "completed" || jobData.status === "running") {
         // Fetch AI messages
         const messagesResponse = await auditService.getAIMessages(jobId, withFindings);
-        const data = messagesResponse.data;
-
-        if (data.ai_messages === "Agent is processing!") {
-          if (!isMessageProcessed(data.ai_messages, '')) {
-            addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
-            markMessageAsProcessed(data.ai_messages, '');
-          }
-          return;
-        }
-
-        console.log("Received new messages, current length:", data.ai_messages.length);
-        console.log("Previous messages length:", previousAIMessagesRef.current.length);
-
-        // Get only the new messages by comparing with previous state
-        const newContent = getNewMessages(data.ai_messages, previousAIMessagesRef.current);
+        
+        // Process the messages and update state
+        await processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings);
         
         // Update previous messages for next comparison
-        previousAIMessagesRef.current = data.ai_messages;
-        
-        // If there's no new content, return early
-        if (!newContent) {
-          console.log("No new content found");
-          return;
-        }
-
-        console.log("Processing new content, length:", newContent.length);
-        
-        // Process the new messages
-        await processAIMessages(newContent, withFindings);
+        previousAIMessagesRef.current = messagesResponse.data.ai_messages;
       }
     } catch (error) {
       console.error("Error fetching AI messages:", error);

@@ -60,3 +60,14 @@ export interface JobStatistics {
   in_progress_jobs: number;
   average_completion_time: number;
 }
+
+export interface TreeNode {
+  title: string;
+  children?: TreeNode[];
+  summary?: string;
+  content?: string;
+}
+
+export interface AgentProgressResponse {
+  activities: TreeNode[];
+}
