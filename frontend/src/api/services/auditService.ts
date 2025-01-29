@@ -7,6 +7,25 @@ import {
   ScheduleJobResponse
 } from '../types';
 
+interface JobDetails {
+  job_id: string;
+  site_id: string;
+  date: string;
+  trial_id: string;
+  run_at: string;
+  status: string;
+  feedback: string;
+  processing_start_time: string;
+  completed_time: string;
+  error_details?: string;
+}
+
+interface JobResponse {
+  job_id: string;
+  status: string;
+  job_details: JobDetails;
+}
+
 const realAuditService = {
   /**
    * Fetch AI messages and findings for a specific job
@@ -48,6 +67,11 @@ const realAuditService = {
 
     return apiClient.post<ScheduleJobResponse>(endpoint, body);
   },
+  
+  getJobDetails: async (jobId: string): Promise<ApiResponse<JobResponse>> => {
+    const endpoint = `/jobs/${encodeURIComponent(jobId)}`;
+    return apiClient.get<JobResponse>(endpoint);
+  }
 };
 
 // Mock implementation
@@ -117,6 +141,30 @@ const mockAuditService = {
         job_id: 'mock-job-123',
         status: 'scheduled',
         message: 'Job scheduled successfully'
+      },
+      status: 200,
+    };
+  },
+  
+  getJobDetails: async (jobId: string): Promise<ApiResponse<JobResponse>> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+      data: {
+        job_id: jobId,
+        status: 'completed',
+        job_details: {
+          job_id: jobId,
+          site_id: 'mock-site-123',
+          date: '2022-01-01',
+          trial_id: 'mock-trial-123',
+          run_at: '2022-01-01T12:00:00',
+          status: 'completed',
+          feedback: 'Job completed successfully',
+          processing_start_time: '2022-01-01T11:00:00',
+          completed_time: '2022-01-01T12:00:00',
+        }
       },
       status: 200,
     };
