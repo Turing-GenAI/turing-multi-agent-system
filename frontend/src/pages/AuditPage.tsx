@@ -6,6 +6,7 @@ import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } fro
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
+import { TreeNode } from '../data/activities';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = false;
@@ -78,6 +79,8 @@ export const AuditPage: React.FC = () => {
 
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
   const previousAIMessagesRef = useRef<string>('');
+
+  const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -373,6 +376,30 @@ export const AuditPage: React.FC = () => {
     }
   };
 
+  const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }) => {
+    if (response.data && response.data.activities && response.data.activities.length > 0) {
+      // Add the progress tree tool UI
+      addAgentMessage(
+        "",  // Empty message since we're just showing the tree
+        "progresstree",
+        {
+          value: response.data.activities[0],  // Taking the first tree node as our root
+          onChange: (updatedTree: TreeNode) => {
+            setProgressTree(updatedTree);
+          },
+          progressTreeProps: {
+            showBreadcrumbs: true,
+            showMiniMap: true,
+            showKeyboardNav: true,
+            showQuickActions: true,
+            initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
+            animationDuration: 200
+          }
+        }
+      );
+    }
+  };
+
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
       if (!jobId) return;
@@ -385,14 +412,31 @@ export const AuditPage: React.FC = () => {
       setJobStatus(jobData.status);
 
       if (jobData.status === "completed" || jobData.status === "running") {
-        // Fetch AI messages
-        const messagesResponse = await auditService.getAIMessages(jobId, withFindings);
+        // Fetch AI messages and progress tree
+        /*
+        const [messagesResponse, progressTreeResponse] = await Promise.all([
+          auditService.getAIMessages(jobId, withFindings),
+          auditService.getAgentProgress(jobId)
+        ]);
+        */
+        const [progressTreeResponse] = await Promise.all([
+          auditService.getAgentProgress(jobId)
+        ]);
         
+       /*
         // Process the messages and update state
-        await processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings);
+        await Promise.all([
+          // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
+          processProgressTreeResponse(progressTreeResponse)
+        ]);
+        */
+        await Promise.all([
+          // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
+          processProgressTreeResponse(progressTreeResponse)
+        ]);
         
         // Update previous messages for next comparison
-        previousAIMessagesRef.current = messagesResponse.data.ai_messages;
+        // previousAIMessagesRef.current = messagesResponse.data.ai_messages;
       }
     } catch (error) {
       console.error("Error fetching AI messages:", error);
@@ -447,7 +491,7 @@ export const AuditPage: React.FC = () => {
         } else {
           fetchAIMessages(jobId, false); 
         }
-      }, 8000); 
+      }, 800000); 
     }
 
     return () => {
