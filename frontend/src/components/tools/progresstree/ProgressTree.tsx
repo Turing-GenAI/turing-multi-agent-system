@@ -5,8 +5,16 @@ import BreadcrumbTrail from './BreadcrumbTrail';
 import TreeMiniMap from './TreeMiniMap';
 import KeyboardNavigation from './KeyboardNavigation';
 import QuickActions from './QuickActions';
-import { activities, TreeNode, PathNode } from '../../../data/activities'
+import { activities, TreeNode, PathNode } from '../../../data/activities';
 import { motion, AnimatePresence } from 'framer-motion';
+
+interface QuickActionsProps {
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  showKeyboardShortcuts: () => void;
+  onToggleSearch: () => void;
+  onToggleFilters: () => void;
+}
 
 interface ProgressTreeProps {
   type: 'tree' | 'minimap' | 'full';
@@ -14,7 +22,6 @@ interface ProgressTreeProps {
   onChange: (node: TreeNode | null) => void;
   options?: {
     showBreadcrumbs?: boolean;
-    showMiniMap?: boolean;
     showKeyboardNav?: boolean;
     showQuickActions?: boolean;
     initialExpandedNodes?: string[];
@@ -30,7 +37,6 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 }) => {
   const {
     showBreadcrumbs = true,
-    showMiniMap = true,
     showKeyboardNav = true,
     showQuickActions = true,
     initialExpandedNodes = [],
@@ -43,63 +49,257 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Simulate dynamic node addition
+  const updateNodeStatus = useCallback((nodes: TreeNode[], path: string[], newStatus: 'pending' | 'in progress' | 'complete'): TreeNode[] => {
+    return nodes.map(node => {
+      if (path.length === 0) return node;
+
+      if (node.title === path[0]) {
+        if (path.length === 1) {
+          if (newStatus === 'in progress' && node.children) {
+            const hasInProgressChild = node.children.some(child => child.status === 'in progress');
+            if (hasInProgressChild) return node;
+          }
+          
+          if (newStatus === 'complete' && node.children) {
+            const allChildrenComplete = node.children.every(child => child.status === 'complete');
+            if (!allChildrenComplete) return node;
+          }
+          
+          return { ...node, status: newStatus };
+        }
+        
+        return {
+          ...node,
+          children: node.children ? updateNodeStatus(node.children, path.slice(1), newStatus) : undefined
+        };
+      }
+      return node;
+    });
+  }, []);
+
   useEffect(() => {
     const addNodesSequentially = async () => {
-      const buildNodeList = (nodes: TreeNode[], parentPath = '') => {
-        return nodes.reduce<TreeNode[]>((acc, node) => {
-          const currentPath = parentPath ? `${parentPath}/${node.title}` : node.title;
-          acc.push({ ...node, fullPath: currentPath });
+      // Initial state - all nodes pending
+      setDisplayedActivities(activities.map(node => ({ ...node, status: 'pending' })));
+      
+      // Protocol deviation to In Progress
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation'], 'in progress'));
+      
+      // Activity ID 1 to In Progress
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1'], 'in progress'));
+      
+      // Inspection Master progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master'], 'in progress'));
+      
+      // Inspection Master children progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Inspection Master'], 'complete'));
+
+      // Planner Agent progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent'], 'in progress'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Planner Agent'], 'complete'));
+
+      // Critique agent progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent'], 'in progress'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Critique agent'], 'complete'));
+
+      // Feedback agent progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent'], 'in progress'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1', 'Feedback agent'], 'complete'));
+
+      // Complete Activity ID 1 after all children are complete
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 1'], 'complete'));
+      
+      // Start Activity ID 2 progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2'], 'in progress'));
+
+      // Inspection Master progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master'], 'in progress'));
+      
+      // Inspection Master children progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Inspection Master'], 'complete'));
+
+      // Planner Agent progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent'], 'in progress'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Planner Agent'], 'complete'));
+
+      // Critique agent progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent'], 'in progress'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Critique agent'], 'complete'));
+
+      // Feedback agent progression
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent'], 'in progress'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Planned sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Planned sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Recommendation on the plan'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Recommendation on the plan'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Reworked sub-activities'], 'in progress'));
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Reworked sub-activities'], 'complete'));
+      
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2', 'Feedback agent'], 'complete'));
+
+      // Complete Activity ID 2 after all children are complete
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation', 'Activity ID 2'], 'complete'));
+      
+      // Finally complete Protocol deviation after both activities are complete
+      await new Promise(resolve => setTimeout(resolve, animationDuration));
+      setDisplayedActivities(prev => updateNodeStatus(prev, ['Protocol deviation'], 'complete'));
+
+      // Expand all nodes initially
+      const expandAll = (nodes: TreeNode[]): string[] => {
+        return nodes.reduce<string[]>((acc, node) => {
+          acc.push(node.title);
           if (node.children) {
-            acc.push(...buildNodeList(node.children, currentPath));
+            acc.push(...expandAll(node.children));
           }
           return acc;
         }, []);
       };
 
-      const allNodes = buildNodeList(activities);
-      
-      for (let i = 0; i < allNodes.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, animationDuration));
-        const currentNode = allNodes[i];
-        const pathParts = currentNode.fullPath?.split('/') || [];
-
-        setDisplayedActivities(prev => {
-          const newActivities = [...prev];
-          let currentLevel = newActivities;
-          
-          for (let j = 0; j < pathParts.length - 1; j++) {
-            const part = pathParts[j];
-            let existingNode = currentLevel.find(n => n.title === part);
-            if (!existingNode) {
-              existingNode = { title: part, children: [] };
-              currentLevel.push(existingNode);
-            }
-            currentLevel = existingNode.children || [];
-          }
-
-          const lastPart = pathParts[pathParts.length - 1];
-          if (!currentLevel.find(n => n.title === lastPart)) {
-            currentLevel.push({
-              ...currentNode,
-              children: currentNode.children || []
-            });
-          }
-
-          return [...newActivities];
-        });
-
-        setExpandedNodes(prev => {
-          const parentNodes = pathParts.slice(0, -1);
-          return Array.from(new Set([...prev, ...parentNodes]));
-        });
-
-        onNodeSelect(currentNode);
-      }
+      setExpandedNodes(expandAll(activities));
     };
 
     addNodesSequentially();
-  }, [animationDuration, onNodeSelect]);
+  }, [animationDuration, updateNodeStatus]);
 
   const handleToggleExpand = useCallback((nodeTitle: string) => {
     setExpandedNodes(prev =>
@@ -119,8 +319,8 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
         return titles;
       }, []);
     };
-    setExpandedNodes(getAllNodeTitles(activities));
-  }, []);
+    setExpandedNodes(getAllNodeTitles(displayedActivities));
+  }, [displayedActivities]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodes([]);
@@ -137,15 +337,15 @@ Enter: Toggle expand/collapse
     `);
   }, []);
 
-  const handleToggleSearch = useCallback(() => {
-    // Implement search toggle logic here
-  }, []);
+  const quickActionsProps: QuickActionsProps = {
+    onExpandAll: handleExpandAll,
+    onCollapseAll: handleCollapseAll,
+    showKeyboardShortcuts,
+    onToggleSearch: () => {},
+    onToggleFilters: () => {}
+  };
 
-  const handleToggleFilters = useCallback(() => {
-    // Implement filters toggle logic here
-  }, []);
-
-  const nodePath = useMemo((): PathNode[] => {
+  const nodePath = useMemo(() => {
     if (!selectedNode) return [];
     
     const path: PathNode[] = [];
@@ -163,15 +363,15 @@ Enter: Toggle expand/collapse
       return false;
     };
     
-    findPath(activities, selectedNode);
+    findPath(displayedActivities, selectedNode);
     return path;
-  }, [selectedNode]);
+  }, [selectedNode, displayedActivities]);
 
   switch (type) {
     case 'minimap':
       return (
         <TreeMiniMap
-          data={activities}
+          data={displayedActivities}
           selectedNode={selectedNode}
           onNavigate={onNodeSelect}
         />
@@ -182,15 +382,14 @@ Enter: Toggle expand/collapse
         <Box sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 2, boxShadow: 3 }}>
           <TreePane
             data={displayedActivities}
-            onNodeSelect={onNodeSelect}
             selectedNode={selectedNode}
+            onNodeSelect={onNodeSelect}
             expandedNodes={expandedNodes}
             onToggleExpand={handleToggleExpand}
           />
         </Box>
       );
 
-    case 'full':
     default:
       if (isMobile) {
         return (
@@ -211,11 +410,11 @@ Enter: Toggle expand/collapse
               >
                 <TreePane
                   data={displayedActivities}
+                  selectedNode={selectedNode}
                   onNodeSelect={(node) => {
                     onNodeSelect(node);
                     setMobileOpen(false);
                   }}
-                  selectedNode={selectedNode}
                   expandedNodes={expandedNodes}
                   onToggleExpand={handleToggleExpand}
                 />
@@ -238,15 +437,7 @@ Enter: Toggle expand/collapse
                 )}
               </AnimatePresence>
             </Box>
-            {showQuickActions && (
-              <QuickActions
-                onExpandAll={handleExpandAll}
-                onCollapseAll={handleCollapseAll}
-                showKeyboardShortcuts={showKeyboardShortcuts}
-                onToggleSearch={handleToggleSearch}
-                onToggleFilters={handleToggleFilters}
-              />
-            )}
+            {showQuickActions && <QuickActions {...quickActionsProps} />}
           </Box>
         );
       }
@@ -264,8 +455,8 @@ Enter: Toggle expand/collapse
           >
             <TreePane
               data={displayedActivities}
-              onNodeSelect={onNodeSelect}
               selectedNode={selectedNode}
+              onNodeSelect={onNodeSelect}
               expandedNodes={expandedNodes}
               onToggleExpand={handleToggleExpand}
             />
@@ -273,30 +464,14 @@ Enter: Toggle expand/collapse
 
           {showKeyboardNav && (
             <KeyboardNavigation
-              data={activities}
+              data={displayedActivities}
               selectedNode={selectedNode}
               onNodeSelect={onNodeSelect}
               onToggleExpand={handleToggleExpand}
             />
           )}
 
-          {showMiniMap && (
-            <TreeMiniMap
-              data={activities}
-              selectedNode={selectedNode}
-              onNavigate={onNodeSelect}
-            />
-          )}
-
-          {showQuickActions && (
-            <QuickActions
-              onExpandAll={handleExpandAll}
-              onCollapseAll={handleCollapseAll}
-              showKeyboardShortcuts={showKeyboardShortcuts}
-              onToggleSearch={handleToggleSearch}
-              onToggleFilters={handleToggleFilters}
-            />
-          )}
+          {showQuickActions && <QuickActions {...quickActionsProps} />}
         </Box>
       );
   }

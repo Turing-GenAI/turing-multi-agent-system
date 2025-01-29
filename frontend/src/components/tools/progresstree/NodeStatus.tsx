@@ -19,7 +19,7 @@ interface StatusConfig {
 }
 
 interface NodeStatusProps {
-  status: string;
+  status: StatusType;
 }
 
 const statusConfig: Record<StatusType, StatusConfig> = {
@@ -53,7 +53,7 @@ const statusConfig: Record<StatusType, StatusConfig> = {
 };
 
 const NodeStatus: React.FC<NodeStatusProps> = ({ status }) => {
-  const config = statusConfig[status.toLowerCase() as StatusType] || statusConfig.pending;
+  const config = statusConfig[status] || statusConfig.pending;
   const IconComponent = config.icon;
 
   return (
@@ -82,7 +82,7 @@ const NodeStatus: React.FC<NodeStatusProps> = ({ status }) => {
             borderRadius: '50%',
             bgcolor: config.color,
             opacity: 0.15,
-            animation: status.toLowerCase() === 'in progress' ? 'pulse 2s infinite' : 'none',
+            animation: status === 'in progress' ? 'pulse 2s infinite' : 'none',
             '@keyframes pulse': {
               '0%': { transform: 'scale(1)', opacity: 0.15 },
               '50%': { transform: 'scale(1.5)', opacity: 0.25 },
@@ -96,9 +96,9 @@ const NodeStatus: React.FC<NodeStatusProps> = ({ status }) => {
           component={motion.div}
           animate={config.animation}
           transition={{
-            duration: status.toLowerCase() === 'in progress' ? 3 : 0.4,
-            repeat: status.toLowerCase() === 'in progress' ? Infinity : 0,
-            ease: status.toLowerCase() === 'in progress' ? 'linear' : 'easeInOut',
+            duration: status === 'in progress' ? 3 : 0.4,
+            repeat: status === 'in progress' ? Infinity : 0,
+            ease: status === 'in progress' ? 'linear' : 'easeInOut',
           }}
           sx={{
             width: '100%',

@@ -3,6 +3,7 @@ import { Box, Typography, IconButton } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import BranchLines from './BranchLines';
+import NodeStatus from './NodeStatus';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TreeNodeData {
@@ -10,6 +11,7 @@ interface TreeNodeData {
   summary?: string;
   content?: string;
   children?: TreeNodeData[];
+  status?: 'pending' | 'in progress' | 'complete';
 }
 
 interface TreeNodeProps {
@@ -95,7 +97,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       <BranchLines 
         depth={depth}
         isLastChild={isLastChild}
-        hasChildren={hasChildren}
+        hasChildren={!!hasChildren}
         isExpanded={isExpanded}
       />
       
@@ -163,11 +165,14 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             )}
             {!hasChildren && <Box sx={{ width: 28, mr: 1 }} />}
             
+            <NodeStatus status={node.status || 'pending'} />
+            
             <Box sx={{ 
               minWidth: 0, 
               flex: 1,
               width: '100%',
-              overflow: 'visible'
+              overflow: 'visible',
+              ml: 1.5
             }}>
               <Typography
                 sx={{
