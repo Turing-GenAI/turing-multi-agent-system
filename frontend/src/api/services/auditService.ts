@@ -32,6 +32,26 @@ interface JobResponse {
   job_details: JobDetails;
 }
 
+interface TreeNode {
+  title: string;
+  children?: TreeNode[];
+  summary?: string;
+  content?: string;
+}
+
+// Keep track of progress state for each job
+const jobProgress = new Map<string, {
+  level: number;
+  activityIndex: number;
+  agentIndex: number;
+  subActivityIndex: number;
+}>();
+
+// Helper to reset progress for testing
+const resetProgress = (jobId: string) => {
+  jobProgress.delete(jobId);
+};
+
 const realAuditService = {
   /**
    * Fetch AI messages and findings for a specific job
@@ -284,12 +304,105 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
+    // Initialize progress for new jobs
+    if (!jobProgress.has(jobId)) {
+      jobProgress.set(jobId, {
+        level: 0,
+        activityIndex: 0,
+        agentIndex: 0,
+        subActivityIndex: 0
+      });
+    }
+
+    const currentProgress = jobProgress.get(jobId)!;
+
+    const buildIncrementalTree = () => {
+      const result: TreeNode[] = [
+        {
+          title: "Protocol deviation",
+          children: []
+        }
+      ];
+
+      // Level 1: Activity IDs
+      if (currentProgress.level >= 1) {
+        const activityCount = Math.min(currentProgress.activityIndex + 1, 2);
+        for (let i = 0; i < activityCount; i++) {
+          result[0].children!.push({
+            title: `Activity ID ${i + 1}`,
+            children: []
+          });
+        }
+      }
+
+      // Level 2: Agents
+      if (currentProgress.level >= 2) {
+        const agents = ["Inspection Master", "Planner Agent", "Critique agent", "Feedback agent"];
+        const activityIndex = Math.min(currentProgress.activityIndex, result[0].children!.length - 1);
+        const agentCount = Math.min(currentProgress.agentIndex + 1, agents.length);
+        
+        for (let i = 0; i < agentCount; i++) {
+          result[0].children![activityIndex].children!.push({
+            title: agents[i],
+            children: []
+          });
+        }
+      }
+
+      // Level 3: Sub-activities
+      if (currentProgress.level >= 3) {
+        const subActivities = [
+          "Planned sub-activities",
+          "Recommendation on the plan",
+          "Reworked sub-activities"
+        ];
+        
+        const activityIndex = Math.min(currentProgress.activityIndex, result[0].children!.length - 1);
+        const agentIndex = Math.min(currentProgress.agentIndex, result[0].children![activityIndex].children!.length - 1);
+        const subActivityCount = Math.min(currentProgress.subActivityIndex + 1, subActivities.length);
+
+        for (let i = 0; i < subActivityCount; i++) {
+          result[0].children![activityIndex].children![agentIndex].children!.push({
+            title: subActivities[i],
+            summary: "All sub-activities have been thoroughly planned, including resource allocation and scheduling.",
+            content: "1. Initial assessment completed\n2. Resource allocation determined\n3. Timeline created"
+          });
+        }
+      }
+
+      // Progress to next state
+      currentProgress.subActivityIndex++;
+      if (currentProgress.subActivityIndex >= 3) {
+        currentProgress.subActivityIndex = 0;
+        currentProgress.agentIndex++;
+        if (currentProgress.agentIndex >= 4) {
+          currentProgress.agentIndex = 0;
+          currentProgress.activityIndex++;
+          if (currentProgress.activityIndex >= 2) {
+            currentProgress.activityIndex = 0;
+            currentProgress.level++;
+            if (currentProgress.level >= 4) {
+              // Clean up completed job progress
+              jobProgress.delete(jobId);
+            }
+          }
+        }
+      }
+
+      // Update progress in the Map
+      if (currentProgress.level < 4) {
+        jobProgress.set(jobId, { ...currentProgress });
+      }
+
+      return result;
+    };
+
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
           status: 200,
           data: {
-            activities
+            activities: buildIncrementalTree()
           }
         });
       }, 500);
