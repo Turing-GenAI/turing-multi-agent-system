@@ -4,7 +4,11 @@ import {
   AIMessagesResponse, 
   ApiResponse, 
   ScheduleJobRequest,
-  ScheduleJobResponse
+  ScheduleJobResponse,
+  JobFeedbackRequest,
+  JobFeedbackResponse,
+  JobCancellationResponse,
+  JobStatistics
 } from '../types';
 
 interface JobDetails {
@@ -68,9 +72,48 @@ const realAuditService = {
     return apiClient.post<ScheduleJobResponse>(endpoint, body);
   },
   
-  getJobDetails: async (jobId: string): Promise<ApiResponse<JobResponse>> => {
-    const endpoint = `/jobs/${encodeURIComponent(jobId)}`;
+  getJobDetails: async (jobId: string, status: string): Promise<ApiResponse<JobResponse>> => {
+    const endpoint = `/jobs/?status=${encodeURIComponent(status)}`;
     return apiClient.get<JobResponse>(endpoint);
+  },
+
+  /**
+   * Update feedback for a specific job
+   * @param jobId - The ID of the job to update feedback for
+   * @param feedback - The feedback text to update
+   * @returns Promise with updated job details
+   */
+  updateJobFeedback: async (
+    jobId: string,
+    feedback: string
+  ): Promise<ApiResponse<JobFeedbackResponse>> => {
+    const endpoint = `/jobs/${encodeURIComponent(jobId)}/feedback`;
+    const body: JobFeedbackRequest = {
+      feedback,
+    };
+
+    return apiClient.put<JobFeedbackResponse>(endpoint, body);
+  },
+
+  /**
+   * Cancel a running job
+   * @param jobId - The ID of the job to cancel
+   * @returns Promise with cancellation status
+   */
+  cancelJob: async (
+    jobId: string
+  ): Promise<ApiResponse<JobCancellationResponse>> => {
+    const endpoint = `/jobs/${encodeURIComponent(jobId)}/cancel`;
+    return apiClient.post<JobCancellationResponse>(endpoint, {});
+  },
+
+  /**
+   * Get job statistics
+   * @returns Promise with job statistics
+   */
+  getJobStatistics: async (): Promise<ApiResponse<JobStatistics>> => {
+    const endpoint = '/jobs/statistics';
+    return apiClient.get<JobStatistics>(endpoint);
   }
 };
 
@@ -146,7 +189,7 @@ const mockAuditService = {
     };
   },
   
-  getJobDetails: async (jobId: string): Promise<ApiResponse<JobResponse>> => {
+  getJobDetails: async (jobId: string, status: string): Promise<ApiResponse<JobResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -169,6 +212,54 @@ const mockAuditService = {
       status: 200,
     };
   },
+
+  updateJobFeedback: async (
+    jobId: string,
+    feedback: string
+  ): Promise<ApiResponse<JobFeedbackResponse>> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+      data: {
+        job_id: jobId,
+        feedback: feedback,
+        message: 'Feedback updated successfully'
+      },
+      status: 200,
+    };
+  },
+
+  cancelJob: async (
+    jobId: string
+  ): Promise<ApiResponse<JobCancellationResponse>> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+      data: {
+        job_id: jobId,
+        status: 'cancelled',
+        message: 'Job cancelled successfully'
+      },
+      status: 200,
+    };
+  },
+
+  getJobStatistics: async (): Promise<ApiResponse<JobStatistics>> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+      data: {
+        total_jobs: 10,
+        completed_jobs: 5,
+        failed_jobs: 2,
+        pending_jobs: 3
+      },
+      status: 200,
+    };
+  }
 };
 
 // Export either mock or real service based on environment variable

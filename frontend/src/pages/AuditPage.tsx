@@ -8,7 +8,7 @@ import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-
 import { auditService } from '../api/services/auditService'; // Import the audit service
 
 // Set this to true to skip message streaming animation (for debugging)
-const SKIP_ANIMATION = true;
+const SKIP_ANIMATION = false;
 
 // Delay settings for normal and debug modes
 const DELAYS = {
@@ -222,6 +222,27 @@ export const AuditPage: React.FC = () => {
 
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
+      if (!jobId) return;
+
+      // First, get the current job status
+      const jobResponse = await auditService.getJobDetails(jobId);
+      const jobData = jobResponse.data;
+      
+      // Update job status
+      setJobStatus(jobData.status);
+
+      // If job requires human feedback or has error, handle accordingly
+      if (jobData.status === 'take_human_feedback') {
+        addAgentMessage(`Job ${jobId} requires human feedback. Please provide your input.`, undefined, { agentPrefix: '', nodeName: '' });
+        return;
+      } else if (jobData.status === 'error') {
+        const errorMessage = jobData.job_details.error_details || 'An unknown error occurred';
+        addAgentMessage(`Analysis failed! Error: ${errorMessage}`, undefined, { agentPrefix: '', nodeName: '' });
+        setIsProcessing(false);
+        return;
+      }
+
+      // Fetch AI messages
       const response = await auditService.getAIMessages(jobId, withFindings);
       const data = response.data;
       
@@ -249,13 +270,6 @@ export const AuditPage: React.FC = () => {
       }
 
       console.log("Processing new content, length:", newContent.length);
-      // Get only the new messages by comparing with previous state
-      const newContentLength = newContent.length;
-      
-      // If there's no new content, return early
-      if (!newContentLength) {
-        return;
-      }
 
       const split_delimiters = [
         "================================== Ai Message ==================================", 
@@ -384,8 +398,8 @@ export const AuditPage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error("Error fetching mock messages:", error);
-      const errorMessage = `Error fetching mock messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+      console.error("Error fetching messages:", error);
+      const errorMessage = `Error fetching messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
       if (!isMessageProcessed(errorMessage, '')) {
         addAgentMessage(errorMessage, undefined, { agentPrefix: '', nodeName: '' });
         markMessageAsProcessed(errorMessage, '');

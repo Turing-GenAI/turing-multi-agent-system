@@ -36,3 +36,27 @@ export interface ScheduleJobResponse {
   status: string;
   message?: string;
 }
+
+export interface JobFeedbackRequest {
+  feedback: string;
+}
+
+export interface JobFeedbackResponse {
+  job_id: string;
+  status: string;
+  updated_feedback: string;
+}
+
+export interface JobCancellationResponse {
+  job_id: string;
+  status: string;
+  message: string;
+}
+
+export interface JobStatistics {
+  total_jobs: number;
+  completed_jobs: number;
+  failed_jobs: number;
+  in_progress_jobs: number;
+  average_completion_time: number;
+}
