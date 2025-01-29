@@ -1,0 +1,217 @@
+import React from 'react';
+import { Box, Typography, IconButton } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import BranchLines from './BranchLines';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface TreeNodeData {
+  title: string;
+  summary?: string;
+  content?: string;
+  children?: TreeNodeData[];
+}
+
+interface TreeNodeProps {
+  node: TreeNodeData;
+  depth?: number;
+  isLastChild: boolean;
+  onNodeSelect: (node: TreeNodeData) => void;
+  selectedNode: TreeNodeData | null;
+  expandedNodes: string[];
+  onToggleExpand: (title: string) => void;
+}
+
+interface TreePaneProps {
+  data: TreeNodeData[];
+  selectedNode: TreeNodeData | null;
+  onNodeSelect: (node: TreeNodeData) => void;
+  expandedNodes: string[];
+  onToggleExpand: (title: string) => void;
+}
+
+const TreeNode: React.FC<TreeNodeProps> = ({
+  node,
+  depth = 0,
+  isLastChild,
+  onNodeSelect,
+  selectedNode,
+  expandedNodes,
+  onToggleExpand
+}) => {
+  const isSelected = selectedNode && selectedNode.title === node.title;
+  const isExpanded = expandedNodes.includes(node.title);
+  const hasChildren = node.children && node.children.length > 0;
+  const isLeaf = !hasChildren;
+
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <BranchLines 
+        depth={depth}
+        isLastChild={isLastChild}
+        hasChildren={hasChildren}
+        isExpanded={isExpanded}
+      />
+      
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: depth * 0.1 }}
+      >
+        <Box
+          component={motion.div}
+          whileHover={{ scale: 1.01 }}
+          onClick={() => onNodeSelect(node)}
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            pl: depth * 3 + 6,
+            pr: 2,
+            py: 2,
+            cursor: 'pointer',
+            position: 'relative',
+            minHeight: '40px',
+            borderRadius: 1,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              bgcolor: 'background.highlight',
+              boxShadow: isLeaf ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+            },
+            ...(isSelected && {
+              bgcolor: 'background.highlight',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: '3px',
+                bgcolor: 'primary.main',
+                borderRadius: '0 4px 4px 0',
+              },
+            }),
+            ...(isLeaf && {
+              margin: '4px 8px',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                borderColor: 'primary.light',
+                transform: 'translateX(4px)',
+              },
+            }),
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            {hasChildren && (
+              <IconButton
+                size="small"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onToggleExpand(node.title);
+                }}
+                sx={{ mr: 1 }}
+              >
+                {isExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+              </IconButton>
+            )}
+            {!hasChildren && <Box sx={{ width: 28, mr: 1 }} />}
+            
+            <Box sx={{ 
+              minWidth: 0, 
+              flex: 1,
+              width: '100%',
+              overflow: 'visible'
+            }}>
+              <Typography
+                sx={{
+                  fontSize: isLeaf ? '1rem' : '0.9rem',
+                  fontWeight: isSelected ? 600 : isLeaf ? 500 : 400,
+                  color: isLeaf ? 'primary.main' : 'text.primary',
+                  letterSpacing: '0.01em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {node.title}
+              </Typography>
+              {isLeaf && node.summary && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: '0.85rem',
+                    mt: 0.5,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                >
+                  {node.summary}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </Box>
+      </motion.div>
+
+      <AnimatePresence>
+        {isExpanded && node.children && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {node.children.map((child, index) => (
+              <TreeNode
+                key={child.title}
+                node={child}
+                depth={depth + 1}
+                isLastChild={index === node.children.length - 1}
+                onNodeSelect={onNodeSelect}
+                selectedNode={selectedNode}
+                expandedNodes={expandedNodes}
+                onToggleExpand={onToggleExpand}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Box>
+  );
+};
+
+const TreePane: React.FC<TreePaneProps> = ({
+  data,
+  selectedNode,
+  onNodeSelect,
+  expandedNodes,
+  onToggleExpand
+}) => {
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        py: 2,
+      }}
+    >
+      {data.map((node, index) => (
+        <TreeNode
+          key={node.title}
+          node={node}
+          isLastChild={index === data.length - 1}
+          onNodeSelect={onNodeSelect}
+          selectedNode={selectedNode}
+          expandedNodes={expandedNodes}
+          onToggleExpand={onToggleExpand}
+        />
+      ))}
+    </Box>
+  );
+};
+
+export default TreePane;
