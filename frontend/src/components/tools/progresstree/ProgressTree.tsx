@@ -137,6 +137,14 @@ Enter: Toggle expand/collapse
     `);
   }, []);
 
+  const handleToggleSearch = useCallback(() => {
+    // Implement search toggle logic here
+  }, []);
+
+  const handleToggleFilters = useCallback(() => {
+    // Implement filters toggle logic here
+  }, []);
+
   const nodePath = useMemo((): PathNode[] => {
     if (!selectedNode) return [];
     
@@ -235,6 +243,8 @@ Enter: Toggle expand/collapse
                 onExpandAll={handleExpandAll}
                 onCollapseAll={handleCollapseAll}
                 showKeyboardShortcuts={showKeyboardShortcuts}
+                onToggleSearch={handleToggleSearch}
+                onToggleFilters={handleToggleFilters}
               />
             )}
           </Box>
@@ -283,6 +293,8 @@ Enter: Toggle expand/collapse
               onExpandAll={handleExpandAll}
               onCollapseAll={handleCollapseAll}
               showKeyboardShortcuts={showKeyboardShortcuts}
+              onToggleSearch={handleToggleSearch}
+              onToggleFilters={handleToggleFilters}
             />
           )}
         </Box>
