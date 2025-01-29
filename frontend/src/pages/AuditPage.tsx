@@ -122,6 +122,7 @@ export const AuditPage: React.FC = () => {
     options?: {
       agentPrefix?: string;
       nodeName?: string;
+      messageId?: string;  // Optional ID for updating existing messages
     };
   }>>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
@@ -131,12 +132,12 @@ export const AuditPage: React.FC = () => {
     const processQueue = async () => {
       if (messageQueue.length > 0 && !isProcessingQueue) {
         setIsProcessingQueue(true);
-        const { message, toolType, options } = messageQueue[0];
+        const { message, toolType, options, messageId } = messageQueue[0];
 
-        // For tool UI messages, add them instantly
+        // For tool UI messages, add or update them instantly
         if (toolType) {
           const newMessage: Message = {
-            id: Date.now().toString(),
+            id: messageId,
             agent: 'trial_master_agent',
             content: JSON.stringify({
               type: 'tool_ui',
@@ -153,7 +154,9 @@ export const AuditPage: React.FC = () => {
 
           setMessagesByAgent(prev => ({
             ...prev,
-            [selectedAgentTab]: [...prev[selectedAgentTab], newMessage],
+            [selectedAgentTab]: prev[selectedAgentTab].some(msg => msg.id === messageId)
+              ? prev[selectedAgentTab].map(msg => msg.id === messageId ? newMessage : msg)
+              : [...prev[selectedAgentTab], newMessage],
           }));
 
           setMessageQueue(prev => prev.slice(1));
@@ -162,7 +165,6 @@ export const AuditPage: React.FC = () => {
         }
 
         // For regular messages, either stream them or add instantly based on SKIP_ANIMATION
-        const messageId = Date.now().toString();
         const newMessage: Message = {
           id: messageId,
           agent: 'trial_master_agent',
@@ -174,7 +176,9 @@ export const AuditPage: React.FC = () => {
 
         setMessagesByAgent(prev => ({
           ...prev,
-          [selectedAgentTab]: [...prev[selectedAgentTab], newMessage],
+          [selectedAgentTab]: prev[selectedAgentTab].some(msg => msg.id === messageId)
+            ? prev[selectedAgentTab].map(msg => msg.id === messageId ? newMessage : msg)
+            : [...prev[selectedAgentTab], newMessage],
         }));
 
         if (!SKIP_ANIMATION) {
@@ -217,10 +221,33 @@ export const AuditPage: React.FC = () => {
     options?: { 
       agentPrefix?: string;
       nodeName?: string;
+      messageId?: string;  // Optional ID for updating existing messages
     }
   ) => {
-    // Add message to queue instead of processing immediately
-    setMessageQueue(prev => [...prev, { message, toolType, options }]);
+    const queueItem = { 
+      message, 
+      toolType, 
+      options,
+      messageId: options?.messageId || Date.now().toString()  // Use provided ID or generate new one
+    };
+
+    // Check if message with this ID already exists in the queue
+    if (options?.messageId) {
+      setMessageQueue(prev => {
+        const existingIndex = prev.findIndex(item => item.messageId === options.messageId);
+        if (existingIndex >= 0) {
+          // Update existing message in queue
+          const newQueue = [...prev];
+          newQueue[existingIndex] = queueItem;
+          return newQueue;
+        }
+        // Add as new message if not found
+        return [...prev, queueItem];
+      });
+    } else {
+      // Add new message to queue
+      setMessageQueue(prev => [...prev, queueItem]);
+    }
   };
 
   const processAIMessages = async (data: { ai_messages: string }, previousMessages: string, withFindings: boolean = false) => {
@@ -376,13 +403,14 @@ export const AuditPage: React.FC = () => {
     }
   };
 
-  const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }) => {
+  const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }, jobId: string) => {
     if (response.data && response.data.activities && response.data.activities.length > 0) {
       // Add the progress tree tool UI
       addAgentMessage(
         "",  // Empty message since we're just showing the tree
         "progresstree",
         {
+          messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
           value: response.data.activities[0],  // Taking the first tree node as our root
           onChange: (updatedTree: TreeNode) => {
             setProgressTree(updatedTree);
@@ -427,12 +455,12 @@ export const AuditPage: React.FC = () => {
         // Process the messages and update state
         await Promise.all([
           // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
-          processProgressTreeResponse(progressTreeResponse)
+          processProgressTreeResponse(progressTreeResponse, jobId)
         ]);
         */
         await Promise.all([
           // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
-          processProgressTreeResponse(progressTreeResponse)
+          processProgressTreeResponse(progressTreeResponse, jobId)
         ]);
         
         // Update previous messages for next comparison
@@ -491,7 +519,7 @@ export const AuditPage: React.FC = () => {
         } else {
           fetchAIMessages(jobId, false); 
         }
-      }, 800000); 
+      }, 4000); 
     }
 
     return () => {
