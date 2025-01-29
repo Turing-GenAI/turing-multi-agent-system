@@ -124,9 +124,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
-      <div className="p-10 border-b flex-shrink-0">
-        <h2 className="text-lg font-semibold mb-6">Audit Agent</h2>
-        <AuditProgressSteps currentStep={currentStep} />
+      <div className="border-b flex-shrink-0 h-16 flex items-center px-6">
+        <h2 className="text-lg font-semibold">Audit Agent</h2>
+        {/* <AuditProgressSteps currentStep={currentStep} /> */}
       </div>
 
       <div ref={messageContainerRef} className="flex-1 overflow-y-auto">
