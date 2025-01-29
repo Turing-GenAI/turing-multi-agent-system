@@ -30,6 +30,52 @@ interface TreePaneProps {
   onToggleExpand: (title: string) => void;
 }
 
+interface AnimatedTextProps {
+  text: string;
+  delay?: number;
+  speed?: number;
+}
+
+const AnimatedText: React.FC<AnimatedTextProps> = ({ text, delay = 0, speed = 0.05 }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Typography
+        variant="body2"
+        component={motion.div}
+        sx={{
+          color: 'text.secondary',
+          fontSize: '0.85rem',
+          mt: 0.5,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+        }}
+      >
+        {text.split('').map((char, index) => (
+          <motion.span
+            key={index}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              duration: 0.1,
+              delay: delay + (index * speed),
+              ease: "easeOut"
+            }}
+          >
+            {char}
+          </motion.span>
+        ))}
+      </Typography>
+    </motion.div>
+  );
+};
+
 const TreeNode: React.FC<TreeNodeProps> = ({
   node,
   depth = 0,
@@ -137,21 +183,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 {node.title}
               </Typography>
               {isLeaf && node.summary && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: 'text.secondary',
-                    fontSize: '0.85rem',
-                    mt: 0.5,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                  }}
-                >
-                  {node.summary}
-                </Typography>
+                <AnimatedText 
+                  text={node.summary}
+                  delay={0.2}
+                  speed={0.03}
+                />
               )}
             </Box>
           </Box>
