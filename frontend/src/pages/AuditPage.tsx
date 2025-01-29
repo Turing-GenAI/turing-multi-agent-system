@@ -220,6 +220,135 @@ export const AuditPage: React.FC = () => {
     setMessageQueue(prev => [...prev, { message, toolType, options }]);
   };
 
+  const processAIMessages = async (messages: string[], withFindings: boolean = false) => {
+    const split_delimiters = [
+      "================================== Ai Message ==================================", 
+      "================================= Tool Message ================================="
+    ];
+    
+    const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+    const splittedMessages = messages.split(splitPattern);
+
+    for (const message of splittedMessages) {
+      if (message.length > 0) {
+        await delay(1000);
+        
+        if (message.includes("Name:")) {
+          const messageNode = message.split("Name: ")[1];
+          const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
+          const agentPrefix = agentNode.split('-')[0]?.trim()??'';
+          const nodeName = agentNode.split('-')[1]?.trim()?? '';
+          const timestamp = new Date().toISOString();
+          
+          if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
+            continue;
+          }
+
+          let content = messageNode || '';
+          
+          if (content.includes("content=")) {
+            const parts = content.split("content=");
+            if (parts.length > 1) {
+              const contentParts = parts[1].split("additional_kwargs=");
+              content = contentParts[0] || '';
+              content = content.replace(/^['"]|['"]$/g, '');
+            }
+          }
+          
+          content = content.replace(/\{[^}]+\}/g, '')
+                         .replace(/response_metadata=.*?(?=\n|$)/g, '')
+                         .replace(/id='.*?'/g, '')
+                         .replace(/usage_metadata=.*?(?=\n|$)/g, '')
+                         .replace(/<class '.*?'>/g, '')
+                         .trim();
+          
+          if (agentNode.includes("generate_response_agent") || 
+              agentNode.includes("generate_findings_agent")) {
+            
+            const findingId = `${nodeName}-${content}`.trim();
+            if (!isMessageProcessed(findingId, nodeName)) {
+              setFindings(prev => ({
+                ...prev,
+                pd: [...prev.pd, {
+                  id: crypto.randomUUID(),
+                  agent: nodeName || "findings",
+                  content: content.trim(),
+                  timestamp
+                }]
+              }));
+              markMessageAsProcessed(findingId, nodeName);
+            }
+          } else {
+            let cleanedContent = content;
+            
+            if (content.startsWith("trial supervisor - ")) {
+              cleanedContent = content.replace("trial supervisor - ", "").trim();
+            } else if (content.startsWith("CRM - ")) {
+              cleanedContent = content.replace("CRM - ", "").trim();
+            }
+            
+            if (!isMessageProcessed(cleanedContent, nodeName)) {
+              addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
+              markMessageAsProcessed(cleanedContent, nodeName);
+            }
+          }
+        } else {
+          if (!isMessageProcessed(message, '')) {
+            addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
+            markMessageAsProcessed(message, '');
+          }
+        }
+      }
+    }
+
+    if (withFindings) {
+      await delay(1500);
+      
+      const timestamp = new Date().toISOString();
+      const mockFindings = {
+        PD: [
+          {
+            id: crypto.randomUUID(),
+            agent: "inspection",
+            content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
+            timestamp
+          }
+        ],
+        AE: [
+          {
+            id: crypto.randomUUID(),
+            agent: "inspection",
+            content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
+            timestamp
+          }
+        ],
+        SGR: []
+      };
+
+      for (const finding of mockFindings.PD) {
+        if (!isMessageProcessed(finding.content, finding.agent)) {
+          await delay(800);
+          setFindings(prev => ({
+            ...prev,
+            pd: [...prev.pd, finding]
+          }));
+          markMessageAsProcessed(finding.content, finding.agent);
+        }
+      }
+      
+      for (const finding of mockFindings.AE) {
+        if (!isMessageProcessed(finding.content, finding.agent)) {
+          await delay(800);
+          setFindings(prev => ({
+            ...prev,
+            ae: [...prev.ae, finding]
+          }));
+          markMessageAsProcessed(finding.content, finding.agent);
+        }
+      }
+    }
+  };
+
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
       if (!jobId) return;
@@ -231,179 +360,41 @@ export const AuditPage: React.FC = () => {
       // Update job status
       setJobStatus(jobData.status);
 
-      // If job requires human feedback or has error, handle accordingly
-      if (jobData.status === 'take_human_feedback') {
-        addAgentMessage(`Job ${jobId} requires human feedback. Please provide your input.`, undefined, { agentPrefix: '', nodeName: '' });
-        return;
-      } else if (jobData.status === 'error') {
-        const errorMessage = jobData.job_details.error_details || 'An unknown error occurred';
-        addAgentMessage(`Analysis failed! Error: ${errorMessage}`, undefined, { agentPrefix: '', nodeName: '' });
-        setIsProcessing(false);
-        return;
-      }
+      if (jobData.status === "completed" || jobData.status === "running") {
+        // Fetch AI messages
+        const messagesResponse = await auditService.getAIMessages(jobId, withFindings);
+        const data = messagesResponse.data;
 
-      // Fetch AI messages
-      const response = await auditService.getAIMessages(jobId, withFindings);
-      const data = response.data;
-      
-      if (data.ai_messages === "Agent is processing!") {
-        if (!isMessageProcessed(data.ai_messages, '')) {
-          addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
-          markMessageAsProcessed(data.ai_messages, '');
-        }
-        return;
-      }
-
-      console.log("Received new messages, current length:", data.ai_messages.length);
-      console.log("Previous messages length:", previousAIMessagesRef.current.length);
-
-      // Get only the new messages by comparing with previous state
-      const newContent = getNewMessages(data.ai_messages, previousAIMessagesRef.current);
-      
-      // Update previous messages for next comparison
-      previousAIMessagesRef.current = data.ai_messages;
-      
-      // If there's no new content, return early
-      if (!newContent) {
-        console.log("No new content found");
-        return;
-      }
-
-      console.log("Processing new content, length:", newContent.length);
-
-      const split_delimiters = [
-        "================================== Ai Message ==================================", 
-        "================================= Tool Message ================================="
-      ];
-      
-      const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
-      const splittedMessages = newContent.split(splitPattern);
-
-      for (const message of splittedMessages) {
-        if (message.length > 0) {
-          await delay(1000);
-          
-          if (message.includes("Name:")) {
-            const messageNode = message.split("Name: ")[1];
-            const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
-            const agentPrefix = agentNode.split('-')[0]?.trim()??'';
-            const nodeName = agentNode.split('-')[1]?.trim()?? '';
-            const timestamp = new Date().toISOString();
-            
-            if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
-              continue;
-            }
-
-            let content = messageNode || '';
-            
-            if (content.includes("content=")) {
-              const parts = content.split("content=");
-              if (parts.length > 1) {
-                const contentParts = parts[1].split("additional_kwargs=");
-                content = contentParts[0] || '';
-                content = content.replace(/^['"]|['"]$/g, '');
-              }
-            }
-            
-            content = content.replace(/\{[^}]+\}/g, '')
-                           .replace(/response_metadata=.*?(?=\n|$)/g, '')
-                           .replace(/id='.*?'/g, '')
-                           .replace(/usage_metadata=.*?(?=\n|$)/g, '')
-                           .replace(/<class '.*?'>/g, '')
-                           .trim();
-            
-            if (agentNode.includes("generate_response_agent") || 
-                agentNode.includes("generate_findings_agent")) {
-              
-              const findingId = `${nodeName}-${content}`.trim();
-              if (!isMessageProcessed(findingId, nodeName)) {
-                setFindings(prev => ({
-                  ...prev,
-                  pd: [...prev.pd, {
-                    id: crypto.randomUUID(),
-                    agent: nodeName || "findings",
-                    content: content.trim(),
-                    timestamp
-                  }]
-                }));
-                markMessageAsProcessed(findingId, nodeName);
-              }
-            } else {
-              let cleanedContent = content;
-              
-              if (content.startsWith("trial supervisor - ")) {
-                cleanedContent = content.replace("trial supervisor - ", "").trim();
-              } else if (content.startsWith("CRM - ")) {
-                cleanedContent = content.replace("CRM - ", "").trim();
-              }
-              
-              if (!isMessageProcessed(cleanedContent, nodeName)) {
-                addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
-                markMessageAsProcessed(cleanedContent, nodeName);
-              }
-            }
-          } else {
-            if (!isMessageProcessed(message, '')) {
-              addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
-              markMessageAsProcessed(message, '');
-            }
+        if (data.ai_messages === "Agent is processing!") {
+          if (!isMessageProcessed(data.ai_messages, '')) {
+            addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
+            markMessageAsProcessed(data.ai_messages, '');
           }
+          return;
         }
-      }
 
-      if (withFindings) {
-        await delay(1500);
+        console.log("Received new messages, current length:", data.ai_messages.length);
+        console.log("Previous messages length:", previousAIMessagesRef.current.length);
+
+        // Get only the new messages by comparing with previous state
+        const newContent = getNewMessages(data.ai_messages, previousAIMessagesRef.current);
         
-        const timestamp = new Date().toISOString();
-        const mockFindings = {
-          PD: [
-            {
-              id: crypto.randomUUID(),
-              agent: "inspection",
-              content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
-              timestamp
-            }
-          ],
-          AE: [
-            {
-              id: crypto.randomUUID(),
-              agent: "inspection",
-              content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
-              timestamp
-            }
-          ],
-          SGR: []
-        };
-
-        for (const finding of mockFindings.PD) {
-          if (!isMessageProcessed(finding.content, finding.agent)) {
-            await delay(800);
-            setFindings(prev => ({
-              ...prev,
-              pd: [...prev.pd, finding]
-            }));
-            markMessageAsProcessed(finding.content, finding.agent);
-          }
-        }
+        // Update previous messages for next comparison
+        previousAIMessagesRef.current = data.ai_messages;
         
-        for (const finding of mockFindings.AE) {
-          if (!isMessageProcessed(finding.content, finding.agent)) {
-            await delay(800);
-            setFindings(prev => ({
-              ...prev,
-              ae: [...prev.ae, finding]
-            }));
-            markMessageAsProcessed(finding.content, finding.agent);
-          }
+        // If there's no new content, return early
+        if (!newContent) {
+          console.log("No new content found");
+          return;
         }
+
+        console.log("Processing new content, length:", newContent.length);
+        
+        // Process the new messages
+        await processAIMessages(newContent, withFindings);
       }
     } catch (error) {
-      console.error("Error fetching messages:", error);
-      const errorMessage = `Error fetching messages: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
-      if (!isMessageProcessed(errorMessage, '')) {
-        addAgentMessage(errorMessage, undefined, { agentPrefix: '', nodeName: '' });
-        markMessageAsProcessed(errorMessage, '');
-      }
+      console.error("Error fetching AI messages:", error);
     }
   };
 
