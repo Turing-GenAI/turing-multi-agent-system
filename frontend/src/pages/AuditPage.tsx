@@ -220,7 +220,7 @@ export const AuditPage: React.FC = () => {
     setMessageQueue(prev => [...prev, { message, toolType, options }]);
   };
 
-  const processAIMessages = async (messages: string[], withFindings: boolean = false) => {
+  const processAIMessages = async (messages: string, withFindings: boolean = false) => {
     const split_delimiters = [
       "================================== Ai Message ==================================", 
       "================================= Tool Message ================================="
