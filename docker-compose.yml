@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    image: auditcopilot.azurecr.io/web:v1
+    image: auditcopilot.azurecr.io/web:v2_turing_demo
     ports:
       - "8000:8000"
     depends_on:
@@ -22,7 +22,7 @@ services:
 
   frontend:
     build: ./react_app
-    image: auditcopilot.azurecr.io/frontend:v1
+    image: auditcopilot.azurecr.io/frontend:v2_turing_demo
     command: ["npm", "run", "start"]
     ports:
       - "3000:3000"

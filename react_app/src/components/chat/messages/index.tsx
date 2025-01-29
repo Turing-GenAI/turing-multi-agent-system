@@ -17,7 +17,7 @@ export interface ChatSectionProps {
 
 const Messages: React.FC<ChatSectionProps> = React.memo(
 	({ useCase, messages, setDisabled, shouldScroll }) => {
-		const messageEndRef = useRef<HTMLDivElement>(null);
+		// const messageEndRef = useRef<HTMLDivElement>(null);
 
 		// const [isUserScrolling, setIsUserScrolling] = useState(false);
 		// messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,13 +88,13 @@ const Messages: React.FC<ChatSectionProps> = React.memo(
 		// }, [messages.length, messageEndRef]);
 
 		// useEffect(() => {
-			// const scrollToBottom = () => {
-				// window.scrollTo(0, document.body.scrollHeight);
-				// messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-			// };
-			// if (!isUserScrolling) {
-			// scrollToBottom();
-			// }
+		// const scrollToBottom = () => {
+		// window.scrollTo(0, document.body.scrollHeight);
+		// messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+		// };
+		// if (!isUserScrolling) {
+		// scrollToBottom();
+		// }
 		// }, [messages.length, shouldScroll]);
 
 		return (
@@ -104,7 +104,7 @@ const Messages: React.FC<ChatSectionProps> = React.memo(
 						<div className="col-md-10">
 							<div className="chatsection">
 								<MessageList messages={messages} setDisabled={setDisabled} />
-								<div ref={messageEndRef}></div>
+								{/* <div ref={messageEndRef}></div> */}
 							</div>
 						</div>
 					</div>
@@ -114,4 +114,4 @@ const Messages: React.FC<ChatSectionProps> = React.memo(
 	}
 );
 
-export default Messages;
+export default React.memo(Messages);

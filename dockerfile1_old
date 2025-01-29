@@ -12,8 +12,7 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libreoffice \
+RUN apt-get update && apt-get install -y libreoffice --no-install-recommends \
     python3.10 \
     python3-pip \
     python3.10-venv \
@@ -24,26 +23,26 @@ RUN apt-get update && apt-get install -y \
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - && \
-    mv /root/.local/bin/poetry /usr/local/bin/
+    mv /root/.local/bin/poetry /usr/local/bin/  # Move Poetry to a globally accessible location
 
 # Add Poetry to PATH
 ENV PATH="/usr/local/bin:$PATH"
 
-# Copy project files
+
+# Copy project
 COPY . /app
 
+
 # Install project dependencies
-RUN poetry self update && \
-    cd /app/scheduler_app && poetry config virtualenvs.create false && \
-    poetry install --without dev --no-root && \
+RUN cd /app/scheduler_app && poetry config virtualenvs.create false && \
+    poetry install --no-dev && \
     cd /app/jnj_audit_copilot && poetry config virtualenvs.create false && \
-    poetry install --without dev --no-root
+    poetry install --no-dev
 
 # Install uvicorn
 RUN pip install uvicorn
 
-# Set work directory
-WORKDIR /app/scheduler_app
+WORKDIR /app/scheduler_app  
 
 # Set virtual environment activation (for non-interactive mode)
 ENV VIRTUAL_ENV="/app/scheduler_app/.venv"

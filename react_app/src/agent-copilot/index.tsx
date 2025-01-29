@@ -34,7 +34,7 @@ const AgentSettingsPopup: React.FC = () => {
 	);
 
 	const [messages, setMessages] = useState<messagesType[]>([]);
-	const [shouldScroll, setShouldScroll] = useState(true);
+	// const [shouldScroll, setShouldScroll] = useState(true);
 
 	const [trialMasterMessages, setTrialMasterMessages] = useState<
 		messagesType[]
@@ -100,7 +100,7 @@ const AgentSettingsPopup: React.FC = () => {
 
 	const handleAgentSelect = (agent: string) => {
 		setSelectedAgent(agent);
-		setShouldScroll(true); // Trigger
+		// setShouldScroll(true); // Trigger
 
 		if (agent === "Trial master") {
 			updateMessages(trialMasterMessages);
@@ -116,8 +116,26 @@ const AgentSettingsPopup: React.FC = () => {
 	};
 
 	const send_human_feedback = async (feedback: string, job_id: string) => {
+		// addMessage(feedback, "right");
+		setMessages((prevMessages: any) => [
+			...prevMessages,
+			{
+				type: "right",
+				text: feedback,
+				time: new Date().toLocaleTimeString(),
+				icon: false,
+			},
+		]);
+		setInspectionMasterMessages((prevMessages: any) => [
+			...prevMessages,
+			{
+				type: "right",
+				text: feedback,
+				time: new Date().toLocaleTimeString(),
+				icon: false,
+			},
+		]);
 		try {
-			addMessage(feedback, "right");
 			const response = await fetch(
 				`${process.env.REACT_APP_API_URL}/update-job/${job_id}`,
 				{
@@ -132,7 +150,6 @@ const AgentSettingsPopup: React.FC = () => {
 				}
 			);
 			if (response.ok) {
-				// addMessage(feedback, "right");
 				setHumanFeedback(!humanFeedback);
 				setJob((prevJob: any) => ({
 					...prevJob, // Spread the previous job object
@@ -378,7 +395,6 @@ const AgentSettingsPopup: React.FC = () => {
 						new Date(b.run_at).getTime() - new Date(a.run_at).getTime()
 				);
 
-				console.log(fetchedJobs, "haha job");
 				let fetchedJob = fetchedJobs[0];
 				if (fetchedJob) {
 					// update only if the status has changed...!
@@ -494,19 +510,35 @@ const AgentSettingsPopup: React.FC = () => {
 	};
 
 	// Inside your component
-	const updateMessages = useCallback(
-		(newMessages: React.SetStateAction<messagesType[]>) => {
-			if (JSON.stringify(messages) !== JSON.stringify(newMessages)) {
-				setMessages(newMessages);
+	const updateMessages = useCallback((newMessages: messagesType[]) => {
+		const uniqueMessages: messagesType[] = [];
+		const seenMessages = new Set<string>();
+		if (newMessages.length !== messages.length) {
+			for (const newMsg of newMessages) {
+				const normalizedText = newMsg.text.replace(/\n/g, " "); // Replace line breaks with spaces
+				const messageSignature = `${normalizedText}-${newMsg.time}-${newMsg.type}`;
+				if (!seenMessages.has(messageSignature)) {
+					uniqueMessages.push(newMsg);
+					seenMessages.add(messageSignature);
+				}
 			}
-		},
-		[messages]
-	); // Dependency on current messages
+
+			console.log(messages, "existing messages");
+			console.log(uniqueMessages, "unique messages....!");
+
+			if (uniqueMessages.length > 0) {
+				setMessages((prevMessages: messagesType[]) => [
+					...prevMessages,
+					...uniqueMessages,
+				]);
+			}
+		}
+	}, []); // Dependency on current messages
 
 	// Reset shouldScroll when messages are updated
-	useEffect(() => {
-		setShouldScroll(false);
-	}, [messages]);
+	// useEffect(() => {
+	// 	setShouldScroll(false);
+	// }, [messages]);
 
 	useEffect(() => {
 		setSiteId("CHOOSE SITE"); // Reset siteId when trial changes
@@ -517,7 +549,7 @@ const AgentSettingsPopup: React.FC = () => {
 		setSelectedTab(0);
 		setMessages([]);
 		getJob(siteId);
-		setShouldScroll(true);
+		// setShouldScroll(true);
 	}, [siteId]);
 
 	useEffect(() => {
@@ -543,7 +575,9 @@ const AgentSettingsPopup: React.FC = () => {
 				setAlertType("warning");
 				setShowAlertBar(true);
 				setFooterDisabled(false);
-				handleAgentSelect("Inspection master"); //when feedback required change to inspection agent.
+				if (selectedAgent !== "Inspection master") {
+					handleAgentSelect("Inspection master");
+				}
 
 				// setMessages(inspectionMasterMessages);
 			} else if (foundJob?.status == "completed") {
@@ -598,17 +632,17 @@ const AgentSettingsPopup: React.FC = () => {
 			) {
 				getJob(siteId); // Use the ref here
 			}
-		}, 40000); // 8000 ms = 8 seconds
+		}, 2000); // 8000 ms = 8 seconds
 
 		// check status after 33 seconds if status is take human feedback.
 		// const feedbackIntervalId = setInterval(() => {
-			// if (
-				// Object.keys(foundJob).length > 0 &&
-				// foundJob.status === "take_human_feedback"
-			// ) {
-				// getJob(siteId);
-			// }
-		// }, 30000);
+		// 	if (
+		// 		Object.keys(foundJob).length > 0 &&
+		// 		foundJob.status === "take_human_feedback"
+		// 	) {
+		// 		getJob(siteId);
+		// 	}
+		// }, 8000);
 
 		// Cleanup function to clear the intervals on component unmount
 		return () => {
@@ -749,7 +783,7 @@ const AgentSettingsPopup: React.FC = () => {
 										chat_id={"1"}
 										setDisabled={(param: boolean) => setDisabled(param)}
 										useCase={0}
-										shouldScroll={shouldScroll}
+										shouldScroll={false}
 									/>
 								</div>
 
@@ -798,4 +832,4 @@ const AgentSettingsPopup: React.FC = () => {
 	);
 };
 
-export default AgentSettingsPopup;
+export default React.memo(AgentSettingsPopup);

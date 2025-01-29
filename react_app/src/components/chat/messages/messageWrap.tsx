@@ -104,55 +104,57 @@ const MessageWrap: React.FC<MessageWrapProps> = React.memo(
 				setDisabled(true);
 			}
 		});
-		const [isUserScrolling, setIsUserScrolling] = useState(false);
 
-		useEffect(() => {
-			let userHasScrolled = false;
+		// const [isUserScrolling, setIsUserScrolling] = useState(false);
 
-			const handleUserScroll = () => {
-				userHasScrolled = true;
-				setIsUserScrolling(true);
-				window.removeEventListener("scroll", handleScroll);
-			};
+		// useEffect(() => {
+		// 	let userHasScrolled = false;
 
-			const handleScroll = () => {
-				const scrollTop =
-					window.pageYOffset || document.documentElement.scrollTop;
-				const scrollHeight = document.documentElement.scrollHeight;
-				const clientHeight = document.documentElement.clientHeight;
+		// 	const handleUserScroll = () => {
+		// 		userHasScrolled = true;
+		// 		setIsUserScrolling(true);
+		// 		window.removeEventListener("scroll", handleScroll);
+		// 	};
 
-				// Check if user is near the bottom
-				if (scrollHeight - scrollTop <= clientHeight + 100) {
-					setIsUserScrolling(false);
-				} else {
-					setIsUserScrolling(true);
-				}
+		// 	const handleScroll = () => {
+		// 		const scrollTop =
+		// 			window.pageYOffset || document.documentElement.scrollTop;
+		// 		const scrollHeight = document.documentElement.scrollHeight;
+		// 		const clientHeight = document.documentElement.clientHeight;
 
-				if (!userHasScrolled) {
-					userHasScrolled = true;
-					window.removeEventListener("scroll", handleScroll);
-				}
-			};
+		// 		// Check if user is near the bottom
+		// 		if (scrollHeight - scrollTop <= clientHeight + 100) {
+		// 			setIsUserScrolling(false);
+		// 		} else {
+		// 			setIsUserScrolling(true);
+		// 		}
 
-			window.addEventListener("scroll", handleScroll);
-			window.addEventListener("wheel", handleUserScroll);
-			window.addEventListener("touchmove", handleUserScroll);
+		// 		if (!userHasScrolled) {
+		// 			userHasScrolled = true;
+		// 			window.removeEventListener("scroll", handleScroll);
+		// 		}
+		// 	};
 
-			return () => {
-				window.removeEventListener("scroll", handleScroll);
-				window.removeEventListener("wheel", handleUserScroll);
-				window.removeEventListener("touchmove", handleUserScroll);
-			};
-		}, []);
+		// 	window.addEventListener("scroll", handleScroll);
+		// 	window.addEventListener("wheel", handleUserScroll);
+		// 	window.addEventListener("touchmove", handleUserScroll);
 
-		useEffect(() => {
-			const scrollToBottom = () => {
-				window.scrollTo(0, document.body.scrollHeight);
-			};
-			if (!isUserScrolling) {
-				scrollToBottom();
-			}
-		}, [isUserScrolling]);
+		// 	return () => {
+		// 		window.removeEventListener("scroll", handleScroll);
+		// 		window.removeEventListener("wheel", handleUserScroll);
+		// 		window.removeEventListener("touchmove", handleUserScroll);
+		// 	};
+		// }, []);
+
+		// useEffect(() => {
+		// 	const scrollToBottom = () => {
+		// 		window.scrollTo(0, document.body.scrollHeight);
+		// 	};
+		// 	if (!isUserScrolling) {
+		// 		scrollToBottom();
+		// 	}
+		// }, [isUserScrolling]);
+
 		return (
 			<div className={`message-wrap ${msg.type}`}>
 				<div className="d-flex flex-row">
@@ -226,4 +228,4 @@ const MessageWrap: React.FC<MessageWrapProps> = React.memo(
 	}
 );
 
-export default MessageWrap;
+export default React.memo(MessageWrap);
