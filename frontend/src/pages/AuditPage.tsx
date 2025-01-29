@@ -113,14 +113,14 @@ export const AuditPage: React.FC = () => {
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Queue to store pending messages
-  const [messageQueue, setMessageQueue] = useState<{
+  const [messageQueue, setMessageQueue] = useState<Array<{
     message: string;
-    toolType?: 'trial' | 'site' | 'date' | 'button';
-    options?: { 
+    toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree';
+    options?: {
       agentPrefix?: string;
       nodeName?: string;
-    }
-  }[]>([]);
+    };
+  }>>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
   // Process messages in queue
@@ -210,7 +210,7 @@ export const AuditPage: React.FC = () => {
 
   const addAgentMessage = async (
     message: string, 
-    toolType?: 'trial' | 'site' | 'date' | 'button',
+    toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree',
     options?: { 
       agentPrefix?: string;
       nodeName?: string;

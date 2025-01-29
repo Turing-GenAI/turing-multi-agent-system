@@ -2,9 +2,11 @@ import React from 'react';
 import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { FloatingDatePicker } from './FloatingDatePicker';
+import ProgressTree from './tools/progresstree/ProgressTree';
+import { TreeNode } from '../data/activities';
 
 interface ToolUIProps {
-  type: 'trial' | 'site' | 'date' | 'button';
+  type: 'trial' | 'site' | 'date' | 'button' | 'progresstree';
   value: any;
   onChange: (value: any) => void;
   options?: {
@@ -18,12 +20,34 @@ interface ToolUIProps {
     };
     buttonText?: string;
     isAnalysisStarted?: boolean;
+    progressTreeProps?: {
+      showBreadcrumbs?: boolean;
+      showMiniMap?: boolean;
+      showKeyboardNav?: boolean;
+      showQuickActions?: boolean;
+      initialExpandedNodes?: string[];
+      animationDuration?: number;
+    };
   };
 }
 
 export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }) => {
   switch (type) {
-    case 'button':
+    case 'progresstree': {
+      const treeNode = value as TreeNode | null;
+      return (
+        <div className="mt-4">
+          <ProgressTree
+            type="full"
+            value={treeNode}
+            onChange={onChange}
+            options={options?.progressTreeProps}
+          />
+        </div>
+      );
+    }
+
+    case 'button': {
       return (
         <div className="mt-4">
           <button
@@ -40,8 +64,9 @@ export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }
           </button>
         </div>
       );
+    }
 
-    case 'trial':
+    case 'trial': {
       return (
         <div className="mt-4 relative">
           <select
@@ -65,8 +90,9 @@ export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }
           </div>
         </div>
       );
+    }
 
-    case 'site':
+    case 'site': {
       return (
         <div className="mt-4 relative">
           <select
@@ -90,8 +116,9 @@ export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }
           </div>
         </div>
       );
+    }
 
-    case 'date':
+    case 'date': {
       const dateRange = value as { from: Date | undefined; to: Date | undefined };
       const { ref, targetRef, isOpen, setIsOpen } = options?.datePickerProps || {};
 
@@ -130,8 +157,10 @@ export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }
           )}
         </div>
       );
+    }
 
-    default:
+    default: {
       return null;
+    }
   }
 };

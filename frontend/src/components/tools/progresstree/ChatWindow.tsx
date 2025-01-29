@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Paper, TextField, IconButton, Typography } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import MainLayout from './MainLayout';
+import ProgressTree from './ProgressTree';
 import DetailPane from './DetailPane';
 import BreadcrumbTrail from './BreadcrumbTrail';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -180,7 +180,17 @@ const ChatWindow: React.FC = () => {
                     </Typography>
                     {message.tool === 'TreePane' && (
                       <Box sx={{ mt: 2 }}>
-                        <MainLayout onNodeSelect={handleNodeSelect} />
+                        <ProgressTree 
+                          type="full"
+                          value={selectedNode}
+                          onChange={handleNodeSelect}
+                          options={{
+                            showBreadcrumbs: true,
+                            showMiniMap: true,
+                            showKeyboardNav: true,
+                            showQuickActions: true
+                          }}
+                        />
                       </Box>
                     )}
                   </Paper>

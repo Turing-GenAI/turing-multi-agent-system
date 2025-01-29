@@ -72,7 +72,7 @@ const realAuditService = {
     return apiClient.post<ScheduleJobResponse>(endpoint, body);
   },
   
-  getJobDetails: async (jobId: string, status: string): Promise<ApiResponse<JobResponse>> => {
+  getJobDetails: async (status: string): Promise<ApiResponse<JobResponse>> => {
     const endpoint = `/jobs/?status=${encodeURIComponent(status)}`;
     return apiClient.get<JobResponse>(endpoint);
   },
@@ -189,7 +189,7 @@ const mockAuditService = {
     };
   },
   
-  getJobDetails: async (jobId: string, status: string): Promise<ApiResponse<JobResponse>> => {
+  getJobDetails: async (jobId: string): Promise<ApiResponse<JobResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
