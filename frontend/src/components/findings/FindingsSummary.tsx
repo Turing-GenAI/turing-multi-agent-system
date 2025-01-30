@@ -180,12 +180,12 @@ export const FindingsSummary: React.FC = () => {
   return (
     <>
       <div className="flex flex-col space-y-4">
-        <div>
+        {/* <div>
           <h2 className="text-lg font-semibold text-gray-900">Findings Summary</h2>
           <p className="text-sm text-gray-500">
             {aeFindings + pdFindings} findings identified
           </p>
-        </div>
+        </div> */}
 
         <div className="flex items-center space-x-6 text-sm">
           <div 
