@@ -64,7 +64,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
       <div 
         className={`
-          relative max-w-[80%] min-w-[60px] p-4 
+          relative max-w-[100%] min-w-[60px] p-4 
           transition-all duration-200
           hover:shadow-lg
           ${bubbleStyles}
