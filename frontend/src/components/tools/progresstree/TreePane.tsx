@@ -39,6 +39,12 @@ interface AnimatedTextProps {
   speed?: number;
 }
 
+interface SummaryPopupProps {
+  summary: string;
+  isVisible: boolean;
+  position: { x: number; y: number };
+}
+
 const AnimatedText: React.FC<AnimatedTextProps> = ({ text, delay = 0, speed = 0.05 }) => {
   return (
     <motion.div
@@ -79,6 +85,42 @@ const AnimatedText: React.FC<AnimatedTextProps> = ({ text, delay = 0, speed = 0.
   );
 };
 
+const SummaryPopup: React.FC<SummaryPopupProps> = ({ summary, isVisible, position }) => {
+  if (!isVisible) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed',
+        left: position.x,
+        top: position.y,
+        zIndex: 1000,
+        pointerEvents: 'none'
+      }}
+    >
+      <Box
+        sx={{
+          bgcolor: 'background.paper',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          borderRadius: 1,
+          p: 2,
+          maxWidth: '400px',
+          maxHeight: '200px',
+          overflow: 'auto'
+        }}
+      >
+        <Typography variant="body2">
+          {summary}
+        </Typography>
+      </Box>
+    </motion.div>
+  );
+};
+
 const TreeNode: React.FC<TreeNodeProps> = ({
   node,
   depth = 0,
@@ -96,12 +138,39 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const hasChildren = node.children && node.children.length > 0;
   const isLeaf = !hasChildren;
 
+  const [popupPosition, setPopupPosition] = React.useState({ x: 0, y: 0 });
+  const [showPopup, setShowPopup] = React.useState(false);
+
   const handleNodeSelect = () => {
     onNodeSelect({ ...node, path: nodePath });
   };
 
+  const handleMouseEnter = (event: React.MouseEvent) => {
+    if (node.summary) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      setPopupPosition({
+        x: rect.right + 10,
+        y: rect.top
+      });
+      setShowPopup(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setShowPopup(false);
+  };
+
   return (
     <Box sx={{ position: 'relative' }}>
+      {node.summary && (
+        <AnimatePresence>
+          <SummaryPopup
+            summary={node.summary}
+            isVisible={showPopup}
+            position={popupPosition}
+          />
+        </AnimatePresence>
+      )}
       <BranchLines 
         depth={depth}
         isLastChild={isLastChild}
@@ -118,6 +187,8 @@ const TreeNode: React.FC<TreeNodeProps> = ({
           component={motion.div}
           whileHover={{ scale: 1.01 }}
           onClick={handleNodeSelect}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           sx={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -129,9 +200,12 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             minHeight: '40px',
             borderRadius: 1,
             transition: 'all 0.2s ease-in-out',
+            border: '1px solid transparent',
             '&:hover': {
               bgcolor: 'background.highlight',
-              boxShadow: isLeaf ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+              borderColor: 'primary.light',
+              transform: 'translateX(4px)',
             },
             ...(isSelected && {
               bgcolor: 'background.highlight',
@@ -149,8 +223,6 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             }),
             ...(isLeaf && {
               margin: '4px 8px',
-              border: '1px solid',
-              borderColor: 'divider',
               '&:hover': {
                 borderColor: 'primary.light',
                 transform: 'translateX(4px)',
