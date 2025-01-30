@@ -202,14 +202,33 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             borderRadius: 1,
             transition: 'all 0.2s ease-in-out',
             border: '1px solid transparent',
+            bgcolor: () => {
+              if (node.name.includes('critique_agent')) return 'rgba(254, 243, 199, 0.3)' // Light yellow
+              if (node.name.includes('reflection_agent')) return 'rgba(209, 250, 229, 0.3)' // Light green
+              if (node.name.includes('feedback_agent')) return 'rgba(219, 234, 254, 0.3)' // Light blue
+              if (node.name.includes('Unknown')) return 'rgba(243, 244, 246, 0.5)' // Light gray
+              return 'transparent'
+            },
             '&:hover': {
-              bgcolor: 'background.highlight',
+              bgcolor: () => {
+                if (node.name.includes('critique_agent')) return 'rgba(254, 243, 199, 0.5)'
+                if (node.name.includes('reflection_agent')) return 'rgba(209, 250, 229, 0.5)'
+                if (node.name.includes('feedback_agent')) return 'rgba(219, 234, 254, 0.5)'
+                if (node.name.includes('Unknown')) return 'rgba(243, 244, 246, 0.7)'
+                return 'background.highlight'
+              },
               boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
               borderColor: 'primary.light',
               transform: 'translateX(4px)',
             },
             ...(isSelected && {
-              bgcolor: 'background.highlight',
+              bgcolor: () => {
+                if (node.name.includes('critique_agent')) return 'rgba(254, 243, 199, 0.6)'
+                if (node.name.includes('reflection_agent')) return 'rgba(209, 250, 229, 0.6)'
+                if (node.name.includes('feedback_agent')) return 'rgba(219, 234, 254, 0.6)'
+                if (node.name.includes('Unknown')) return 'rgba(243, 244, 246, 0.8)'
+                return 'background.highlight'
+              },
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
               '&::before': {
                 content: '""',
@@ -218,7 +237,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 top: 0,
                 bottom: 0,
                 width: '3px',
-                bgcolor: 'primary.main',
+                bgcolor: () => {
+                  if (node.name.includes('critique_agent')) return 'warning.main'
+                  if (node.name.includes('reflection_agent')) return 'success.main'
+                  if (node.name.includes('feedback_agent')) return 'info.main'
+                  if (node.name.includes('Unknown')) return 'grey.500'
+                  return 'primary.main'
+                },
                 borderRadius: '0 4px 4px 0',
               },
             }),
@@ -259,7 +284,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 sx={{
                   fontSize: isLeaf ? '1rem' : '0.9rem',
                   fontWeight: isSelected ? 600 : isLeaf ? 500 : 400,
-                  color: isLeaf ? 'primary.main' : 'text.primary',
+                  color: () => {
+                    if (node.name.includes('critique_agent')) return 'warning.dark'
+                    if (node.name.includes('reflection_agent')) return 'success.dark'
+                    if (node.name.includes('feedback_agent')) return 'info.dark'
+                    if (node.name.includes('Unknown')) return 'grey.700'
+                    return isLeaf ? 'primary.main' : 'text.primary'
+                  },
                   letterSpacing: '0.01em',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -268,7 +299,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
               >
                 {getAgentDisplayNameByNode(node.name)}
               </Typography>
-              {isLeaf && node.summary && (
+              {node.summary && (
                 <AnimatedText 
                   text={node.summary}
                   delay={0.2}
