@@ -81,6 +81,7 @@ export const AuditPage: React.FC = () => {
   const previousAIMessagesRef = useRef<string>('');
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
+  const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -585,7 +586,17 @@ export const AuditPage: React.FC = () => {
   };
 
   const getCurrentFindings = () => {
-    return [...findings.pd, ...findings.ae, ...findings.sgr];
+    // Ensure findings is properly initialized
+    if (!findings) return [];
+    
+    // Combine all findings into a single array
+    const allFindings = [
+      ...(Array.isArray(findings.pd) ? findings.pd : []),
+      ...(Array.isArray(findings.ae) ? findings.ae : []),
+      ...(Array.isArray(findings.sgr) ? findings.sgr : [])
+    ];
+    
+    return allFindings;
   };
 
   const scheduleAnalysisJob = async () => {
@@ -634,6 +645,9 @@ export const AuditPage: React.FC = () => {
 
   const handleToolInput = (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => {
     console.log('Tool Input:', { type, value });
+    if (type === 'progresstree') {
+      setSelectedTreeNode(value);
+    }
   };
 
   return (
@@ -661,7 +675,7 @@ export const AuditPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 py-4 px-6">
           <div className="flex items-center justify-between">
@@ -690,7 +704,7 @@ export const AuditPage: React.FC = () => {
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden p-6">
+        <div className="flex-1 overflow-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <AgentWindow
@@ -711,8 +725,11 @@ export const AuditPage: React.FC = () => {
               />
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <FindingsTable
+              <FindingsTable 
                 findings={getCurrentFindings()}
+                selectedTreeNode={selectedTreeNode}
+                selectedFindingTab={selectedFindingTab}
+                setSelectedFindingTab={setSelectedFindingTab}
                 expandedRows={expandedRows}
                 setExpandedRows={setExpandedRows}
               />

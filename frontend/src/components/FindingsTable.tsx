@@ -1,31 +1,37 @@
 import React, { useMemo } from 'react';
-import { ChevronDown, ChevronRight, AlertCircle, ArrowUpCircle, Eye, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
-import { Finding, FindingCategory } from '../types';
+import { Box } from '@mui/material';
+import DetailPane from './tools/progresstree/DetailPane';
+import { Finding } from '../types';
 import { FindingCard } from './findings/FindingCard';
 import { FindingsSummary } from './findings/FindingsSummary';
+
+interface TreeNode {
+  title: string;
+  content?: string;
+  children?: TreeNode[];
+}
 
 interface FindingsTableProps {
   selectedFindingTab: string;
   setSelectedFindingTab: (value: string) => void;
-  findings: Finding[];
+  findings: Array<{
+    id: string;
+    agent: string;
+    content: string;
+    timestamp: string;
+  }>;
   expandedRows: string[];
   setExpandedRows: (value: string[]) => void;
+  selectedTreeNode: TreeNode | null;
 }
-
-const tabToCategoryMap: Record<string, FindingCategory> = {
-  'pd': 'Protocol Deviation',
-  'ae': 'Adverse Event',
-  'sgr': 'Site Generated Report'
-};
 
 export const FindingsTable: React.FC<FindingsTableProps> = ({
   selectedFindingTab,
   setSelectedFindingTab,
-  findings,
+  findings = [],
   expandedRows,
   setExpandedRows,
+  selectedTreeNode,
 }) => {
   const toggleRow = (id: string) => {
     setExpandedRows(
@@ -35,55 +41,38 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
     );
   };
 
-  const getSeverityStyles = (severity: string) => {
-    switch (severity) {
-      case 'Critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'Major':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    }
-  };
-
   const filteredFindings = useMemo(() => {
-    // Original code with tabs filtering
-    // const category = tabToCategoryMap[selectedFindingTab];
-    // return findings.filter(finding => finding.category === category);
-    
-    // New code: Return all findings without filtering
-    return findings;
-  }, [findings, selectedFindingTab]);
+    return findings || [];
+  }, [findings]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm h-[680px] flex flex-col">
-      <div className="p-4 border-b space-y-4">
-        <FindingsSummary findings={findings} />
-        {/* Original tabs code
-        <Tabs value={selectedFindingTab} onValueChange={setSelectedFindingTab}>
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="pd">Protocol Deviations</TabsTrigger>
-            <TabsTrigger value="ae">Adverse Events</TabsTrigger>
-            <TabsTrigger value="sgr">Site Generated Reports</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        */}
-        
-        {/* for single  */}
-        {/* <Tabs value={selectedFindingTab} onValueChange={setSelectedFindingTab}>
-          <TabsList>
-            <TabsTrigger value="all">Findings</TabsTrigger>
-          </TabsList>
-        </Tabs> */}
-      </div>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* DetailPane Section */}
+      {/* <Box sx={{ flex: '0 0 auto', height: '300px', p: 2 }}>
+        <DetailPane selectedNode={selectedTreeNode} />
+      </Box> */}
 
-      <div className="h-[520px] overflow-y-auto">
-        <div className="p-4 space-y-4">
-          {filteredFindings.map((finding) => (
-            <FindingCard key={finding.id} finding={finding} />
-          ))}
+      {/* Findings Section */}
+      <Box sx={{ flex: '1 1 auto', overflow: 'auto' }}>
+        <div className="bg-white rounded-lg shadow-sm flex flex-col">
+          <div className="p-4 border-b space-y-4">
+            <FindingsSummary findings={findings} />
+          </div>
+          <DetailPane selectedNode={selectedTreeNode} />
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-4">
+              {filteredFindings.map((finding) => (
+                <FindingCard 
+                  key={finding.id} 
+                  finding={finding}
+                  isExpanded={expandedRows.includes(finding.id)}
+                  onToggle={() => toggleRow(finding.id)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
