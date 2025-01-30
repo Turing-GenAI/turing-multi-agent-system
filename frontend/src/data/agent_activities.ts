@@ -18,6 +18,183 @@ export interface FlatNode extends TreeNode {
   hasChildren: boolean;
 }
 
+export const agentActivities1: TreeNode[] = [
+  {
+    "id": 2,
+    "content": "-> Detected site review areas for audit inspection: PD, AE_SAE\nInvoking Inspection Master Agent",
+    "summary": "The site review areas identified for audit inspection are PD and AE_SAE. The process involves invoking the Inspection Master Agent.",
+    "name": "trial supervisor - inspection_master_agent"
+  },
+  {
+    "id": 3,
+    "content": "Picked the site area for execution: PD\nGot 1 activities to carry out related to PD\n*<activity_id#PD_001>  Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+    "summary": "The site area selected for execution is PD, where one activity is to be carried out. This activity involves checking the management of the reported PDs to ensure they have been resolved or closed within an acceptable time frame.",
+    "name": "inspection - site_area_agent",
+    "children": [
+      {
+        "id": 5,
+        "content": "Invoking the site area agent for below main activity:\n<activity_id#PD_001> ###  Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+        "summary": "The site area agent is tasked with reviewing the management of reported PDs to confirm they have been resolved or closed within an acceptable timeframe. This involves monitoring the status of activity ID PD_001.",
+        "name": "inspection - site_area_router"
+      },
+      {
+        "id": 6,
+        "content": "Generating sub-activities for: <activity_id#PD_001>\nBelow are the generated sub-activities:\n\u00e2\u20ac\u00a2 Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+        "summary": "The sub-activity for activity ID PD_001 involves verifying that the management of reported PDs has been effectively handled. This includes ensuring that all issues have been resolved or closed within an acceptable time frame.",
+        "name": "inspection - planner_agent"
+      },
+      {
+        "id": 7,
+        "content": "Invoking critique agent for validating sub-activities\nLLM Feedback on sub-activities:\nDo we need to work on feedback-> Yes,\nWhat is the feedback-> The sub-questions related to the management of protocol deviations (PDs) should be more specific and actionable. They should cover key aspects such as the identification, documentation, resolution, and closure of PDs. Additionally, the sub-questions should be logically sequenced to follow the process of managing PDs from start to finish. Here are some suggestions for improvement:\n1. How are protocol deviations identified and documented?\n2. What is the process for assessing the impact of each protocol deviation on the study?\n3. How is the resolution of protocol deviations tracked and monitored?\n4. What is the average time frame for resolving protocol deviations?\n5. Are there any protocol deviations that remain unresolved or open beyond the acceptable time frame?\n6. How is the closure of protocol deviations documented and verified?\n7. Are there any recurring protocol deviations, and if so, what measures are being taken to prevent them?\n8. How is communication regarding protocol deviations managed between the study team and relevant stakeholders?\n9. Are there any standard operating procedures in place for managing protocol deviations?\n10. How is compliance with the protocol deviation management process audited and reviewed?\nThese sub-questions ensure a comprehensive review of the management of protocol deviations and their resolution within an acceptable time frame.",
+        "summary": "The feedback emphasizes the need for more specific and actionable sub-questions regarding the management of protocol deviations, focusing on key aspects such as identification, documentation, resolution, and closure. Suggested improvements include a logical sequence of questions that comprehensively address the entire process of managing protocol deviations effectively.",
+        "name": "inspection - critique_agent"
+      },
+      {
+        "id": 8,
+        "content": "Working on feedback\nUpdated sub-activities:\n1. How are protocol deviations identified and documented?\n2. What is the process for assessing the impact of each protocol deviation on the study?\n3. How is the resolution of protocol deviations tracked and monitored?",
+        "summary": "The updated sub-activities focus on the identification and documentation of protocol deviations, assessing their impact on the study, and tracking their resolution. These processes are essential for ensuring compliance and maintaining the integrity of the study.",
+        "name": "inspection - feedback_agent node"
+      },
+      {
+        "id": 9,
+        "content": "Invoking critique agent for validating sub-activities\nLLM Feedback on sub-activities:\nDo we need to work on feedback-> No,\nWhat is the feedback-> NA\n=",
+        "summary": "The critique agent is being used to validate sub-activities, and it has determined that no feedback is necessary. Additionally, there is no specific feedback provided for the sub-activities.",
+        "name": "inspection - critique_agent"
+      },
+      {
+        "id": 10,
+        "content": "Name: inspection - user_agent:\nUser input -> Human Feedback: y\n=\nInvoking user for validating output from feedback_agent.\nDo you approve of the above sub-activities?\nType 'y' to continue; otherwise, explain.\nPlease specify the adjustments you would like.\nUser input ->\n=================================== Agent Message y===================================",
+        "summary": "The user is prompted to validate the output from the feedback agent regarding sub-activities. The user approves by typing 'y', indicating they are satisfied with the output.",
+        "name": "Unknown"
+      },
+    ]
+  }
+];
+
+export const agentActivities2: TreeNode[] = [
+  {
+    "id": 2,
+    "content": "-> Detected site review areas for audit inspection: PD, AE_SAE\nInvoking Inspection Master Agent",
+    "summary": "The site review areas identified for audit inspection are PD and AE_SAE. The process involves invoking the Inspection Master Agent.",
+    "name": "trial supervisor - inspection_master_agent"
+  },
+  {
+    "id": 3,
+    "content": "Picked the site area for execution: PD\nGot 1 activities to carry out related to PD\n*<activity_id#PD_001>  Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+    "summary": "The site area selected for execution is PD, where one activity is to be carried out. This activity involves checking the management of the reported PDs to ensure they have been resolved or closed within an acceptable time frame.",
+    "name": "inspection - site_area_agent",
+    "children": [
+      {
+        "id": 5,
+        "content": "Invoking the site area agent for below main activity:\n<activity_id#PD_001> ###  Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+        "summary": "The site area agent is tasked with reviewing the management of reported PDs to confirm they have been resolved or closed within an acceptable timeframe. This involves monitoring the status of activity ID PD_001.",
+        "name": "inspection - site_area_router"
+      },
+      {
+        "id": 6,
+        "content": "Generating sub-activities for: <activity_id#PD_001>\nBelow are the generated sub-activities:\n\u00e2\u20ac\u00a2 Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+        "summary": "The sub-activity for activity ID PD_001 involves verifying that the management of reported PDs has been effectively handled. This includes ensuring that all issues have been resolved or closed within an acceptable time frame.",
+        "name": "inspection - planner_agent"
+      },
+      {
+        "id": 7,
+        "content": "Invoking critique agent for validating sub-activities\nLLM Feedback on sub-activities:\nDo we need to work on feedback-> Yes,\nWhat is the feedback-> The sub-questions related to the management of protocol deviations (PDs) should be more specific and actionable. They should cover key aspects such as the identification, documentation, resolution, and closure of PDs. Additionally, the sub-questions should be logically sequenced to follow the process of managing PDs from start to finish. Here are some suggestions for improvement:\n1. How are protocol deviations identified and documented?\n2. What is the process for assessing the impact of each protocol deviation on the study?\n3. How is the resolution of protocol deviations tracked and monitored?\n4. What is the average time frame for resolving protocol deviations?\n5. Are there any protocol deviations that remain unresolved or open beyond the acceptable time frame?\n6. How is the closure of protocol deviations documented and verified?\n7. Are there any recurring protocol deviations, and if so, what measures are being taken to prevent them?\n8. How is communication regarding protocol deviations managed between the study team and relevant stakeholders?\n9. Are there any standard operating procedures in place for managing protocol deviations?\n10. How is compliance with the protocol deviation management process audited and reviewed?\nThese sub-questions ensure a comprehensive review of the management of protocol deviations and their resolution within an acceptable time frame.",
+        "summary": "The feedback emphasizes the need for more specific and actionable sub-questions regarding the management of protocol deviations, focusing on key aspects such as identification, documentation, resolution, and closure. Suggested improvements include a logical sequence of questions that comprehensively address the entire process of managing protocol deviations effectively.",
+        "name": "inspection - critique_agent"
+      },
+      {
+        "id": 8,
+        "content": "Working on feedback\nUpdated sub-activities:\n1. How are protocol deviations identified and documented?\n2. What is the process for assessing the impact of each protocol deviation on the study?\n3. How is the resolution of protocol deviations tracked and monitored?",
+        "summary": "The updated sub-activities focus on the identification and documentation of protocol deviations, assessing their impact on the study, and tracking their resolution. These processes are essential for ensuring compliance and maintaining the integrity of the study.",
+        "name": "inspection - feedback_agent node"
+      },
+      {
+        "id": 9,
+        "content": "Invoking critique agent for validating sub-activities\nLLM Feedback on sub-activities:\nDo we need to work on feedback-> No,\nWhat is the feedback-> NA\n=",
+        "summary": "The critique agent is being used to validate sub-activities, and it has determined that no feedback is necessary. Additionally, there is no specific feedback provided for the sub-activities.",
+        "name": "inspection - critique_agent"
+      },
+      {
+        "id": 10,
+        "content": "Name: inspection - user_agent:\nUser input -> Human Feedback: y\n=\nInvoking user for validating output from feedback_agent.\nDo you approve of the above sub-activities?\nType 'y' to continue; otherwise, explain.\nPlease specify the adjustments you would like.\nUser input ->\n=================================== Agent Message y===================================",
+        "summary": "The user is prompted to validate the output from the feedback agent regarding sub-activities. The user approves by typing 'y', indicating they are satisfied with the output.",
+        "name": "Unknown"
+      },
+      {
+        "id": 11,
+        "content": "Invoking Self rag node for the sub-activity: How are protocol deviations identified and documented?",
+        "summary": "Protocol deviations are identified through monitoring and reporting mechanisms during a study, where any discrepancies from the approved protocol are noted. Documentation involves recording the nature of the deviation, its impact on the study, and any corrective actions taken to address it.",
+        "name": "SelfRAG - self_rag_agent"
+      },
+      {
+        "id": 13,
+        "content": "I have retrieved the relevant guidelines documents to answer the question on how protocol deviations are identified and documented.",
+        "summary": "I have obtained the necessary guidelines to address the identification and documentation of protocol deviations. These documents will provide the required information for answering the question.",
+        "name": "SelfRAG - retrieval_agent"
+      },
+      {
+        "id": 15,
+        "content": "* Sub-Activity: How are protocol deviations identified and documented?\n* Sub-Activity outcome: Protocol deviations are identified and documented through a structured process as outlined in the provided context. Here are the key points:\n1. **Identification**: Protocol deviations are identified by the study team, including Independent Drug Monitors (IDMs) and other relevant stakeholders. They are categorized based on their severity (e.g., Major Protocol Deviations).\n- **Tracking Logs**: Deviations are documented using secure trackers such as the TV-FRM-04433: Deviation and Issue Tracking Log. For blinded studies, a secure (unblinded) tracker is maintained separately by the IDM and IDMM.\n- **Review and Finalization**: The Global Data Manager (GDM) reviews the listing of protocol deviations to ensure correct classification. All major deviations must be finalized before the database hard lock.\n- **Issue and Deviation Review Meetings**: Major Protocol Deviations are discussed during these meetings, ensuring that they are documented and reviewed appropriately. Offline discussions must also be documented and discussed with the study team as necessary.\n- **Reporting**: At the end of the study, the finalized major protocol deviation report is circulated to the study team for review and filed in the V-TMF. It is also included in the Clinical Study Report.\n3. **Closure**: Issues and deviations should be closed within 90 days, and reasons for any delays must be documented in the tracking log.\n4. **Resources**: Several resources are available to guide the identification and management of protocol deviations, including SOPs, job aids, and training courses.\nFetched documents are relevant.\n2. **Documentation**:\nBy following these procedures, protocol deviations are systematically identified, documented, managed, and reported, ensuring compliance and maintaining data integrity and patient safety.",
+        "summary": "Protocol deviations are identified and documented by the study team, including Independent Drug Monitors, through a structured process that involves categorization, secure tracking logs, and thorough review meetings. This systematic approach ensures compliance, data integrity, and patient safety, with finalized reports circulated to the study team and filed appropriately.",
+        "name": "SelfRAG - generate_response_agent"
+      },
+      {
+        "id": 16,
+        "content": "Invoking Self rag node for the sub-activity: What is the process for assessing the impact of each protocol deviation on the study?",
+        "summary": "The process for assessing the impact of each protocol deviation on the study involves evaluating how the deviation affects the study's objectives, data integrity, and participant safety. This assessment typically includes documenting the deviation, analyzing its potential consequences, and determining whether it necessitates any corrective actions or reporting to regulatory authorities.",
+        "name": "SelfRAG - self_rag_agent"
+      },
+      {
+        "id": 18,
+        "content": "The process for assessing the impact of each protocol deviation on the study is detailed in the guidelines documents that have been retrieved. These guidelines contain procedures on how to identify, document, and evaluate protocol deviations.",
+        "summary": "The guidelines documents outline the process for assessing the impact of protocol deviations on the study. They provide procedures for identifying, documenting, and evaluating these deviations.",
+        "name": "SelfRAG - retrieval_agent"
+      },
+      {
+        "id": 20,
+        "content": "* Sub-Activity: What is the process for assessing the impact of each protocol deviation on the study?\n* Sub-Activity outcome: The process for assessing the impact of each protocol deviation on the study involves several structured steps to ensure compliance and maintain data integrity and patient safety. The key steps are as follows:\n- Deviations are documented using secure trackers such as the TV-FRM-04433: Deviation and Issue Tracking Log. For blinded studies, a secure (unblinded) tracker is maintained separately by the IDM and IDMM.\nFetched documents are relevant.\n1. **Identification and Documentation**:\n- Protocol deviations are identified by the study team, including Independent Drug Monitors (IDMs) and other relevant stakeholders.\n2. **Classification and Review**:\n- Deviations are categorized based on their severity (e.g., Major Protocol Deviations).\n- The Global Data Manager (GDM) reviews the listing of protocol deviations to ensure correct classification and documentation.\n3. **Escalation and Discussion**:\n- Major Protocol Deviations and Issues are discussed during the Deviation and Issue Escalation Review meetings. Major issues from the unblinded team should be discussed in a blinded way to prevent unblinding.\n- Offline discussions can also take place, but they must be documented and discussed with the study team as necessary.\n4. **Assessment and Reporting**:\n- For finalization and reporting, all major protocol deviations need to be reviewed, classified, and finalized before the database hard lock.\n- At the end of the study, the Major Protocol Deviation report is circulated to the study team for review, signed by the Study Responsible Physician (SRP), and filed in the V-TMF. It is also included in the Clinical Study Report.\n5. **Resolution and Closure**:\n- Issues and deviations should be closed within 90 days per company policy. If not, the reasons for any delays must be documented in the tracking log (OneCTMS).\n- The process ensures that the study team provides oversight as outlined in the SOP, and all appropriate deviations and issues are properly reviewed, documented, and timely closed.\nBy following these steps, the impact of each protocol deviation on the study is systematically assessed, ensuring compliance with regulatory requirements and maintaining the integrity of the study data.",
+        "summary": "The process for assessing the impact of protocol deviations on a study involves structured steps including identification, classification, escalation, assessment, and resolution to ensure compliance and data integrity. Each deviation is documented, reviewed, and discussed, with major deviations requiring timely closure and reporting to maintain oversight and adherence to regulatory standards.",
+        "name": "SelfRAG - generate_response_agent"
+      },
+      {
+        "id": 21,
+        "content": "Invoking Self rag node for the sub-activity: How is the resolution of protocol deviations tracked and monitored?",
+        "summary": "The resolution of protocol deviations is tracked and monitored through a systematic process that involves documenting each deviation, assessing its impact, and implementing corrective actions. Regular reviews and audits are conducted to ensure compliance and to identify any recurring issues that may need further attention.",
+        "name": "SelfRAG - self_rag_agent"
+      },
+      {
+        "id": 23,
+        "content": "The resolution of protocol deviations is tracked and monitored based on the retrieved guidelines. For further information and specific procedures, please refer to the relevant guidelines documents.",
+        "summary": "Protocol deviations are monitored and resolved according to established guidelines. For detailed procedures, consult the appropriate guidelines documents.",
+        "name": "SelfRAG - retrieval_agent"
+      },
+      {
+        "id": 25,
+        "content": "* Sub-Activity: How is the resolution of protocol deviations tracked and monitored?\n* Sub-Activity outcome: The resolution of protocol deviations is tracked and monitored through a structured process that ensures deviations are documented, reviewed, and closed in a timely manner. The key steps in this process are as follows:\n- Protocol deviations are documented using tracking logs such as the TV-FRM-04433: Deviation and Issue Tracking Log.\nFetched documents are relevant.\n1. **Documentation**:\n- For blinded studies, a secure (unblinded) tracker is maintained separately by the IDM and IDMM.\n2. **Review and Classification**:\n- The Global Data Manager (GDM) reviews the list of protocol deviations to ensure correct classification.\n- Major Protocol Deviations are discussed in Deviation and Issue Escalation Review meetings and documented accordingly.\n3. **Monitoring and Reporting**:\n- Issues and deviations are required to be closed within 90 days. If not, the reasons for any delays must be documented in the tracking log.\n- The final list of major protocol deviations is reviewed, signed by the Study Responsible Physician (SRP), and filed in the V-TMF. This report is also included in the Clinical Study Report.\n4. **Finalization and Closure**:\n- Before the database hard lock, all major protocol deviations must be finalized.\n- The Secure Data Supplier manages the secure (unblinded) Major Protocol Deviations until release at study unblinding if applicable.\n5. **Resources and Training**:\n- Several resources such as SOPs, job aids, and training courses guide the management of protocol deviations.\nBy following these procedures, the resolution of protocol deviations is systematically tracked and monitored to ensure compliance with regulatory requirements and maintain data integrity and patient safety.",
+        "summary": "The resolution of protocol deviations is systematically tracked and monitored through a structured process that includes documentation, review, classification, and timely closure of deviations. Key steps involve using tracking logs, conducting reviews by the Global Data Manager, and ensuring all major deviations are finalized before database lock, supported by various resources and training to maintain compliance and data integrity.",
+        "name": "SelfRAG - generate_response_agent"
+      },
+      {
+        "id": 26,
+        "content": "All the sub-activities are finished.",
+        "summary": "All sub-activities have been completed successfully. There are no remaining tasks to address.",
+        "name": "SelfRAG - self_rag_agent"
+      },
+      {
+        "id": 27,
+        "content": "Generating findings for the activity\nHere is the re-generated summary:\nConclusion:\nThe process for managing protocol deviations in activity PD_001 is robust and ensures compliance with regulatory requirements, maintaining data integrity and patient safety. Protocol deviations are identified by the study team, documented using secure trackers, reviewed and classified by the Global Data Manager, discussed in review meetings, and must be resolved within 90 days, with delays documented. Major deviations are finalized before database hard lock and included in the Clinical Study Report.\n=",
+        "summary": "The management process for protocol deviations in activity PD_001 is thorough, ensuring adherence to regulatory standards while safeguarding data integrity and patient safety. Deviations are systematically identified, documented, reviewed, and resolved within a specified timeframe, with significant deviations finalized prior to the database lock and included in the Clinical Study Report.",
+        "name": "inspection - generate_findings_agent"
+      },
+      {
+        "id": 28,
+        "content": "Name: inspection - user_agent:\nUser input -> Human Feedback: y\n=\nInvoking user for validating output from generate_findings_agent.\nDo you approve of the above generated findings?\nType 'y' to continue; otherwise, explain.\nPlease specify any rephrasing or formatting\nadjustments you would like.\nUser input ->\n=================================== Agent Message y===================================",
+        "summary": "The user is prompted to validate the output from the generate_findings_agent and is asked to approve the findings by typing 'y' or providing feedback for adjustments. The user has confirmed approval by responding with 'y'.",
+        "name": "Unknown"
+      },
+    ]
+  }
+]
 export const agentactivities: TreeNode[] = [
   {
     "id": 2,

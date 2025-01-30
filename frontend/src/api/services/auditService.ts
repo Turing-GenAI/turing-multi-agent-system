@@ -12,7 +12,9 @@ import {
   AgentProgressResponse
 } from '../types';
 import { activities } from '../../data/activities';
-import { agentactivities } from '../../data/agent_activities';
+import { agentactivities, agentActivities1, agentActivities2 } from '../../data/agent_activities';
+
+let apiCallCount = 0;
 
 interface JobDetails {
   job_id: string;
@@ -33,25 +35,6 @@ interface JobResponse {
   job_details: JobDetails;
 }
 
-interface TreeNode {
-  title: string;
-  children?: TreeNode[];
-  summary?: string;
-  content?: string;
-}
-
-// Keep track of progress state for each job
-const jobProgress = new Map<string, {
-  level: number;
-  activityIndex: number;
-  agentIndex: number;
-  subActivityIndex: number;
-}>();
-
-// Helper to reset progress for testing
-const resetProgress = (jobId: string) => {
-  jobProgress.delete(jobId);
-};
 
 const realAuditService = {
   /**
@@ -305,88 +288,19 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
-    // if (!jobProgress.has(jobId)) {
-    //     jobProgress.set(jobId, {
-    //       level: 0,
-    //       activityIndex: 0,
-    //       agentIndex: 0,
-    //       subActivityIndex: 0
-    //     });
-    //   }
 
-    //   const currentProgress = jobProgress.get(jobId)!;
-
-    //   const buildIncrementalTree = () => {
-    //     // Deep clone the activities array to avoid modifying the original
-    //     const result = JSON.parse(JSON.stringify(activities));
-
-    //     // If level 0, return empty tree with just root
-    //     if (currentProgress.level === 0) {
-    //       return result;
-    //     }
-
-    //     // Level 1: Show activities up to current index
-    //     if (currentProgress.level === 1) {
-    //       result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
-    //       return result;
-    //     }
-
-    //     // Level 2: Show agents up to current index for the current activity
-    //     if (currentProgress.level === 2) {
-    //       result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
-    //       const currentActivity = result[0].children?.[currentProgress.activityIndex];
-    //       if (currentActivity) {
-    //         currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
-    //       }
-    //       return result;
-    //     }
-
-    //     // Level 3: Show sub-activities up to current index for the current agent
-    //     if (currentProgress.level === 3) {
-    //       result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
-    //       const currentActivity = result[0].children?.[currentProgress.activityIndex];
-    //       if (currentActivity) {
-    //         currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
-    //         const currentAgent = currentActivity.children?.[currentProgress.agentIndex];
-    //         if (currentAgent) {
-    //           currentAgent.children = currentAgent.children?.slice(0, currentProgress.subActivityIndex + 1);
-    //         }
-    //       }
-    //     }
-
-    //     // Progress to next state
-    //     currentProgress.subActivityIndex++;
-    //     if (currentProgress.subActivityIndex >= 3) {
-    //       currentProgress.subActivityIndex = 0;
-    //       currentProgress.agentIndex++;
-    //       if (currentProgress.agentIndex >= 4) {
-    //         currentProgress.agentIndex = 0;
-    //         currentProgress.activityIndex++;
-    //         if (currentProgress.activityIndex >= 2) {
-    //           currentProgress.activityIndex = 0;
-    //           currentProgress.level++;
-    //           if (currentProgress.level >= 4) {
-    //             // Clean up completed job progress
-    //             jobProgress.delete(jobId);
-    //           }
-    //         }
-    //       }
-    //     }
-
-    //     // Update progress in the Map
-    //     if (currentProgress.level < 4) {
-    //       jobProgress.set(jobId, { ...currentProgress });
-    //     }
-
-    //     return result;
-    //   };
-
+    const responses = [agentActivities1, agentActivities2, agentactivities]
+    const activities = responses[apiCallCount]
+    apiCallCount++
+    if(apiCallCount >= responses.length) {
+      apiCallCount = responses.length - 1
+    }
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
           status: 200,
           data: {
-            activities: agentactivities // Return all activities directly
+            activities: JSON.parse(JSON.stringify(activities)) // Deep clone the activities
           }
         });
       }, 500);

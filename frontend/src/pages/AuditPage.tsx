@@ -82,6 +82,7 @@ export const AuditPage: React.FC = () => {
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
+  const [awaitingForFeedback, setAwaitingForFeedback] = useState(false);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -417,29 +418,97 @@ export const AuditPage: React.FC = () => {
     }
   };
 
+  // Helper function to find and remove the last leaf node with name "unknown"
+  const findAndRemoveUnknownNode = (activities: TreeNode[]): { updatedActivities: TreeNode[], humanFeedbackPrompt: string | undefined } => {
+    if (!activities || activities.length === 0) {
+      return { updatedActivities: [], humanFeedbackPrompt: undefined };
+    }
+
+    // Get the last activity
+    const lastActivity = activities[activities.length - 1];
+
+    // Helper function to find the last leaf node
+    const findLastLeafNode = (node: TreeNode): { node: TreeNode | null, parent: TreeNode | null } => {
+      if (!node.children || node.children.length === 0) {
+        return { node, parent: null };
+      }
+
+      const lastChild = node.children[node.children.length - 1];
+      const result = findLastLeafNode(lastChild);
+      if (result.node === lastChild) {
+        result.parent = node;
+      }
+      return result;
+    };
+
+    // Find the last leaf node in the last activity
+    const { node: lastLeaf, parent } = findLastLeafNode(lastActivity);
+
+    // If the last leaf has name "unknown", remove it and return its content
+    if (lastLeaf && lastLeaf.name === "Unknown") {
+      const humanFeedbackPrompt = lastLeaf.content;
+      
+      // Remove the unknown node from its parent
+      if (parent && parent.children) {
+        parent.children = parent.children.slice(0, -1);
+        // If parent now has no children, remove it from activities
+        if (parent.children.length === 0 && activities.length > 1) {
+          activities = activities.slice(0, -1);
+        }
+      } else {
+        // If the unknown node is at the root level, remove the entire activity
+        activities = activities.slice(0, -1);
+      }
+
+      return {
+        updatedActivities: activities,
+        humanFeedbackPrompt
+      };
+    }
+
+    return {
+      updatedActivities: activities,
+      humanFeedbackPrompt: undefined
+    };
+  };
+
   const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }, jobId: string) => {
     if (response.data && response.data.activities && response.data.activities.length > 0) {
-      // Add the progress tree tool UI
-      console.log("Progress tree response:", response.data.activities)
-      addAgentMessage(
-        "",  // Empty message since we're just showing the tree
-        "progresstree",
-        {
-          messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
-          value: response.data.activities,  // Taking the first tree node as our root
-          onChange: (updatedTree: TreeNode) => {
-            setProgressTree(updatedTree);
-          },
-          progressTreeProps: {
-            showBreadcrumbs: true,
-            showMiniMap: true,
-            showKeyboardNav: true,
-            showQuickActions: true,
-            initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
-            animationDuration: 200
+      // Process the activities to handle unknown node
+      const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(response.data.activities);
+      console.log("humanFeedbackPrompt:", humanFeedbackPrompt);
+      // If we have regular activities, add them as a progress tree
+      if (updatedActivities.length > 0) {
+        console.log("Progress tree response:", updatedActivities);
+        addAgentMessage(
+          "",  // Empty message since we're just showing the tree
+          "progresstree",
+          {
+            messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
+            value: updatedActivities,
+            onChange: (updatedTree: TreeNode) => {
+              setProgressTree(updatedTree);
+            },
+            progressTreeProps: {
+              showBreadcrumbs: true,
+              showMiniMap: true,
+              showKeyboardNav: true,
+              showQuickActions: true,
+              initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
+              animationDuration: 200
+            }
           }
-        }
-      );
+        );
+      }
+
+      // If we found an unknown node, add its content as a regular message after a delay
+      if (humanFeedbackPrompt) {
+        console.log("Human feedback prompt:", humanFeedbackPrompt)
+        setTimeout(() => {
+          setAwaitingForFeedback(true);
+          addAgentMessage(humanFeedbackPrompt);
+        }, 10000); // 10 seconds delay
+      }
     }
   };
 
@@ -556,16 +625,35 @@ export const AuditPage: React.FC = () => {
       isUser: true
     };
 
+    // Add message to conversation
     setMessagesByAgent(prev => ({
       ...prev,
       [agent]: [...prev[agent], newMessage]
     }));
 
+    // Clear input
     setUserInput(prev => ({
       ...prev,
       [agent]: ''
     }));
+
+    // Check if we're awaiting feedback
+    if (awaitingForFeedback) {
+      try {
+        auditService.updateJobFeedback(jobId!, userInput[agent]).then(() => {
+          setAwaitingForFeedback(false); // Reset the feedback state
+          setAwaitingForFeedback(false); // Reset the feedback state
+          addAgentMessage("Thanks for your feedback! I'm proceeding further...")
+          fetchAIMessages(jobId!, true)
+        });
+        
+      } catch (error) {
+        console.error('Error updating job feedback:', error);
+      }
+      return;
+    }
     
+    // Regular message flow
     setTimeout(() => {
       const responses = mockResponses[`${agent}_agent`].responses;
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
@@ -711,7 +799,7 @@ export const AuditPage: React.FC = () => {
                 messages={messagesByAgent[selectedAgentTab]}
                 userInput={userInput[selectedAgentTab]}
                 updateUserInput={(value) => setUserInput(prev => ({ ...prev, [selectedAgentTab]: value }))}
-                handleSendMessage={(e) => handleSendMessage(selectedAgentTab, e)}
+                handleSendMessage={(e) =>  handleSendMessage(selectedAgentTab, e)}
                 trials={trials}
                 sites={sites}
                 onInputComplete={(data) => {
