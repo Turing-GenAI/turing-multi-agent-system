@@ -59,7 +59,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 
     return tree1.every((node1, index) => {
       const node2 = tree2[index];
-      if (node1.title !== node2.title || node1.status !== node2.status) return false;
+      if (node1.name !== node2.name || node1.status !== node2.status) return false;
       if (node1.children && node2.children) {
         return areTreesEqual(node1.children, node2.children);
       }
@@ -72,7 +72,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     const result: { node: TreeNode; path: string }[] = [];
     
     nodes.forEach(node => {
-      const currentPath = parentPath ? `${parentPath}.${node.title}` : node.title;
+      const currentPath = parentPath ? `${parentPath}.${node.name}` : node.name;
       result.push({ node, path: currentPath });
       
       if (node.children) {
@@ -86,15 +86,15 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   // Function to add a node to the tree at its correct position
   const addNodeToTree = useCallback((tree: TreeNode[], path: string[], node: TreeNode): TreeNode[] => {
     if (path.length === 1) {
-      if (!tree.find(n => n.title === path[0])) {
+      if (!tree.find(n => n.name === path[0])) {
         tree.push({ ...node, children: [], status: 'pending' });
       }
       return tree;
     }
 
-    let parent = tree.find(n => n.title === path[0]);
+    let parent = tree.find(n => n.name === path[0]);
     if (!parent) {
-      parent = { title: path[0], children: [], status: 'pending' };
+      parent = { name: path[0], children: [], status: 'pending' };
       tree.push(parent);
     }
 
@@ -114,7 +114,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   const hasAllChildren = useCallback((node: TreeNode, allNodes: Set<string>): boolean => {
     if (!node.children) return true;
     return node.children.every(child => {
-      const childPath = `${node.title}.${child.title}`;
+      const childPath = `${node.name}.${child.name}`;
       return allNodes.has(childPath) && hasAllChildren(child, allNodes);
     });
   }, []);
@@ -125,7 +125,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     const updatedNodes = nodes.map(node => {
       if (path.length === 0) return node;
 
-      if (node.title === path[0]) {
+      if (node.name === path[0]) {
         if (path.length === 1) {
           // For leaf nodes, allow direct status update
           if (isLeafNode(node)) {
@@ -265,6 +265,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 
         const { node, path } = orderedNodes[currentIndex];
         const pathParts = path.split('.');
+        
         const allCurrentPaths = new Set(orderedNodes.slice(0, currentIndex + 1).map(n => n.path));
 
         setDisplayedActivities(prev => {
@@ -313,7 +314,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   const handleExpandAll = useCallback(() => {
     const getAllNodeTitles = (nodes: TreeNode[]): string[] => {
       return nodes.reduce<string[]>((titles, node) => {
-        titles.push(node.title);
+        titles.push(node.name);
         if (node.children) {
           titles.push(...getAllNodeTitles(node.children));
         }
@@ -353,11 +354,11 @@ Enter: Toggle expand/collapse
     const findPath = (nodes: TreeNode[], targetNode: TreeNode): boolean => {
       for (const node of nodes) {
         if (node === targetNode) {
-          path.push({ title: node.title, color: '#2196f3' });
+          path.push({ title: node.name, color: '#2196f3' });
           return true;
         }
         if (node.children && findPath(node.children, targetNode)) {
-          path.unshift({ title: node.title, color: '#4caf50' });
+          path.unshift({ title: node.name, color: '#4caf50' });
           return true;
         }
       }

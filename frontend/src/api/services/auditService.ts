@@ -12,6 +12,7 @@ import {
   AgentProgressResponse
 } from '../types';
 import { activities } from '../../data/activities';
+import { agentactivities } from '../../data/agent_activities';
 
 interface JobDetails {
   job_id: string;
@@ -385,7 +386,7 @@ const mockAuditService = {
         resolve({
           status: 200,
           data: {
-            activities: activities // Return all activities directly
+            activities: agentactivities // Return all activities directly
           }
         });
       }, 500);

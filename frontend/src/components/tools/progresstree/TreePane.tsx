@@ -7,7 +7,7 @@ import NodeStatus from './NodeStatus';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TreeNodeData {
-  title: string;
+  name: string;
   summary?: string;
   content?: string;
   children?: TreeNodeData[];
@@ -90,7 +90,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   parentPath = ''
 }) => {
   // Create a unique path for this node based on its position in the tree
-  const nodePath = parentPath ? `${parentPath}.${node.title}` : node.title;
+  const nodePath = parentPath ? `${parentPath}.${node.name}` : node.name;
   const isSelected = selectedNode && selectedNode.path === nodePath;
   const isExpanded = expandedNodes.includes(nodePath);
   const hasChildren = node.children && node.children.length > 0;
@@ -193,7 +193,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                   whiteSpace: 'nowrap'
                 }}
               >
-                {node.title}
+                {node.name}
               </Typography>
               {isLeaf && node.summary && (
                 <AnimatedText 
@@ -217,7 +217,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
           >
             {node.children.map((child, index) => (
               <TreeNode
-                key={child.title}
+                key={child.name}
                 node={child}
                 depth={depth + 1}
                 isLastChild={index === node.children!.length - 1}
@@ -251,7 +251,7 @@ const TreePane: React.FC<TreePaneProps> = ({
     >
       {data.map((node, index) => (
         <TreeNode
-          key={node.title}
+          key={node.name}
           node={node}
           isLastChild={index === data.length - 1}
           onNodeSelect={onNodeSelect}

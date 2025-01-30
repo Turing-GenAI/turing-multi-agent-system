@@ -62,7 +62,7 @@ export interface JobStatistics {
 }
 
 export interface TreeNode {
-  title: string;
+  name: string;
   children?: TreeNode[];
   summary?: string;
   content?: string;
