@@ -3,10 +3,7 @@ import re
 import os
 import json
 from openai import AzureOpenAI
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
 
 def parse_ai_messages(full_text: str):
     """
