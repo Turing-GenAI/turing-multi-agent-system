@@ -136,21 +136,197 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
             borderColor: theme.palette.divider,
             borderRadius: 2,
             overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              backgroundColor: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: theme.palette.divider,
+              borderRadius: '4px',
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+              },
+            },
           }}
         >
-          <Typography
-            variant="body2"
-            component="pre"
+          <Box
             sx={{
               color: theme.palette.text.primary,
-              fontFamily: 'monospace',
-              fontSize: '0.875rem',
-              lineHeight: 1.7,
-              whiteSpace: 'pre-wrap',
+              fontFamily: '"Segoe UI", "Roboto", sans-serif',
+              fontSize: '0.95rem',
+              lineHeight: 1.8,
             }}
           >
-            {selectedNode.content}
-          </Typography>
+            {selectedNode.content?.split('\n').map((paragraph, index, array) => {
+              // Skip empty lines but preserve spacing
+              if (!paragraph.trim()) {
+                return <Box key={index} sx={{ height: '0.5rem' }} />;
+              }
+
+              // Check if line starts with bullet point
+              const isBullet = paragraph.trim().startsWith('•') || paragraph.trim().startsWith('-');
+              
+              // Check if line is a heading (starts with # or is in all caps)
+              const isHeading = paragraph.trim().startsWith('#') || 
+                             (paragraph.trim() === paragraph.trim().toUpperCase() && 
+                              paragraph.trim().length > 3);
+
+              // Check if this is a code block (indented by 4 spaces or tab)
+              const isCodeBlock = paragraph.startsWith('    ') || paragraph.startsWith('\t');
+
+              // Format code blocks (text between backticks)
+              const formattedText = paragraph.split('`').map((part, i) => {
+                if (i % 2 === 1) { // Text between backticks
+                  return (
+                    <Box
+                      key={i}
+                      component="code"
+                      sx={{
+                        backgroundColor: theme.palette.action.hover,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontFamily: 'Consolas, monospace',
+                        fontSize: '0.9em',
+                        color: theme.palette.primary.main,
+                      }}
+                    >
+                      {part}
+                    </Box>
+                  );
+                }
+                // Check for bold text (between ** or __)
+                return part.split(/(\*\*.*?\*\*|__.*?__)/g).map((text, j) => {
+                  if (text.startsWith('**') || text.startsWith('__')) {
+                    return (
+                      <Box
+                        key={`${i}-${j}`}
+                        component="strong"
+                        sx={{
+                          color: theme.palette.primary.main,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {text.slice(2, -2)}
+                      </Box>
+                    );
+                  }
+                  return text;
+                });
+              });
+
+              if (isHeading) {
+                const headingText = paragraph.replace(/^#\s*/, '');
+                return (
+                  <Typography
+                    key={index}
+                    variant="h6"
+                    sx={{
+                      color: nodeColor,
+                      fontWeight: 600,
+                      mt: index === 0 ? 0 : 2.5,
+                      mb: 1.5,
+                      fontSize: '1.2rem',
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      pb: 0.5,
+                    }}
+                  >
+                    {headingText}
+                  </Typography>
+                );
+              }
+
+              if (isCodeBlock) {
+                return (
+                  <Box
+                    key={index}
+                    sx={{
+                      backgroundColor: theme.palette.action.hover,
+                      borderRadius: '6px',
+                      p: 2,
+                      my: 1.5,
+                      fontFamily: 'Consolas, monospace',
+                      fontSize: '0.9em',
+                      color: theme.palette.text.primary,
+                      whiteSpace: 'pre-wrap',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    {paragraph.replace(/^(\t|    )/, '')}
+                  </Box>
+                );
+              }
+
+              if (isBullet) {
+                const bulletText = paragraph.replace(/^[•-]\s*/, '');
+                return (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      mt: 1,
+                      ml: 2,
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        color: theme.palette.primary.main,
+                        mr: 1.5,
+                        fontWeight: 'bold',
+                        lineHeight: 1.8,
+                      }}
+                    >
+                      •
+                    </Box>
+                    <Typography
+                      sx={{
+                        flex: 1,
+                        '& code': {
+                          backgroundColor: theme.palette.action.hover,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontFamily: 'Consolas, monospace',
+                          fontSize: '0.9em',
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      {formattedText}
+                    </Typography>
+                  </Box>
+                );
+              }
+
+              // Check if next line is a heading to add more space
+              const nextIsHeading = array[index + 1]?.trim().startsWith('#') ||
+                                 (array[index + 1]?.trim() === array[index + 1]?.trim().toUpperCase() &&
+                                  array[index + 1]?.trim().length > 3);
+
+              return (
+                <Typography
+                  key={index}
+                  paragraph
+                  sx={{
+                    mt: index === 0 ? 0 : 1.5,
+                    mb: nextIsHeading ? 2 : 0,
+                    textAlign: 'justify',
+                    hyphens: 'auto',
+                    '& code': {
+                      backgroundColor: theme.palette.action.hover,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontFamily: 'Consolas, monospace',
+                      fontSize: '0.9em',
+                      color: theme.palette.primary.main,
+                    },
+                  }}
+                >
+                  {formattedText}
+                </Typography>
+              );
+            })}
+          </Box>
         </Paper>
       ) : (
         <Typography
