@@ -5,6 +5,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import BranchLines from './BranchLines';
 import NodeStatus from './NodeStatus';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAgentDisplayNameByNode } from '../../../data/agentNames';
 
 interface TreeNodeData {
   name: string;
@@ -265,7 +266,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                   whiteSpace: 'nowrap'
                 }}
               >
-                {node.name}
+                {getAgentDisplayNameByNode(node.name)}
               </Typography>
               {isLeaf && node.summary && (
                 <AnimatedText 

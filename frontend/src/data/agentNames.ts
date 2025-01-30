@@ -63,3 +63,8 @@ export const getAgentDisplayName = (nodeName?: string): string => {
   if (!nodeName) return 'Assistant';
   return nodeName in agentNodeName ? agentNodeName[nodeName as keyof typeof agentNodeName] : nodeName;
 };
+
+export const getAgentDisplayNameByNode = (node?: string): string => {
+    if (!node) return 'Assistant';
+    return node in agentName ? agentName[node as keyof typeof agentName] : node;
+  };

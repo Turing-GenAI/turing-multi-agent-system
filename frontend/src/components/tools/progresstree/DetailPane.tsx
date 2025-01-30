@@ -1,6 +1,7 @@
 import React from 'react';
 import { Paper, Typography, Box, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
+import { getAgentDisplayNameByNode } from '../../../data/agentNames';
 
 interface TreeNode {
   name: string;
@@ -128,7 +129,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
           }
         }}
       >
-        {selectedNode.name}
+        {getAgentDisplayNameByNode(selectedNode.name)}
       </Typography>
 
       {selectedNode.content ? (
