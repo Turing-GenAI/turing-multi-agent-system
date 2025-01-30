@@ -40,7 +40,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     showKeyboardNav = true,
     showQuickActions = true,
     initialExpandedNodes = [],
-    animationDuration = 800
+    animationDuration = 2000
   } = options;
 
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);

@@ -272,7 +272,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 <AnimatedText 
                   text={node.summary}
                   delay={0.2}
-                  speed={0.03}
+                  speed={0.01}
                 />
               )}
             </Box>
