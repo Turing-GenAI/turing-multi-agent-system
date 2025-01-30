@@ -120,6 +120,7 @@ export const AuditPage: React.FC = () => {
     message: string;
     toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree';
     options?: {
+      value?: unknown;
       agentPrefix?: string;
       nodeName?: string;
       messageId?: string;  // Optional ID for updating existing messages
@@ -134,6 +135,7 @@ export const AuditPage: React.FC = () => {
         setIsProcessingQueue(true);
         const { message, toolType, options, messageId } = messageQueue[0];
 
+        
         // For tool UI messages, add or update them instantly
         if (toolType) {
           const newMessage: Message = {
@@ -144,7 +146,7 @@ export const AuditPage: React.FC = () => {
               tool: {
                 type: toolType,
                 message,
-                options: toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined,
+                options: options || (toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined),
               },
             }),
             timestamp: new Date(),
@@ -152,6 +154,15 @@ export const AuditPage: React.FC = () => {
             nodeName: options?.nodeName || '',
           };
 
+          const cont = JSON.stringify({
+            type: 'tool_ui',
+            tool: {
+              type: toolType,
+              message,
+              options: options || (toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined),
+            },
+          });
+          console.log("processQueue : ",  cont, ', newMessage: ', JSON.stringify(newMessage))
           setMessagesByAgent(prev => ({
             ...prev,
             [selectedAgentTab]: prev[selectedAgentTab].some(msg => msg.id === messageId)
@@ -159,6 +170,7 @@ export const AuditPage: React.FC = () => {
               : [...prev[selectedAgentTab], newMessage],
           }));
 
+          console.log("processQueue, setMessageByAgent: ", messagesByAgent)
           setMessageQueue(prev => prev.slice(1));
           setIsProcessingQueue(false);
           return;
@@ -219,6 +231,7 @@ export const AuditPage: React.FC = () => {
     message: string, 
     toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree',
     options?: { 
+      value?: unknown;
       agentPrefix?: string;
       nodeName?: string;
       messageId?: string;  // Optional ID for updating existing messages
@@ -406,12 +419,13 @@ export const AuditPage: React.FC = () => {
   const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }, jobId: string) => {
     if (response.data && response.data.activities && response.data.activities.length > 0) {
       // Add the progress tree tool UI
+      console.log("Progress tree response:", response.data.activities)
       addAgentMessage(
         "",  // Empty message since we're just showing the tree
         "progresstree",
         {
           messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
-          value: response.data.activities[0],  // Taking the first tree node as our root
+          value: response.data.activities,  // Taking the first tree node as our root
           onChange: (updatedTree: TreeNode) => {
             setProgressTree(updatedTree);
           },
@@ -519,7 +533,7 @@ export const AuditPage: React.FC = () => {
         } else {
           fetchAIMessages(jobId, false); 
         }
-      }, 4000); 
+      }, 400000); 
     }
 
     return () => {

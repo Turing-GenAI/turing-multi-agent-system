@@ -317,56 +317,40 @@ const mockAuditService = {
     const currentProgress = jobProgress.get(jobId)!;
 
     const buildIncrementalTree = () => {
-      const result: TreeNode[] = [
-        {
-          title: "Protocol deviation",
-          children: []
-        }
-      ];
+      // Deep clone the activities array to avoid modifying the original
+      const result = JSON.parse(JSON.stringify(activities));
 
-      // Level 1: Activity IDs
-      if (currentProgress.level >= 1) {
-        const activityCount = Math.min(currentProgress.activityIndex + 1, 2);
-        for (let i = 0; i < activityCount; i++) {
-          result[0].children!.push({
-            title: `Activity ID ${i + 1}`,
-            children: []
-          });
-        }
+      // If level 0, return empty tree with just root
+      if (currentProgress.level === 0) {
+        return result;
       }
 
-      // Level 2: Agents
-      if (currentProgress.level >= 2) {
-        const agents = ["Inspection Master", "Planner Agent", "Critique agent", "Feedback agent"];
-        const activityIndex = Math.min(currentProgress.activityIndex, result[0].children!.length - 1);
-        const agentCount = Math.min(currentProgress.agentIndex + 1, agents.length);
-        
-        for (let i = 0; i < agentCount; i++) {
-          result[0].children![activityIndex].children!.push({
-            title: agents[i],
-            children: []
-          });
-        }
+      // Level 1: Show activities up to current index
+      if (currentProgress.level === 1) {
+        result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
+        return result;
       }
 
-      // Level 3: Sub-activities
-      if (currentProgress.level >= 3) {
-        const subActivities = [
-          "Planned sub-activities",
-          "Recommendation on the plan",
-          "Reworked sub-activities"
-        ];
-        
-        const activityIndex = Math.min(currentProgress.activityIndex, result[0].children!.length - 1);
-        const agentIndex = Math.min(currentProgress.agentIndex, result[0].children![activityIndex].children!.length - 1);
-        const subActivityCount = Math.min(currentProgress.subActivityIndex + 1, subActivities.length);
+      // Level 2: Show agents up to current index for the current activity
+      if (currentProgress.level === 2) {
+        result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
+        const currentActivity = result[0].children?.[currentProgress.activityIndex];
+        if (currentActivity) {
+          currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
+        }
+        return result;
+      }
 
-        for (let i = 0; i < subActivityCount; i++) {
-          result[0].children![activityIndex].children![agentIndex].children!.push({
-            title: subActivities[i],
-            summary: "All sub-activities have been thoroughly planned, including resource allocation and scheduling.",
-            content: "1. Initial assessment completed\n2. Resource allocation determined\n3. Timeline created"
-          });
+      // Level 3: Show sub-activities up to current index for the current agent
+      if (currentProgress.level === 3) {
+        result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
+        const currentActivity = result[0].children?.[currentProgress.activityIndex];
+        if (currentActivity) {
+          currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
+          const currentAgent = currentActivity.children?.[currentProgress.agentIndex];
+          if (currentAgent) {
+            currentAgent.children = currentAgent.children?.slice(0, currentProgress.subActivityIndex + 1);
+          }
         }
       }
 

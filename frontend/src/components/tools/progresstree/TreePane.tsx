@@ -88,7 +88,19 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onToggleExpand
 }) => {
   const isSelected = selectedNode && selectedNode.title === node.title;
-  const isExpanded = expandedNodes.includes(node.title);
+  
+  // Build the full path for this node
+  const getNodePath = (currentNode: TreeNodeData): string => {
+    // If this is a root node, return just the title
+    if (depth === 0) return currentNode.title;
+    
+    // Otherwise, find this node's path in the expanded nodes array
+    const matchingPath = expandedNodes.find(path => path.endsWith(`.${currentNode.title}`));
+    return matchingPath || currentNode.title;
+  };
+  
+  const nodePath = getNodePath(node);
+  const isExpanded = expandedNodes.includes(nodePath);
   const hasChildren = node.children && node.children.length > 0;
   const isLeaf = !hasChildren;
 
@@ -156,7 +168,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 size="small"
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  onToggleExpand(node.title);
+                  onToggleExpand(nodePath);
                 }}
                 sx={{ mr: 1 }}
               >
@@ -212,7 +224,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 key={child.title}
                 node={child}
                 depth={depth + 1}
-                isLastChild={index === node.children.length - 1}
+                isLastChild={index === node.children!.length - 1}
                 onNodeSelect={onNodeSelect}
                 selectedNode={selectedNode}
                 expandedNodes={expandedNodes}

@@ -34,6 +34,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   setShowDatePicker,
   isAnalysisStarted,
 }) => {
+  console.log("MessageBubble: ", message);
   // Get background color based on message type
   const backgroundStyle = getMessageBackgroundColor(message);
   

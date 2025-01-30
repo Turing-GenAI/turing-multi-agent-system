@@ -11,7 +11,7 @@ interface MessageContentProps {
   selectedTrial: string;
   selectedSite: string;
   dateRange: { from: Date | undefined; to: Date | undefined };
-  handleToolInput: (type: 'trial' | 'site' | 'date' | 'button', value: any) => void;
+  handleToolInput: (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => void;
   trials: string[];
   sites: { [key: string]: Array<{ id: string; status: string }> };
   datePickerRef: React.RefObject<HTMLDivElement>;
@@ -57,6 +57,10 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         return <ProgressSteps steps={toolMessage.steps || []} />;
       } else if (toolMessage.type === 'tool_ui' && toolMessage.tool) {
         const { type, message: toolMsg, options } = toolMessage.tool;
+        if(type === 'progresstree') {
+          console.log("Tool message:", toolMessage, " overall message : ", message)
+        }
+        // console.log('Tool message:', toolMessage);
         return (
           <div className="space-y-3">
             <p className="text-sm leading-relaxed">{toolMsg}</p>
@@ -70,7 +74,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
                     ? selectedSite
                     : type === 'date'
                     ? dateRange
-                    : false
+                    : options?.value
                 }
                 onChange={(value) => handleToolInput(type, value)}
                 options={{

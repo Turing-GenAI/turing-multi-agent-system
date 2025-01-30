@@ -54,6 +54,8 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     setShouldAutoScroll(isScrolledToBottom());
   };
 
+  console.log("AgentWindow messages", messages);
+
   useEffect(() => {
     const container = messageContainerRef.current;
     if (container) {
