@@ -130,9 +130,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           setCurrentStep('confirm');
           addAgentMessage(
             `📋 Please review the analysis parameters:\n\n` +
-            `🔹 Trial ID:        ${selectedTrial}\n` +
-            `🔹 Site ID:         ${selectedSite}\n` +
-            `🔹 Analysis Period: ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
+            `🔹 Trial ID:          ${selectedTrial}\n` +
+            `🔹 Site ID:           ${selectedSite}\n` +
+            `🔹 Analysis Period:   ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
             `✨ Confirm to proceed with the analysis.`,
             'button'
           );

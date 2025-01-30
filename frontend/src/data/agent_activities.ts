@@ -27,19 +27,19 @@ export const agentactivities: TreeNode[] = [
   },
   {
     "id": 3,
-    "content": "Picked the site area for execution: PD\nGot 1 activities to carry out related to PD\n*<activity_id#PD_001>  Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+    "content": "Picked the site area for execution: PD\nGot 1 activities to carry out related to PD\n• <activity_id#PD_001> Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
     "summary": "The site area selected for execution is PD, where one activity is to be carried out. This activity involves checking the management of the reported PDs to ensure they have been resolved or closed within an acceptable time frame.",
     "name": "inspection - site_area_agent",
     "children": [
       {
         "id": 5,
-        "content": "Invoking the site area agent for below main activity:\n<activity_id#PD_001> ###  Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+        "content": "Invoking the site area agent for below main activity:\n<activity_id#PD_001> ### Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
         "summary": "The site area agent is tasked with reviewing the management of reported PDs to confirm they have been resolved or closed within an acceptable timeframe. This involves monitoring the status of activity ID PD_001.",
         "name": "inspection - site_area_router"
       },
       {
         "id": 6,
-        "content": "Generating sub-activities for: <activity_id#PD_001>\nBelow are the generated sub-activities:\n\u00e2\u20ac\u00a2 Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
+        "content": "Generating sub-activities for: <activity_id#PD_001>\nBelow are the generated sub-activities:\n• Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame.",
         "summary": "The sub-activity for activity ID PD_001 involves verifying that the management of reported PDs has been effectively handled. This includes ensuring that all issues have been resolved or closed within an acceptable time frame.",
         "name": "inspection - planner_agent"
       },
@@ -129,7 +129,7 @@ export const agentactivities: TreeNode[] = [
       },
       {
         "id": 27,
-        "content": "Generating findings for the activity\nHere is the re-generated summary:\nConclusion:\nThe process for managing protocol deviations in activity PD_001 is robust and ensures compliance with regulatory requirements, maintaining data integrity and patient safety. Protocol deviations are identified by the study team, documented using secure trackers, reviewed and classified by the Global Data Manager, discussed in review meetings, and must be resolved within 90 days, with delays documented. Major deviations are finalized before database hard lock and included in the Clinical Study Report.\n=",
+        "content": "Generating findings for the activity\nHere is the re-generated summary:\nConclusion:\nThe process for managing protocol deviations in activity PD_001 is robust and ensures compliance with regulatory requirements, maintaining data integrity and patient safety. Protocol deviations are identified by the study team, documented using secure trackers, reviewed and classified by the Global Data Manager, discussed in review meetings, and must be resolved within 90 days, with delays documented. Major deviations are finalized before database hard lock and included in the Clinical Study Report.\n",
         "summary": "The management process for protocol deviations in activity PD_001 is thorough, ensuring adherence to regulatory standards while safeguarding data integrity and patient safety. Deviations are systematically identified, documented, reviewed, and resolved within a specified timeframe, with significant deviations finalized prior to the database lock and included in the Clinical Study Report.",
         "name": "inspection - generate_findings_agent"
       },
@@ -149,20 +149,20 @@ export const agentactivities: TreeNode[] = [
   },
   {
     "id": 31,
-    "content": "Picked the site area for execution: AE_SAE\nGot 1 activities to carry out related to AE_SAE\n*<activity_id#AE_SAE_001>  Are all AEs/SAEs in final disposition in RAVE, ie. end dates?",
+    "content": "Picked the site area for execution: AE_SAE\nGot 1 activities to carry out related to AE_SAE\n• <activity_id#AE_SAE_001> Are all AEs/SAEs in final disposition in RAVE, ie. end dates?",
     "summary": "The site area selected for execution is AE_SAE, which involves one activity. This activity focuses on verifying whether all Adverse Events/Serious Adverse Events have final dispositions recorded in RAVE, specifically checking for end dates.",
     "name": "inspection - site_area_agent",
     "children": [
       {
         "id": 33,
-        "content": "Invoking the site area agent for below main activity:\n<activity_id#AE_SAE_001> ###  Are all AEs/SAEs in final disposition in RAVE, ie. end dates?",
+        "content": "Invoking the site area agent for below main activity:\n<activity_id#AE_SAE_001> ### Are all AEs/SAEs in final disposition in RAVE, ie. end dates?",
         "summary": "The main activity involves checking if all Adverse Events (AEs) and Serious Adverse Events (SAEs) have been finalized in the RAVE system, specifically looking for end dates. This is part of the process for invoking the site area agent related to the specified activity ID.",
         "name": "inspection - site_area_router"
       },
       {
         "id": 34,
-        "content": "Generating sub-activities for: <activity_id#AE_SAE_001>\nBelow are the generated sub-activities:\n\u00e2\u20ac\u00a2 Are all AEs in final disposition in RAVE, i.e., end dates?\n\u00e2\u20ac\u00a2 Are all SAEs in final disposition in RAVE, i.e., end dates?",
-        "summary": "The generated sub-activities for activity ID AE_SAE_001 focus on verifying the final disposition of Adverse Events (AEs) and Serious Adverse Events (SAEs) in the RAVE system, specifically checking for end dates. This ensures that all relevant data is accurately recorded and up to date.",
+        "content": "Generating sub-activities for: <activity_id#AE_SAE_001>\nBelow are the generated sub-activities:\n• Are all AEs in final disposition in RAVE, i.e., end dates?\n• Are all SAEs in final disposition in RAVE, i.e., end dates?",
+        "summary": "The generated sub-activities for activity ID AE_SAE_001 focus on verifying the final disposition of Adverse Events (AEs) and Serious Adverse Events (SAEs) in the RAVE system, specifically checking for end dates. This ensures that all relevant data regarding AEs and SAEs is accurately recorded and up to date.",
         "name": "inspection - planner_agent"
       },
       {
@@ -186,7 +186,7 @@ export const agentactivities: TreeNode[] = [
       {
         "id": 39,
         "content": "The necessary site data has been retrieved for checking if all AEs in final disposition have end dates in RAVE.",
-        "summary": "The site data has been collected to verify that all adverse events (AEs) in the final disposition have corresponding end dates in the RAVE system. This check is essential for ensuring accurate documentation and compliance.",
+        "summary": "The site data has been collected to verify that all adverse events (AEs) in the final disposition have corresponding end dates recorded in RAVE. This check is essential for ensuring accurate documentation and compliance.",
         "name": "SelfRAG - retrieval_agent"
       },
       {
@@ -221,7 +221,7 @@ export const agentactivities: TreeNode[] = [
       },
       {
         "id": 47,
-        "content": "Generating findings for the activity\nHere is the re-generated summary:\nConclusion:\nBased on the data, none of the adverse events (AEs) for the subjects listed have end dates provided, and one serious adverse event (SAE) for Subject 221026 (SCROTAL PAIN) lacks an end date. Therefore, **not all AEs and SAEs are in final disposition in RAVE** due to missing end dates in the dataset.\n=",
+        "content": "Generating findings for the activity\nHere is the re-generated summary:\nConclusion:\nBased on the data, none of the adverse events (AEs) for the subjects listed have end dates provided, and one serious adverse event (SAE) for Subject 221026 (SCROTAL PAIN) lacks an end date. Therefore, **not all AEs and SAEs are in final disposition in RAVE** due to missing end dates in the dataset.\n",
         "summary": "The analysis reveals that there are no end dates provided for the adverse events (AEs) of the subjects, including a serious adverse event (SAE) for Subject 221026 related to scrotal pain. Consequently, this indicates that not all AEs and SAEs have reached final disposition in the RAVE system due to these missing end dates.",
         "name": "inspection - generate_findings_agent"
       },

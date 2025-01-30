@@ -12,6 +12,12 @@ interface DetailPaneProps {
   selectedNode: TreeNode | null;
 }
 
+const decodeSpecialChars = (text: string): string => {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
+};
+
 const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
   const theme = useTheme();
 
@@ -158,24 +164,29 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
             }}
           >
             {selectedNode.content?.split('\n').map((paragraph, index, array) => {
+              // Decode special characters in the paragraph
+              const decodedParagraph = decodeSpecialChars(paragraph);
+              
               // Skip empty lines but preserve spacing
-              if (!paragraph.trim()) {
+              if (!decodedParagraph.trim()) {
                 return <Box key={index} sx={{ height: '0.5rem' }} />;
               }
 
-              // Check if line starts with bullet point
-              const isBullet = paragraph.trim().startsWith('•') || paragraph.trim().startsWith('-');
+              // Check if line starts with bullet point (including encoded bullets)
+              const isBullet = decodedParagraph.trim().startsWith('•') || 
+                             decodedParagraph.trim().startsWith('-') ||
+                             decodedParagraph.trim().startsWith('\u00e2\u20ac\u00a2'); // encoded bullet
               
               // Check if line is a heading (starts with # or is in all caps)
-              const isHeading = paragraph.trim().startsWith('#') || 
-                             (paragraph.trim() === paragraph.trim().toUpperCase() && 
-                              paragraph.trim().length > 3);
+              const isHeading = decodedParagraph.trim().startsWith('#') || 
+                             (decodedParagraph.trim() === decodedParagraph.trim().toUpperCase() && 
+                              decodedParagraph.trim().length > 3);
 
               // Check if this is a code block (indented by 4 spaces or tab)
-              const isCodeBlock = paragraph.startsWith('    ') || paragraph.startsWith('\t');
+              const isCodeBlock = decodedParagraph.startsWith('    ') || decodedParagraph.startsWith('\t');
 
               // Format code blocks (text between backticks)
-              const formattedText = paragraph.split('`').map((part, i) => {
+              const formattedText = decodedParagraph.split('`').map((part, i) => {
                 if (i % 2 === 1) { // Text between backticks
                   return (
                     <Box
@@ -215,7 +226,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
               });
 
               if (isHeading) {
-                const headingText = paragraph.replace(/^#\s*/, '');
+                const headingText = decodedParagraph.replace(/^#\s*/, '');
                 return (
                   <Typography
                     key={index}
@@ -251,13 +262,13 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
                       overflowX: 'auto',
                     }}
                   >
-                    {paragraph.replace(/^(\t|    )/, '')}
+                    {decodedParagraph.replace(/^(\t|    )/, '')}
                   </Box>
                 );
               }
 
               if (isBullet) {
-                const bulletText = paragraph.replace(/^[•-]\s*/, '');
+                const bulletText = decodedParagraph.replace(/^[•\u00e2\u20ac\u00a2-]\s*/, '');
                 return (
                   <Box
                     key={index}
