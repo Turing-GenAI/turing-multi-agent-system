@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from redis import Redis
 from app.setup_redis import connect_to_redis, initialize_redis_structure
+from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -312,7 +313,13 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
                     findings[j.replace(".json", "")] = json_data
 
-    res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings}
+    message_parser = parse_ai_messages(new_messages)
+    processed_messages = filter_parsed_messages_by_name(message_parser)
+    compressed_data = add_content(processed_messages)
+    summarized_data = summarize_content(compressed_data)
+    filtered_data = filter_json_keys(summarized_data)
+
+    res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}
     return res
 
 
