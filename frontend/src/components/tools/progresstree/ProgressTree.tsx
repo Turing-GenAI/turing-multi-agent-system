@@ -105,6 +105,52 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     return tree;
   }, []);
 
+  // Function to check if a node is a leaf node
+  const isLeafNode = useCallback((node: TreeNode): boolean => {
+    return !node.children || node.children.length === 0;
+  }, []);
+
+  // Function to check if all child nodes are present
+  const hasAllChildren = useCallback((node: TreeNode, allNodes: Set<string>): boolean => {
+    if (!node.children) return true;
+    return node.children.every(child => {
+      const childPath = `${node.title}.${child.title}`;
+      return allNodes.has(childPath) && hasAllChildren(child, allNodes);
+    });
+  }, []);
+
+  // Function to update node status
+  const updateNodeStatus = useCallback((nodes: TreeNode[], path: string[], newStatus: 'pending' | 'in progress' | 'complete', allNodes?: Set<string>): TreeNode[] => {
+    return nodes.map(node => {
+      if (path.length === 0) return node;
+
+      if (node.title === path[0]) {
+        if (path.length === 1) {
+          // For leaf nodes, allow direct status update
+          if (isLeafNode(node)) {
+            return { ...node, status: newStatus };
+          }
+          
+          // For non-leaf nodes
+          if (node.children && allNodes) {
+            // If all children are present, mark as complete
+            if (hasAllChildren(node, allNodes)) {
+              return { ...node, status: 'complete' };
+            }
+            // Otherwise, show as in progress while children are being added
+            return { ...node, status: 'in progress' };
+          }
+        }
+        
+        return {
+          ...node,
+          children: node.children ? updateNodeStatus(node.children, path.slice(1), newStatus, allNodes) : undefined
+        };
+      }
+      return node;
+    });
+  }, [isLeafNode, hasAllChildren]);
+
   // Effect to handle initial load and updates
   useEffect(() => {
     // Cancel any ongoing animation
@@ -132,16 +178,36 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
         let currentIndex = 0;
         const addNewNodesSequentially = () => {
           if (currentIndex >= newNodes.length) {
+            // When all nodes are added, update parent statuses
+            const allPaths = new Set(getNodesInOrder(activities).map(n => n.path));
+            setDisplayedActivities(prev => {
+              return prev.map(node => {
+                if (!isLeafNode(node) && hasAllChildren(node, allPaths)) {
+                  return { ...node, status: 'complete' };
+                }
+                return node;
+              });
+            });
             return;
           }
 
           const { node, path } = newNodes[currentIndex];
           const pathParts = path.split('.');
+          const allCurrentPaths = new Set([...currentNodes, ...newNodes.slice(0, currentIndex + 1).map(n => n.path)]);
 
           setDisplayedActivities(prev => {
             const newTree = [...prev];
-            return addNodeToTree(newTree, pathParts, node);
+            const updatedTree = addNodeToTree(newTree, pathParts, node);
+            // Start with in progress and update based on children
+            return updateNodeStatus(updatedTree, pathParts, 'in progress', allCurrentPaths);
           });
+
+          // For leaf nodes, complete after animation
+          if (isLeafNode(node)) {
+            setTimeout(() => {
+              setDisplayedActivities(prev => updateNodeStatus(prev, pathParts, 'complete'));
+            }, animationDuration);
+          }
 
           setExpandedNodes(prev => Array.from(new Set([...prev, path])));
 
@@ -154,23 +220,43 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
         addNewNodesSequentially();
       }
     } else {
-      // Initial load - animate all nodes
+      // Similar logic for initial load
       const orderedNodes = getNodesInOrder(activities);
       let currentIndex = 0;
 
       const addNodesSequentially = () => {
         if (currentIndex >= orderedNodes.length) {
+          // When all nodes are added, update parent statuses
+          const allPaths = new Set(orderedNodes.map(n => n.path));
+          setDisplayedActivities(prev => {
+            return prev.map(node => {
+              if (!isLeafNode(node) && hasAllChildren(node, allPaths)) {
+                return { ...node, status: 'complete' };
+              }
+              return node;
+            });
+          });
           setIsInitialLoad(false);
           return;
         }
 
         const { node, path } = orderedNodes[currentIndex];
         const pathParts = path.split('.');
+        const allCurrentPaths = new Set(orderedNodes.slice(0, currentIndex + 1).map(n => n.path));
 
         setDisplayedActivities(prev => {
           const newTree = [...prev];
-          return addNodeToTree(newTree, pathParts, node);
+          const updatedTree = addNodeToTree(newTree, pathParts, node);
+          // Start with in progress and update based on children
+          return updateNodeStatus(updatedTree, pathParts, 'in progress', allCurrentPaths);
         });
+
+        // For leaf nodes, complete after animation
+        if (isLeafNode(node)) {
+          setTimeout(() => {
+            setDisplayedActivities(prev => updateNodeStatus(prev, pathParts, 'complete'));
+          }, animationDuration);
+        }
 
         setExpandedNodes(prev => Array.from(new Set([...prev, path])));
 
@@ -188,7 +274,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [activities, isInitialLoad, animationDuration, areTreesEqual, getNodesInOrder, addNodeToTree]);
+  }, [activities, isInitialLoad, animationDuration, areTreesEqual, getNodesInOrder, addNodeToTree, updateNodeStatus, isLeafNode, hasAllChildren]);
 
   const handleToggleExpand = useCallback((nodeTitle: string) => {
     setExpandedNodes(prev =>
