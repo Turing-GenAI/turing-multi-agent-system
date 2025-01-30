@@ -154,6 +154,7 @@ export const AuditPage: React.FC = () => {
             timestamp: new Date(),
             isUser: false,
             nodeName: options?.nodeName || '',
+            toolType: toolType, // Add the toolType property here
           };
 
           const cont = JSON.stringify({
@@ -642,9 +643,21 @@ export const AuditPage: React.FC = () => {
       try {
         auditService.updateJobFeedback(jobId!, userInput[agent]).then(() => {
           setAwaitingForFeedback(false); // Reset the feedback state
-          setAwaitingForFeedback(false); // Reset the feedback state
-          addAgentMessage("Thanks for your feedback! I'm proceeding further...")
-          fetchAIMessages(jobId!, true)
+          setMessagesByAgent(prev => {
+            const messages = prev[agent];
+            console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
+            // Find the last index of a message with toolType = 'progresstree'
+            const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
+            console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
+            return {
+              ...prev,
+              [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
+            }
+          });
+
+          delay(1000).then(() => {
+            fetchAIMessages(jobId!, false);
+          })
         });
         
       } catch (error) {
