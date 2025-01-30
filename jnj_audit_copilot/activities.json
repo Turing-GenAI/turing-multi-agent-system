@@ -1,8 +1,0 @@
-{
-    "PD": [
-        "Check the management of the PDs reported to ensure they have been resolved/closed in an acceptable time frame."
-    ],
-    "AE_SAE" : [
-        "Are all AEs/SAEs in final disposition in RAVE, ie. end dates?"
-    ]
-}
