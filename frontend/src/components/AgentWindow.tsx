@@ -6,7 +6,19 @@ import { MessageInput } from './agent/MessageInput';
 import { MessageBubble } from './agent/MessageBubble';
 import { getMessageBackgroundColor } from './agent/utils';
 import { AuditProgressSteps } from './agent/AuditProgressSteps';
-import { AgentWindowProps } from './agent/types';
+
+interface AgentWindowProps {
+  trials: string[];
+  sites: { [key: string]: Array<{ id: string; status: string }> };
+  onInputComplete: (data: { selectedTrial: string; selectedSite: string; dateRange: { from: Date; to: Date } }) => void;
+  handleRunClick: () => void;
+  addAgentMessage: (message: string, type?: string) => void;
+  onToolInput?: (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => void;
+  messages: any[];
+  userInput: string;
+  updateUserInput: (value: string) => void;
+  handleSendMessage: () => void;
+}
 
 export const AgentWindow: React.FC<AgentWindowProps> = ({
   messages,
@@ -18,6 +30,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   onInputComplete,
   handleRunClick,
   addAgentMessage,
+  onToolInput,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -84,11 +97,11 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     };
   }, []);
 
-  const handleToolInput = (type: 'trial' | 'site' | 'date' | 'button', value: any) => {
+  const handleToolInput = (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => {
+    // Handle internal state updates for wizard flow
     switch (type) {
       case 'button':
         if (currentStep === 'greeting') {
-          setShowGreeting(false);
           setCurrentStep('trial');
           const trialCount = trials?.length || 0;
           const trialText = trialCount === 1 ? 'trial' : 'trials';
@@ -117,13 +130,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           setCurrentStep('confirm');
           addAgentMessage(
             `📋 Please review the analysis parameters:\n\n` +
-
             `🔹 Trial ID:        ${selectedTrial}\n` +
-
             `🔹 Site ID:         ${selectedSite}\n` +
-
             `🔹 Analysis Period: ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
-            
             `✨ Confirm to proceed with the analysis.`,
             'button'
           );
@@ -134,6 +143,10 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           });
         }
         break;
+    }
+    // Pass all tool inputs to parent component
+    if (onToolInput) {
+      onToolInput(type, value);
     }
   };
 
