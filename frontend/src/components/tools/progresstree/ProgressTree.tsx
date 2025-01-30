@@ -19,7 +19,7 @@ interface QuickActionsProps {
 interface ProgressTreeProps {
   type: 'tree' | 'minimap' | 'full';
   value: TreeNode[];
-  onChange: (node: TreeNode | null) => void;
+  onChange: (node: TreeNode & { path: string } | null) => void;
   options?: {
     showBreadcrumbs?: boolean;
     showKeyboardNav?: boolean;
@@ -47,6 +47,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpandedNodes);
   const [displayedActivities, setDisplayedActivities] = useState<TreeNode[]>([]);
+  const [selectedNode, setSelectedNode] = useState<(TreeNode & { path: string }) | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -110,199 +111,36 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   }, [animationDuration, updateNodeStatus]);
 
   useEffect(() => {
+    let currentIndex = 0;
     const addNodesSequentially = async () => {
-      // Initial state - all nodes pending
-      setDisplayedActivities(activities.map(node => ({ ...node, status: 'pending' })));
-      
-      // Protocol deviation to In Progress
-      await updateNodeStatusAndExpand(['Protocol deviation'], 'in progress');
-      
-      // Activity ID 1 to In Progress
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1'], 'in progress');
-      
-      // Inspection Master progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master'], 'in progress');
-      
-      // Inspection Master children progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Planned sub-activities'], 'complete');
-      
-      // Inspection Master children progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Inspection Master'], 'complete');
-      
-      // Planner Agent progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent'], 'in progress');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Planner Agent'], 'complete');
-      
-      // Critique agent progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent'], 'in progress');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Critique agent'], 'complete');
-      
-      // Feedback agent progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent'], 'in progress');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1', 'Feedback agent'], 'complete');
-      
-      // Complete Activity ID 1 after all children are complete
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 1'], 'complete');
-      
-      // Start Activity ID 2 progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2'], 'in progress');
-      
-      // Inspection Master progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master'], 'in progress');
-      
-      // Inspection Master children progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Inspection Master'], 'complete');
-      
-      // Planner Agent progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent'], 'in progress');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Planner Agent'], 'complete');
-      
-      // Critique agent progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent'], 'in progress');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Critique agent'], 'complete');
-      
-      // Feedback agent progression
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent'], 'in progress');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Planned sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Planned sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Recommendation on the plan'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Recommendation on the plan'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Reworked sub-activities'], 'in progress');
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent', 'Reworked sub-activities'], 'complete');
-      
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2', 'Feedback agent'], 'complete');
-      
-      // Complete Activity ID 2 after all children are complete
-      await updateNodeStatusAndExpand(['Protocol deviation', 'Activity ID 2'], 'complete');
-      
-      // Finally complete Protocol deviation after both activities are complete
-      await updateNodeStatusAndExpand(['Protocol deviation'], 'complete');
-      
-      // Expand all nodes initially
-      const expandAll = (nodes: TreeNode[]): string[] => {
-        return nodes.reduce<string[]>((acc, node) => {
-          acc.push(node.title);
-          if (node.children) {
-            acc.push(...expandAll(node.children));
-          }
-          return acc;
-        }, []);
-      };
+      if (currentIndex >= activities.length) return;
 
-      setExpandedNodes(expandAll(activities));
-      console.log('Activities', activities);
-      const allNodes = buildNodeList(activities);
-      
-      for (let i = 0; i < allNodes.length; i++) {
+      const currentNode = activities[currentIndex];
+      if (currentNode) {
+        // Wait for the animation duration
         await new Promise(resolve => setTimeout(resolve, animationDuration));
-        const currentNode = allNodes[i];
-        const pathParts = currentNode.fullPath?.split('/') || [];
 
-        setDisplayedActivities(prev => {
-          const newActivities = [...prev];
-          let currentLevel = newActivities;
-          
-          for (let j = 0; j < pathParts.length - 1; j++) {
-            const part = pathParts[j];
-            let existingNode = currentLevel.find(n => n.title === part);
-            if (!existingNode) {
-              existingNode = { title: part, children: [] };
-              currentLevel.push(existingNode);
-            }
-            currentLevel = existingNode.children || [];
-          }
+        // Update node status
+        setDisplayedActivities(prev => updateNodeStatus(prev, [currentNode.title], 'in progress'));
 
-          const lastPart = pathParts[pathParts.length - 1];
-          if (!currentLevel.find(n => n.title === lastPart)) {
-            currentLevel.push({
-              ...currentNode,
-              children: currentNode.children || []
-            });
-          }
-
-          return [...newActivities];
-        });
-
+        // Get all parent paths for expansion
+        const parentNodes = getParentPaths(currentNode.title);
         setExpandedNodes(prev => {
-          const parentNodes = pathParts.slice(0, -1);
           return Array.from(new Set([...prev, ...parentNodes]));
         });
 
-        onNodeSelect(currentNode);
+        // Set selected node with path
+        const nodePath = parentNodes[parentNodes.length - 1] || currentNode.title;
+        setSelectedNode({ ...currentNode, path: nodePath });
+        onNodeSelect({ ...currentNode, path: nodePath });
+
+        currentIndex++;
+        addNodesSequentially();
       }
     };
 
     addNodesSequentially();
-  }, [animationDuration, updateNodeStatus]);
+  }, [animationDuration, updateNodeStatus, onNodeSelect]);
 
   const handleToggleExpand = useCallback((nodeTitle: string) => {
     setExpandedNodes(prev =>
@@ -370,6 +208,11 @@ Enter: Toggle expand/collapse
     return path;
   }, [activities]);
 
+  const handleNodeSelect = (node: TreeNode & { path: string }) => {
+    setSelectedNode(node);
+    onNodeSelect(node);
+  };
+
   switch (type) {
     case 'minimap':
       return (
@@ -385,8 +228,8 @@ Enter: Toggle expand/collapse
         <Box sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 2, boxShadow: 3 }}>
           <TreePane
             data={displayedActivities}
-            onNodeSelect={onNodeSelect}
-            selectedNode={activities.length > 0 ? activities[0] : null}
+            onNodeSelect={handleNodeSelect}
+            selectedNode={selectedNode}
             expandedNodes={expandedNodes}
             onToggleExpand={handleToggleExpand}
           />
@@ -414,10 +257,10 @@ Enter: Toggle expand/collapse
                 <TreePane
                   data={displayedActivities}
                   onNodeSelect={(node) => {
-                    onNodeSelect(node);
+                    handleNodeSelect(node);
                     setMobileOpen(false);
                   }}
-                  selectedNode={activities.length > 0 ? activities[0] : null}
+                  selectedNode={selectedNode}
                   expandedNodes={expandedNodes}
                   onToggleExpand={handleToggleExpand}
                 />
@@ -458,8 +301,8 @@ Enter: Toggle expand/collapse
           >
             <TreePane
               data={displayedActivities}
-              onNodeSelect={onNodeSelect}
-              selectedNode={activities.length > 0 ? activities[0] : null}
+              onNodeSelect={handleNodeSelect}
+              selectedNode={selectedNode}
               expandedNodes={expandedNodes}
               onToggleExpand={handleToggleExpand}
             />

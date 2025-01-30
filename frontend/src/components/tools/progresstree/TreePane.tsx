@@ -18,16 +18,17 @@ interface TreeNodeProps {
   node: TreeNodeData;
   depth?: number;
   isLastChild: boolean;
-  onNodeSelect: (node: TreeNodeData) => void;
-  selectedNode: TreeNodeData | null;
+  onNodeSelect: (node: TreeNodeData & { path: string }) => void;
+  selectedNode: (TreeNodeData & { path: string }) | null;
   expandedNodes: string[];
   onToggleExpand: (title: string) => void;
+  parentPath?: string;
 }
 
 interface TreePaneProps {
   data: TreeNodeData[];
-  selectedNode: TreeNodeData | null;
-  onNodeSelect: (node: TreeNodeData) => void;
+  selectedNode: (TreeNodeData & { path: string }) | null;
+  onNodeSelect: (node: TreeNodeData & { path: string }) => void;
   expandedNodes: string[];
   onToggleExpand: (title: string) => void;
 }
@@ -85,24 +86,19 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onNodeSelect,
   selectedNode,
   expandedNodes,
-  onToggleExpand
+  onToggleExpand,
+  parentPath = ''
 }) => {
-  const isSelected = selectedNode && selectedNode.title === node.title;
-  
-  // Build the full path for this node
-  const getNodePath = (currentNode: TreeNodeData): string => {
-    // If this is a root node, return just the title
-    if (depth === 0) return currentNode.title;
-    
-    // Otherwise, find this node's path in the expanded nodes array
-    const matchingPath = expandedNodes.find(path => path.endsWith(`.${currentNode.title}`));
-    return matchingPath || currentNode.title;
-  };
-  
-  const nodePath = getNodePath(node);
+  // Create a unique path for this node based on its position in the tree
+  const nodePath = parentPath ? `${parentPath}.${node.title}` : node.title;
+  const isSelected = selectedNode && selectedNode.path === nodePath;
   const isExpanded = expandedNodes.includes(nodePath);
   const hasChildren = node.children && node.children.length > 0;
   const isLeaf = !hasChildren;
+
+  const handleNodeSelect = () => {
+    onNodeSelect({ ...node, path: nodePath });
+  };
 
   return (
     <Box sx={{ position: 'relative' }}>
@@ -121,7 +117,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         <Box
           component={motion.div}
           whileHover={{ scale: 1.01 }}
-          onClick={() => onNodeSelect(node)}
+          onClick={handleNodeSelect}
           sx={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -229,6 +225,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 selectedNode={selectedNode}
                 expandedNodes={expandedNodes}
                 onToggleExpand={onToggleExpand}
+                parentPath={nodePath}
               />
             ))}
           </motion.div>
