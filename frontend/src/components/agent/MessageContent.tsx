@@ -5,6 +5,28 @@ import { ProgressSteps } from '../ProgressSteps';
 import { ToolUI } from '../ToolUI';
 import { getAgentDisplayName } from '../../data/agentNames';
 import { ToolMessage } from './types';
+import { motion } from 'framer-motion';
+
+const TypewriterText = ({ text }: { text: string }) => {
+  return (
+    <span style={{ whiteSpace: 'pre-wrap' }}>
+      {text.split('').map((char, index) => (
+        <motion.span
+          key={index}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 0.1,
+            delay: index * 0.02,
+            ease: "easeOut"
+          }}
+        >
+          {char}
+        </motion.span>
+      ))}
+    </span>
+  );
+};
 
 interface MessageContentProps {
   message: Message;
@@ -60,10 +82,11 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         if(type === 'progresstree') {
           console.log("Tool message:", toolMessage, " overall message : ", message)
         }
-        // console.log('Tool message:', toolMessage);
         return (
           <div className="space-y-3">
-            <p className="text-sm leading-relaxed">{toolMsg}</p>
+            <p className="text-sm leading-relaxed">
+              <TypewriterText text={toolMsg} />
+            </p>
             <div className="mt-2">
               <ToolUI
                 type={type}
