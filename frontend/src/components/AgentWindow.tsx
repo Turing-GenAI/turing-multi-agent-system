@@ -92,7 +92,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           setCurrentStep('trial');
           const trialCount = trials?.length || 0;
           const trialText = trialCount === 1 ? 'trial' : 'trials';
-          addAgentMessage(`I've identified ${trialCount} active ${trialText} in the system. Please select one for analysis.`, 'trial');
+          addAgentMessage(`🔍 I've identified ${trialCount} active ${trialText} in the system. Which one would you like to analyze?`, 'trial');
         } else if (currentStep === 'confirm' && !isAnalysisStarted) {
           setIsAnalysisStarted(true);
           handleRunClick();
@@ -104,19 +104,27 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         const sitesForTrial = sites[value] || [];
         const siteCount = sitesForTrial.length;
         const siteText = siteCount === 1 ? 'clinical site' : 'clinical sites';
-        addAgentMessage(`I've located ${siteCount} ${siteText} associated with this trial. Which site would you like to review?`, 'site');
+        addAgentMessage(`📍 I've located ${siteCount} ${siteText} associated with this trial. Which site would you like to review?`, 'site');
         break;
       case 'site':
         setSelectedSite(value);
         setCurrentStep('date');
-        addAgentMessage('Please specify the time period for analysis:', 'date');
+        addAgentMessage(`📅 Please specify the time period for analysis:`, 'date');
         break;
       case 'date':
         setDateRange(value);
         if (value.from && value.to) {
           setCurrentStep('confirm');
           addAgentMessage(
-            `Please confirm to proceed Analysis with Trial ID: ${selectedTrial}, Site ID: ${selectedSite}, Date: ${value.from.toLocaleDateString()} - ${value.to.toLocaleDateString()}`,
+            `📋 Please review the analysis parameters:\n\n` +
+
+            `🔹 Trial ID:        ${selectedTrial}\n` +
+
+            `🔹 Site ID:         ${selectedSite}\n` +
+
+            `🔹 Analysis Period: ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
+            
+            `✨ Confirm to proceed with the analysis.`,
             'button'
           );
           onInputComplete({
