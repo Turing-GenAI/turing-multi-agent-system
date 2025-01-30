@@ -10,7 +10,7 @@ interface MessageBubbleProps {
   selectedTrial: string;
   selectedSite: string;
   dateRange: { from: Date | undefined; to: Date | undefined };
-  handleToolInput: (type: 'trial' | 'site' | 'date' | 'button', value: any) => void;
+  handleToolInput: (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => void;
   trials: string[];
   sites: { [key: string]: Array<{ id: string; status: string }> };
   datePickerRef: React.RefObject<HTMLDivElement>;

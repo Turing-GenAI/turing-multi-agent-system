@@ -632,6 +632,10 @@ export const AuditPage: React.FC = () => {
     }
   };
 
+  const handleToolInput = (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => {
+    console.log('Tool Input:', { type, value });
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Left Sidebar */}
@@ -703,6 +707,7 @@ export const AuditPage: React.FC = () => {
                 }}
                 handleRunClick={handleRunClick}
                 addAgentMessage={addAgentMessage}
+                onToolInput={handleToolInput}
               />
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
