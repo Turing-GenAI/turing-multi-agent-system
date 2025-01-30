@@ -225,7 +225,7 @@ def filter_json_keys(data):
     Returns:
         dict or list: Filtered JSON data containing only the specified keys
     """
-    KEYS_TO_KEEP = ['id', 'content', 'summary', 'name']
+    KEYS_TO_KEEP = ['id', 'name', 'summary', 'content']
     
     def filter_single_item(item):
         return {key: item[key] for key in KEYS_TO_KEEP if key in item}

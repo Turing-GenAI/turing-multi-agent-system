@@ -313,11 +313,20 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
                     findings[j.replace(".json", "")] = json_data
 
-    message_parser = parse_ai_messages(new_messages[-1])
-    processed_messages = filter_parsed_messages_by_name(message_parser)
-    compressed_data = add_content(processed_messages)
-    summarized_data = summarize_content(compressed_data)
-    filtered_data = filter_json_keys(summarized_data)
+    try:
+        # Parse and process the latest AI message
+        message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
+        processed_messages = filter_parsed_messages_by_name(message_parser)
+        
+        # Add content and summarize
+        compressed_data = add_content(processed_messages) if processed_messages else []
+        summarized_data = summarize_content(compressed_data) if compressed_data else []
+        
+        # Filter down to essential keys
+        filtered_data = filter_json_keys(summarized_data) if summarized_data else []
+    except Exception as e:
+        logger.error(f"Error processing AI messages: {str(e)}")
+        filtered_data = []
 
     res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}
     return res
