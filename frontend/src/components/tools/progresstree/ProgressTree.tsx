@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Box, useTheme, useMediaQuery } from '@mui/material';
 import TreePane from './TreePane';
 import BreadcrumbTrail from './BreadcrumbTrail';
@@ -43,104 +43,152 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     animationDuration = 800
   } = options;
 
-  console.log(" activities : ", activities);
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpandedNodes);
   const [displayedActivities, setDisplayedActivities] = useState<TreeNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<(TreeNode & { path: string }) | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const previousActivities = useRef<TreeNode[]>([]);
+  const animationRef = useRef<number>();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const updateNodeStatus = useCallback((nodes: TreeNode[], path: string[], newStatus: 'pending' | 'in progress' | 'complete'): TreeNode[] => {
-    return nodes.map(node => {
-      if (path.length === 0) return node;
+  // Function to compare two trees deeply
+  const areTreesEqual = useCallback((tree1: TreeNode[], tree2: TreeNode[]): boolean => {
+    if (tree1.length !== tree2.length) return false;
 
-      if (node.title === path[0]) {
-        if (path.length === 1) {
-          if (newStatus === 'in progress' && node.children) {
-            const hasInProgressChild = node.children.some(child => child.status === 'in progress');
-            if (hasInProgressChild) return node;
-          }
-          
-          if (newStatus === 'complete' && node.children) {
-            const allChildrenComplete = node.children.every(child => child.status === 'complete');
-            if (!allChildrenComplete) return node;
-          }
-          
-          return { ...node, status: newStatus };
-        }
-        
-        return {
-          ...node,
-          children: node.children ? updateNodeStatus(node.children, path.slice(1), newStatus) : undefined
-        };
+    return tree1.every((node1, index) => {
+      const node2 = tree2[index];
+      if (node1.title !== node2.title || node1.status !== node2.status) return false;
+      if (node1.children && node2.children) {
+        return areTreesEqual(node1.children, node2.children);
       }
-      return node;
+      return (!node1.children && !node2.children);
     });
   }, []);
 
-  const updateNodeStatusAndExpand = useCallback(async (path: string[], newStatus: 'pending' | 'in progress' | 'complete') => {
-    // Helper function to get all node titles from a path
-    const getNodeTitlesFromPath = (path: string[]): string[] => {
-      // This will store all parent paths
-      const paths: string[] = [];
-      let currentPath = '';
-      
-      // Build paths incrementally
-      path.forEach((segment, index) => {
-        if (index === 0) {
-          currentPath = segment;
-        } else {
-          currentPath = `${currentPath}.${segment}`;
-        }
-        paths.push(currentPath);
-      });
-      
-      return paths;
-    };
-
-    // Update the status
-    setDisplayedActivities(prev => updateNodeStatus(prev, path, newStatus));
+  // Function to get all nodes in depth-first order with their full paths
+  const getNodesInOrder = useCallback((nodes: TreeNode[], parentPath: string = ''): { node: TreeNode; path: string }[] => {
+    const result: { node: TreeNode; path: string }[] = [];
     
-    // Get all parent paths and expand them
-    const nodePaths = getNodeTitlesFromPath(path);
-    setExpandedNodes(prev => [...new Set([...prev, ...nodePaths])]);
+    nodes.forEach(node => {
+      const currentPath = parentPath ? `${parentPath}.${node.title}` : node.title;
+      result.push({ node, path: currentPath });
+      
+      if (node.children) {
+        result.push(...getNodesInOrder(node.children, currentPath));
+      }
+    });
     
-    // Wait for animation
-    await new Promise(resolve => setTimeout(resolve, animationDuration));
-  }, [animationDuration, updateNodeStatus]);
+    return result;
+  }, []);
 
+  // Function to add a node to the tree at its correct position
+  const addNodeToTree = useCallback((tree: TreeNode[], path: string[], node: TreeNode): TreeNode[] => {
+    if (path.length === 1) {
+      if (!tree.find(n => n.title === path[0])) {
+        tree.push({ ...node, children: [] });
+      }
+      return tree;
+    }
+
+    let parent = tree.find(n => n.title === path[0]);
+    if (!parent) {
+      parent = { title: path[0], children: [] };
+      tree.push(parent);
+    }
+
+    if (parent.children) {
+      parent.children = addNodeToTree(parent.children, path.slice(1), node);
+    }
+
+    return tree;
+  }, []);
+
+  // Effect to handle initial load and updates
   useEffect(() => {
-    let currentIndex = 0;
-    const addNodesSequentially = async () => {
-      if (currentIndex >= activities.length) return;
+    // Cancel any ongoing animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
 
-      const currentNode = activities[currentIndex];
-      if (currentNode) {
-        // Wait for the animation duration
-        await new Promise(resolve => setTimeout(resolve, animationDuration));
+    if (activities.length === 0) return;
 
-        // Update node status
-        setDisplayedActivities(prev => updateNodeStatus(prev, [currentNode.title], 'in progress'));
+    // Check if this is just a re-render with the same data
+    if (!isInitialLoad && areTreesEqual(activities, previousActivities.current)) {
+      return;
+    }
 
-        // Get all parent paths for expansion
-        const parentNodes = getParentPaths(currentNode.title);
-        setExpandedNodes(prev => {
-          return Array.from(new Set([...prev, ...parentNodes]));
+    // Update previous activities reference
+    previousActivities.current = activities;
+
+    // If it's not initial load, check what nodes are new
+    if (!isInitialLoad) {
+      const currentNodes = new Set(getNodesInOrder(displayedActivities).map(n => n.path));
+      const newNodes = getNodesInOrder(activities).filter(n => !currentNodes.has(n.path));
+
+      // Only animate new nodes
+      if (newNodes.length > 0) {
+        let currentIndex = 0;
+        const addNewNodesSequentially = () => {
+          if (currentIndex >= newNodes.length) {
+            return;
+          }
+
+          const { node, path } = newNodes[currentIndex];
+          const pathParts = path.split('.');
+
+          setDisplayedActivities(prev => {
+            const newTree = [...prev];
+            return addNodeToTree(newTree, pathParts, node);
+          });
+
+          setExpandedNodes(prev => Array.from(new Set([...prev, path])));
+
+          currentIndex++;
+          animationRef.current = requestAnimationFrame(() => {
+            setTimeout(addNewNodesSequentially, animationDuration / 2);
+          });
+        };
+
+        addNewNodesSequentially();
+      }
+    } else {
+      // Initial load - animate all nodes
+      const orderedNodes = getNodesInOrder(activities);
+      let currentIndex = 0;
+
+      const addNodesSequentially = () => {
+        if (currentIndex >= orderedNodes.length) {
+          setIsInitialLoad(false);
+          return;
+        }
+
+        const { node, path } = orderedNodes[currentIndex];
+        const pathParts = path.split('.');
+
+        setDisplayedActivities(prev => {
+          const newTree = [...prev];
+          return addNodeToTree(newTree, pathParts, node);
         });
 
-        // Set selected node with path
-        const nodePath = parentNodes[parentNodes.length - 1] || currentNode.title;
-        setSelectedNode({ ...currentNode, path: nodePath });
-        onNodeSelect({ ...currentNode, path: nodePath });
+        setExpandedNodes(prev => Array.from(new Set([...prev, path])));
 
         currentIndex++;
-        addNodesSequentially();
+        animationRef.current = requestAnimationFrame(() => {
+          setTimeout(addNodesSequentially, animationDuration / 2);
+        });
+      };
+
+      addNodesSequentially();
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
       }
     };
-
-    addNodesSequentially();
-  }, [animationDuration, updateNodeStatus, onNodeSelect]);
+  }, [activities, isInitialLoad, animationDuration, areTreesEqual, getNodesInOrder, addNodeToTree]);
 
   const handleToggleExpand = useCallback((nodeTitle: string) => {
     setExpandedNodes(prev =>

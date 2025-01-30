@@ -304,89 +304,88 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
-    // Initialize progress for new jobs
-    if (!jobProgress.has(jobId)) {
-      jobProgress.set(jobId, {
-        level: 0,
-        activityIndex: 0,
-        agentIndex: 0,
-        subActivityIndex: 0
-      });
-    }
+    // if (!jobProgress.has(jobId)) {
+    //     jobProgress.set(jobId, {
+    //       level: 0,
+    //       activityIndex: 0,
+    //       agentIndex: 0,
+    //       subActivityIndex: 0
+    //     });
+    //   }
 
-    const currentProgress = jobProgress.get(jobId)!;
+    //   const currentProgress = jobProgress.get(jobId)!;
 
-    const buildIncrementalTree = () => {
-      // Deep clone the activities array to avoid modifying the original
-      const result = JSON.parse(JSON.stringify(activities));
+    //   const buildIncrementalTree = () => {
+    //     // Deep clone the activities array to avoid modifying the original
+    //     const result = JSON.parse(JSON.stringify(activities));
 
-      // If level 0, return empty tree with just root
-      if (currentProgress.level === 0) {
-        return result;
-      }
+    //     // If level 0, return empty tree with just root
+    //     if (currentProgress.level === 0) {
+    //       return result;
+    //     }
 
-      // Level 1: Show activities up to current index
-      if (currentProgress.level === 1) {
-        result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
-        return result;
-      }
+    //     // Level 1: Show activities up to current index
+    //     if (currentProgress.level === 1) {
+    //       result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
+    //       return result;
+    //     }
 
-      // Level 2: Show agents up to current index for the current activity
-      if (currentProgress.level === 2) {
-        result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
-        const currentActivity = result[0].children?.[currentProgress.activityIndex];
-        if (currentActivity) {
-          currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
-        }
-        return result;
-      }
+    //     // Level 2: Show agents up to current index for the current activity
+    //     if (currentProgress.level === 2) {
+    //       result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
+    //       const currentActivity = result[0].children?.[currentProgress.activityIndex];
+    //       if (currentActivity) {
+    //         currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
+    //       }
+    //       return result;
+    //     }
 
-      // Level 3: Show sub-activities up to current index for the current agent
-      if (currentProgress.level === 3) {
-        result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
-        const currentActivity = result[0].children?.[currentProgress.activityIndex];
-        if (currentActivity) {
-          currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
-          const currentAgent = currentActivity.children?.[currentProgress.agentIndex];
-          if (currentAgent) {
-            currentAgent.children = currentAgent.children?.slice(0, currentProgress.subActivityIndex + 1);
-          }
-        }
-      }
+    //     // Level 3: Show sub-activities up to current index for the current agent
+    //     if (currentProgress.level === 3) {
+    //       result[0].children = result[0].children?.slice(0, currentProgress.activityIndex + 1);
+    //       const currentActivity = result[0].children?.[currentProgress.activityIndex];
+    //       if (currentActivity) {
+    //         currentActivity.children = currentActivity.children?.slice(0, currentProgress.agentIndex + 1);
+    //         const currentAgent = currentActivity.children?.[currentProgress.agentIndex];
+    //         if (currentAgent) {
+    //           currentAgent.children = currentAgent.children?.slice(0, currentProgress.subActivityIndex + 1);
+    //         }
+    //       }
+    //     }
 
-      // Progress to next state
-      currentProgress.subActivityIndex++;
-      if (currentProgress.subActivityIndex >= 3) {
-        currentProgress.subActivityIndex = 0;
-        currentProgress.agentIndex++;
-        if (currentProgress.agentIndex >= 4) {
-          currentProgress.agentIndex = 0;
-          currentProgress.activityIndex++;
-          if (currentProgress.activityIndex >= 2) {
-            currentProgress.activityIndex = 0;
-            currentProgress.level++;
-            if (currentProgress.level >= 4) {
-              // Clean up completed job progress
-              jobProgress.delete(jobId);
-            }
-          }
-        }
-      }
+    //     // Progress to next state
+    //     currentProgress.subActivityIndex++;
+    //     if (currentProgress.subActivityIndex >= 3) {
+    //       currentProgress.subActivityIndex = 0;
+    //       currentProgress.agentIndex++;
+    //       if (currentProgress.agentIndex >= 4) {
+    //         currentProgress.agentIndex = 0;
+    //         currentProgress.activityIndex++;
+    //         if (currentProgress.activityIndex >= 2) {
+    //           currentProgress.activityIndex = 0;
+    //           currentProgress.level++;
+    //           if (currentProgress.level >= 4) {
+    //             // Clean up completed job progress
+    //             jobProgress.delete(jobId);
+    //           }
+    //         }
+    //       }
+    //     }
 
-      // Update progress in the Map
-      if (currentProgress.level < 4) {
-        jobProgress.set(jobId, { ...currentProgress });
-      }
+    //     // Update progress in the Map
+    //     if (currentProgress.level < 4) {
+    //       jobProgress.set(jobId, { ...currentProgress });
+    //     }
 
-      return result;
-    };
+    //     return result;
+    //   };
 
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
           status: 200,
           data: {
-            activities: buildIncrementalTree()
+            activities: activities // Return all activities directly
           }
         });
       }, 500);
