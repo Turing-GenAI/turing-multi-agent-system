@@ -143,6 +143,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const [showPopup, setShowPopup] = React.useState(false);
 
   const handleNodeSelect = () => {
+    if(node.name.includes("Unknown")) return;
     onNodeSelect({ ...node, path: nodePath });
   };
 
