@@ -284,7 +284,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 sx={{
                   fontSize: isLeaf ? '1rem' : '0.9rem',
                   fontWeight: isSelected ? 600 : isLeaf ? 500 : 400,
-                  color: isLeaf ? 'primary.main' : 'text.primary',
+                  color: () => {
+                    if (node.name.includes('critique_agent')) return 'warning.dark'
+                    if (node.name.includes('reflection_agent')) return 'success.dark'
+                    if (node.name.includes('feedback_agent')) return 'info.dark'
+                    if (node.name.includes('Unknown')) return 'grey.700'
+                    return isLeaf ? 'primary.main' : 'text.primary'
+                  },
                   letterSpacing: '0.01em',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',

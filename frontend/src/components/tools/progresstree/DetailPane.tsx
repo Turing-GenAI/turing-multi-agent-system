@@ -71,18 +71,24 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
     );
   }
 
-  const getNodeColor = (title: string): string => {
-    const colors = [
-      '#2196f3', // blue
-      '#4caf50', // green
-      '#ff9800', // orange
-      '#9c27b0', // purple
-      '#f44336', // red
-    ];
-    return colors[Math.abs(title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length];
+  const getNodeColor = (nodeName: string): string => {
+    if (nodeName.includes('critique_agent')) return theme.palette.warning.dark
+    if (nodeName.includes('reflection_agent')) return theme.palette.success.dark
+    if (nodeName.includes('feedback_agent')) return theme.palette.info.dark
+    if (nodeName.includes('Unknown')) return theme.palette.grey[700]
+    return theme.palette.primary.main
+  };
+
+  const getNodeBackground = (nodeName: string): string => {
+    if (nodeName.includes('critique_agent')) return 'rgba(254, 243, 199, 0.3)' // Light yellow
+    if (nodeName.includes('reflection_agent')) return 'rgba(209, 250, 229, 0.3)' // Light green
+    if (nodeName.includes('feedback_agent')) return 'rgba(219, 234, 254, 0.3)' // Light blue
+    if (nodeName.includes('Unknown')) return 'rgba(243, 244, 246, 0.5)' // Light gray
+    return theme.palette.background.paper
   };
 
   const nodeColor = getNodeColor(selectedNode.name);
+  const nodeBackground = getNodeBackground(selectedNode.name);
 
   return (
     <Paper
@@ -94,7 +100,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
       sx={{
         height: '100%',
         p: 3,
-        bgcolor: 'background.paper',
+        bgcolor: nodeBackground,
         borderRadius: 2,
         overflow: 'auto',
         position: 'relative',
@@ -105,7 +111,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
           left: 0,
           right: 0,
           height: '4px',
-          background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+          background: `linear-gradient(90deg, ${nodeColor}, ${theme.palette.background.paper})`,
         }
       }}
     >
@@ -138,7 +144,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
           sx={{
             p: 3,
             height: 'calc(100% - 80px)',
-            bgcolor: theme.palette.background.paper,
+            bgcolor: nodeBackground,
             border: '1px solid',
             borderColor: theme.palette.divider,
             borderRadius: 2,
@@ -238,8 +244,9 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
                       mt: index === 0 ? 0 : 2.5,
                       mb: 1.5,
                       fontSize: '1.2rem',
-                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      borderBottom: `1px solid ${nodeColor}`,
                       pb: 0.5,
+                      opacity: 0.9
                     }}
                   >
                     {headingText}
@@ -283,10 +290,11 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
                     <Box
                       component="span"
                       sx={{
-                        color: theme.palette.primary.main,
+                        color: nodeColor,
                         mr: 1.5,
                         fontWeight: 'bold',
                         lineHeight: 1.8,
+                        opacity: 0.9
                       }}
                     >
                       •
@@ -351,6 +359,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
             '& span': {
               color: nodeColor,
               fontWeight: 500,
+              opacity: 0.9
             }
           }}
         >

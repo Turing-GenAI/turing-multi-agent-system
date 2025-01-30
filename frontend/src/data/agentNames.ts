@@ -13,19 +13,20 @@ export const agentName = {
     "CRM - generate_final_report node": "CRM - Generate Final Report",
     "inspection - data_ingestion node": "Inspection - Data Ingestion",
     "inspection - site_area_router": "Inspection - Site Router",
-    "inspection - planner_agent": "Inspection - Planner",
-    "inspection - critique_agent": "Inspection - Critique",
-    "inspection - feedback_agent node": "Inspection - Feedback",
-    "SelfRAG - self_rag_agent": "Self RAG  - Self RAG",
-    "SelfRAG - retrieval_agent": "Self RAG  - Retrieval",
+    "inspection - planner_agent": "Inspection - Planner Agent",
+    "inspection - critique_agent": "Inspection - Critique Agent",
+    "inspection - feedback_agent node": "Inspection - Feedback Agent",
+    "SelfRAG - self_rag_agent": "Self RAG",
+    "SelfRAG - retrieval_agent": "Self RAG  - Retrieval Agent",
     "SelfRAG - site_data_retriever tool": "Self RAG  - Site Data Retriever",
     "SelfRAG - document_grading_agent": "Self RAG  - Document Grading",
-    "SelfRAG - reflection_agent": "Self RAG  - Reflection",
+    "SelfRAG - reflection_agent": "Self RAG  - Reflection Agent",
     "SelfRAG - generate_response_agent": "Self RAG  - Generate Response ",
     "SelfRAG - guidelines_retriever tool": "Self RAG  - Guidelines Retriever",
     "SelfRAG - site_data_retriever": "Self RAG  - Site Data Retriever",
-    "inspection - generate_findings_agent": "Inspection - Generate Findings",
-    "Inspection - discrepancy_data_generator_node": "Inspection - Discrepancy Data Generator"
+    "inspection - generate_findings_agent": "Inspection - Generate Findings Agent",
+    "Inspection - discrepancy_data_generator_node": "Inspection - Discrepancy Data Generator",
+    "Unknown": "Captured User Feedback"
 } as const;
 
 export const agentNodeName = {
