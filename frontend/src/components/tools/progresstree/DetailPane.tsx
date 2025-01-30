@@ -22,6 +22,11 @@ const decodeSpecialChars = (text: string): string => {
 const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
   const theme = useTheme();
 
+  // Return empty div for any Unknown node to prevent details from showing
+  if (selectedNode?.name === 'Unknown') {
+    return <div></div>;
+  }
+
   if (!selectedNode) {
     return (
       <Paper 
