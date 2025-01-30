@@ -268,7 +268,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
               >
                 {getAgentDisplayNameByNode(node.name)}
               </Typography>
-              {isLeaf && node.summary && (
+              {node.summary && (
                 <AnimatedText 
                   text={node.summary}
                   delay={0.2}

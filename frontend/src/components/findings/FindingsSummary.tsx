@@ -21,10 +21,10 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({ findings }) =>
   return (
     <div className="flex flex-col space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">Findings Summary</h2>
-        <p className="text-sm text-gray-500">
+        {/* <h2 className="text-lg font-semibold text-gray-900">Findings Summary</h2> */}
+        {/* <p className="text-sm text-gray-500">
           {findings.length} {findings.length === 1 ? 'finding' : 'findings'} identified
-        </p>
+        </p> */}
       </div>
 
       <div className="flex items-center space-x-6 text-sm">
