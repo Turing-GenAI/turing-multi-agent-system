@@ -3,7 +3,7 @@ import { Paper, Typography, Box, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
 
 interface TreeNode {
-  title: string;
+  name: string;
   content?: string;
   children?: TreeNode[];
 }
@@ -75,7 +75,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
     return colors[Math.abs(title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length];
   };
 
-  const nodeColor = getNodeColor(selectedNode.title);
+  const nodeColor = getNodeColor(selectedNode.name);
 
   return (
     <Paper
@@ -122,7 +122,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
           }
         }}
       >
-        {selectedNode.title}
+        {selectedNode.name}
       </Typography>
 
       {selectedNode.content ? (
