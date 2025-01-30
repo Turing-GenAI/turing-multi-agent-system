@@ -2,7 +2,11 @@ from enum import unique
 import re
 import os
 import json
-from openai import AzureOpenAI
+from dotenv import load_dotenv
+from langchain_openai import AzureChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage
+
+load_dotenv()
 
 
 def parse_ai_messages(full_text: str):
@@ -142,26 +146,24 @@ def summarize_content(data):
         dict or list: The input object(s) with additional 'summary' field
     """
     def get_summary(content):
-        client = AzureOpenAI(
-            api_key=os.getenv('AZURE_OPENAI_API_KEY'),
-            api_version=os.getenv('AZURE_OPENAI_API_VERSION'),
-            azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT')
+        azure_chat_openai_client = AzureChatOpenAI(
+            model=os.environ.get("AZURE_OPENAI_API_MODEL_NAME"),
+            azure_deployment=os.environ.get("AZURE_OPENAI_API_DEPLOYMENT_NAME"),
+            api_version=os.environ.get("AZURE_OPENAI_API_MODEL_VERSION"),
+            azure_endpoint=os.environ.get("AZURE_OPENAI_API_ENDPOINT"),
+            temperature=0
         )
         
         if not content:
             return "No content available to summarize."
             
         try:
-            response = client.chat.completions.create(
-                model=os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME'),
-                messages=[
-                    {"role": "system", "content": "Summarize the following content in exactly 2 sentences."},
-                    {"role": "user", "content": content}
-                ],
-                max_tokens=1024,
-                temperature=0.0
-            )
-            return response.choices[0].message.content.strip()
+            messages = [
+                SystemMessage(content="Summarize the following content in exactly 2 sentences."),
+                HumanMessage(content=content)
+            ]
+            response = azure_chat_openai_client.invoke(messages)
+            return response.content.strip()
         except Exception as e:
             return f"Error generating summary: {str(e)}"
     

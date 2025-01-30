@@ -313,7 +313,7 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
                     findings[j.replace(".json", "")] = json_data
 
-    message_parser = parse_ai_messages(new_messages)
+    message_parser = parse_ai_messages(new_messages[-1])
     processed_messages = filter_parsed_messages_by_name(message_parser)
     compressed_data = add_content(processed_messages)
     summarized_data = summarize_content(compressed_data)
