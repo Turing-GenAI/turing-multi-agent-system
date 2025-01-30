@@ -87,14 +87,14 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   const addNodeToTree = useCallback((tree: TreeNode[], path: string[], node: TreeNode): TreeNode[] => {
     if (path.length === 1) {
       if (!tree.find(n => n.title === path[0])) {
-        tree.push({ ...node, children: [] });
+        tree.push({ ...node, children: [], status: 'pending' });
       }
       return tree;
     }
 
     let parent = tree.find(n => n.title === path[0]);
     if (!parent) {
-      parent = { title: path[0], children: [] };
+      parent = { title: path[0], children: [], status: 'pending' };
       tree.push(parent);
     }
 
@@ -121,7 +121,8 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 
   // Function to update node status
   const updateNodeStatus = useCallback((nodes: TreeNode[], path: string[], newStatus: 'pending' | 'in progress' | 'complete', allNodes?: Set<string>): TreeNode[] => {
-    return nodes.map(node => {
+    // First pass: Update the target node
+    const updatedNodes = nodes.map(node => {
       if (path.length === 0) return node;
 
       if (node.title === path[0]) {
@@ -149,7 +150,26 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
       }
       return node;
     });
-  }, [isLeafNode, hasAllChildren]);
+
+    // Second pass: Check if we need to update parent statuses
+    if (newStatus === 'complete') {
+      const allCurrentPaths = new Set(getNodesInOrder(updatedNodes).map(n => n.path));
+      return updatedNodes.map(node => {
+        if (!isLeafNode(node)) {
+          // Check if all children are complete
+          const allChildrenComplete = node.children?.every(child => child.status === 'complete') ?? false;
+          if (allChildrenComplete) {
+            return { ...node, status: 'complete' };
+          } else if (node.children?.some(child => child.status === 'complete' || child.status === 'in progress')) {
+            return { ...node, status: 'in progress' };
+          }
+        }
+        return node;
+      });
+    }
+
+    return updatedNodes;
+  }, [isLeafNode, hasAllChildren, getNodesInOrder]);
 
   // Effect to handle initial load and updates
   useEffect(() => {
@@ -197,9 +217,12 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 
           setDisplayedActivities(prev => {
             const newTree = [...prev];
-            const updatedTree = addNodeToTree(newTree, pathParts, node);
-            // Start with in progress and update based on children
-            return updateNodeStatus(updatedTree, pathParts, 'in progress', allCurrentPaths);
+            const updatedTree = addNodeToTree(newTree, pathParts, { ...node, status: 'pending' });
+            // After a longer delay, update to in progress
+            setTimeout(() => {
+              setDisplayedActivities(prev => updateNodeStatus(prev, pathParts, 'in progress', allCurrentPaths));
+            }, animationDuration / 2);
+            return updatedTree;
           });
 
           // For leaf nodes, complete after animation
@@ -246,9 +269,12 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 
         setDisplayedActivities(prev => {
           const newTree = [...prev];
-          const updatedTree = addNodeToTree(newTree, pathParts, node);
-          // Start with in progress and update based on children
-          return updateNodeStatus(updatedTree, pathParts, 'in progress', allCurrentPaths);
+          const updatedTree = addNodeToTree(newTree, pathParts, { ...node, status: 'pending' });
+          // After a longer delay, update to in progress
+          setTimeout(() => {
+            setDisplayedActivities(prev => updateNodeStatus(prev, pathParts, 'in progress', allCurrentPaths));
+          }, animationDuration / 2);
+          return updatedTree;
         });
 
         // For leaf nodes, complete after animation
