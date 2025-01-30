@@ -16,8 +16,8 @@ const TypewriterText = ({ text }: { text: string }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{
-            duration: 0.1,
-            delay: index * 0.02,
+            duration: 0.05,
+            delay: index * 0.01,
             ease: "easeOut"
           }}
         >
@@ -123,8 +123,10 @@ export const MessageContent: React.FC<MessageContentProps> = ({
     }
   }
 
-  const contentLines = message.content.split('\n').filter(line => line.trim().length > 0);
+  // const contentLines = message.content.split('\n').filter(line => line.trim().length > 0);
   const isTyping = message.content === '';
+  const tokens = message.content.split('\n',1)
+  const content = tokens.length > 1 ? tokens[1] : message.content
 
   return (
     <div className="space-y-2">
@@ -139,37 +141,10 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         </div>
       )}
       <div className="space-y-2">
-        {contentLines.length === 1 ? (
-          <p 
-            key={0} 
-            className={`
-              text-sm leading-relaxed
-              ${message.isUser ? 'text-white' : 'text-gray-700'}
-              ${contentLines[0].length > 100 ? 'break-words' : ''}
-            `}
-          >
-            {contentLines[0].trim()}
-            {isTyping && (
-              <span className="animate-pulse ml-0.5">▋</span>
-            )}
-          </p>
-        ) : (
-          contentLines.slice(1).map((line, index) => (
-            <p 
-              key={index + 1}
-              className={`
-                text-sm leading-relaxed
-                ${message.isUser ? 'text-white' : 'text-gray-700'}
-                ${line.length > 100 ? 'break-words' : ''}
-              `}
-            >
-              {line.trim()}
-              {index === contentLines.length - 2 && isTyping && (
-                <span className="animate-pulse ml-0.5">▋</span>
-              )}
-            </p>
-          ))
-        )}
+        <p className={`text-sm leading-relaxed ${message.isUser ? 'text-white' : 'text-gray-700'}`}>
+          <TypewriterText text={content} />
+          {isTyping && <span className="animate-pulse ml-0.5">▋</span>}
+        </p>
       </div>
       {message.isUser && (
         <div className="flex justify-end">

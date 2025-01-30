@@ -9,7 +9,7 @@ import { auditService } from '../api/services/auditService'; // Import the audit
 import { TreeNode } from '../data/activities';
 
 // Set this to true to skip message streaming animation (for debugging)
-const SKIP_ANIMATION = false;
+const SKIP_ANIMATION = true;
 
 // Delay settings for normal and debug modes
 const DELAYS = {
