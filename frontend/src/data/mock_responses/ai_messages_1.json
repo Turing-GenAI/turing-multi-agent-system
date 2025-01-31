@@ -1,0 +1,16 @@
+{
+  "ai_messages": "================================== Ai Message ==================================\nName: trial_supervisor_agent: \n\nDetected the following trigger events - \n\nSite ID: CNTO1275PUC3001 \nTrial ID: P73-PL10008 \nInvoking Inspection Master Agent\n\n================================== Ai Message ==================================\nName: trial supervisor - inspection_master_agent: \n\nInvoking Inspection Master Agent \n    -> Detected site review areas for audit inspection: PD, AE_SAE\n\n",
+  "new_ai_messages": [
+    "================================== Ai Message ==================================\nName: trial_supervisor_agent: \n\nDetected the following trigger events - \n\nSite ID: CNTO1275PUC3001 \nTrial ID: P73-PL10008 \nInvoking Inspection Master Agent\n\n================================== Ai Message ==================================\nName: trial supervisor - inspection_master_agent: \n\nInvoking Inspection Master Agent \n    -> Detected site review areas for audit inspection: PD, AE_SAE\n\n"
+  ],
+  "last_position": 505,
+  "findings": {},
+  "filtered_data": [
+    {
+      "id": 2,
+      "name": "trial supervisor - inspection_master_agent",
+      "summary": "Error generating summary: Error code: 429 - {'error': {'code': '429', 'message': 'Requests to the ChatCompletions_Create Operation under Azure OpenAI API version 2024-04-01-preview have exceeded call rate limit of your current OpenAI S0 pricing tier. Please retry after 4 seconds. Please go here: https://aka.ms/oai/quotaincrease if you would like to further increase the default rate limit.'}}",
+      "content": "-> Detected site review areas for audit inspection: PD, AE_SAE\nInvoking Inspection Master Agent"
+    }
+  ]
+}

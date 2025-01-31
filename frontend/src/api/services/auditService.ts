@@ -13,8 +13,10 @@ import {
 } from '../types';
 import { activities } from '../../data/activities';
 import { agentactivities, agentActivities1, agentActivities2 } from '../../data/agent_activities';
+import { get_ai_messages1, get_ai_message2 } from '../../data/get_ai_responses';
 
 let apiCallCount = 0;
+const parentNodes = [ "inspection - site_area_agent", "trial supervisor - inspection_master_agent"]
 
 interface JobDetails {
   job_id: string;
@@ -79,7 +81,7 @@ const realAuditService = {
   },
   
   getJobDetails: async (status: string): Promise<ApiResponse<JobResponse>> => {
-    const endpoint = `/jobs/?status=${encodeURIComponent(status)}`;
+    const endpoint = `/job-status/${encodeURIComponent(status)}`;
     return apiClient.get<JobResponse>(endpoint);
   },
 
@@ -140,51 +142,20 @@ const mockAuditService = {
     jobId: string,
     withFindings: boolean = false
   ): Promise<ApiResponse<AIMessagesResponse>> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Fetch mock messages from file
-    const response = await fetch('/mockMessages.txt');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const responses = [get_ai_messages1, get_ai_message2];
+    apiCallCount = 0;
+    const responseStr = responses[apiCallCount];
+    
+    if(apiCallCount >= responses.length) {
+      apiCallCount = responses.length - 1;
     }
-    const mockMessages = await response.text();
+    apiCallCount++;
 
-    const mockResponse: AIMessagesResponse = {
-      ai_messages: mockMessages,
-      ...(withFindings && {
-        findings: {
-          pd: [
-            {
-              id: 'pd1',
-              agent: 'trial_master',
-              content: 'Protocol deviation found: Missing patient data in visit 3',
-              timestamp: new Date().toISOString()
-            }
-          ],
-          ae: [
-            {
-              id: 'ae1',
-              agent: 'inspection_master',
-              content: 'Adverse event not properly documented within 24 hours',
-              timestamp: new Date().toISOString()
-            }
-          ],
-          sgr: [
-            {
-              id: 'sgr1',
-              agent: 'crm_master',
-              content: 'Site generated report shows inconsistency in drug administration',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        }
-      })
-    };
+    const response: AIMessagesResponse = JSON.parse(responseStr);
 
     return {
-      data: mockResponse,
       status: 200,
+      data: response
     };
   },
 
@@ -220,7 +191,7 @@ const mockAuditService = {
           date: '2022-01-01',
           trial_id: 'mock-trial-123',
           run_at: '2022-01-01T12:00:00',
-          status: 'completed',
+          status: 'running',
           feedback: 'Job completed successfully',
           processing_start_time: '2022-01-01T11:00:00',
           completed_time: '2022-01-01T12:00:00',
@@ -236,7 +207,7 @@ const mockAuditService = {
   ): Promise<ApiResponse<JobFeedbackResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    apiCallCount++
     return {
       data: {
         job_id: jobId,
@@ -288,23 +259,26 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
-
-    const responses = [agentActivities1, agentActivities2, agentactivities]
-    const activities = responses[apiCallCount]
-    apiCallCount++
+    const responses = [get_ai_messages1, get_ai_message2];
+    
     if(apiCallCount >= responses.length) {
-      apiCallCount = responses.length - 1
+      apiCallCount = responses.length - 1;
     }
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          status: 200,
-          data: {
-            activities: JSON.parse(JSON.stringify(activities)) // Deep clone the activities
-          }
-        });
-      }, 500);
+
+    const responseStr = responses[apiCallCount];
+    const response = JSON.parse(responseStr);
+    const activitiesJson = response.filtered_data || [];
+    
+    activitiesJson.forEach((activity: any) => {
+      parentNodes.includes(activity.name);
     });
+
+    return {
+      status: 200,
+      data: {
+        activities: JSON.parse(JSON.stringify(activities)) // Deep clone the activities
+      }
+    };
   }
 };
 

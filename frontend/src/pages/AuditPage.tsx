@@ -7,6 +7,7 @@ import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 import { TreeNode } from '../data/activities';
+import { AIMessagesResponse } from '../api';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -40,6 +41,8 @@ export const AuditPage: React.FC = () => {
   const [selectedAgentTab, setSelectedAgentTab] = useState<AgentType>('trial_master');
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const currentActivitiesRef = useRef<TreeNode[]>([]);
+  const lastJobStatusRef = useRef<string | null>(null);
   const [messagesByAgent, setMessagesByAgent] = useState<Record<AgentType, Message[]>>({
     trial_master: [],
     inspection_master: [],
@@ -473,10 +476,44 @@ export const AuditPage: React.FC = () => {
     };
   };
 
-  const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }, jobId: string) => {
-    if (response.data && response.data.activities && response.data.activities.length > 0) {
+  const buildTreeFromFilteredData = (filteredActivities: TreeNode[] | undefined) => {
+    if (!filteredActivities || filteredActivities.length === 0) return;
+
+    const activities = [...currentActivitiesRef.current];
+    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
+    
+    filteredActivities.forEach((activity) => {
+      if (parentNodes.includes(activity.name)) {
+        // If it's a parent node, add it directly to activities
+        activities.push(activity);
+      } else {
+        // If it's a child node, add it to the last parent's children
+        const lastParentNode = activities[activities.length - 1];
+        if (lastParentNode) {
+          if (!lastParentNode.children) {
+            lastParentNode.children = [];
+          }
+          lastParentNode.children.push(activity);
+        } else {
+          // If no parent exists, add directly to activities
+          activities.push(activity);
+        }
+      }
+    });
+
+    // Update the ref with new activities
+    currentActivitiesRef.current = activities;
+    return activities;
+  };
+
+  const processProgressTreeResponse = async (aiMessageResponse: AIMessagesResponse, jobId: string) => {
+    console.log("BackendIntegration: ", "processProgressTreeResponse  : ", aiMessageResponse)
+    console.log("processProgressTreeResponse:", aiMessageResponse);
+    const filteredActivities = aiMessageResponse.filtered_data
+    const activities = buildTreeFromFilteredData(filteredActivities)
+    if (activities && activities?.length > 0) {
       // Process the activities to handle unknown node
-      const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(response.data.activities);
+      const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(activities);
       console.log("humanFeedbackPrompt:", humanFeedbackPrompt);
       // If we have regular activities, add them as a progress tree
       if (updatedActivities.length > 0) {
@@ -516,43 +553,36 @@ export const AuditPage: React.FC = () => {
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
     try {
       if (!jobId) return;
-
+      console.log("BackendIntegration", "fetchAIMessages...")
       // First, get the current job status
-      const jobResponse = await auditService.getJobDetails(jobId);
-      const jobData = jobResponse.data;
-      
-      // Update job status
-      setJobStatus(jobData.status);
-
-      if (jobData.status === "completed" || jobData.status === "running") {
-        // Fetch AI messages and progress tree
-        /*
-        const [messagesResponse, progressTreeResponse] = await Promise.all([
-          auditService.getAIMessages(jobId, withFindings),
-          auditService.getAgentProgress(jobId)
-        ]);
-        */
-        const [progressTreeResponse] = await Promise.all([
-          auditService.getAgentProgress(jobId)
-        ]);
+      const jobDetailsResponse = await auditService.getJobDetails(jobId);
+      const jobData = jobDetailsResponse.data;
+      console.log("BackendIntegration", "fetchAIMessages: jobData: ", jobData, ", lastJobStatusRef: ", lastJobStatusRef.current);
+      if (jobData) {
+        setJobStatus(jobData.status);
+        console.log("BackendIntegration", "fetchAIMessages: jobData: condition: ", 
+          (jobData.status !== "completed" && jobData.status !== "error") || 
+          lastJobStatusRef.current === null || 
+          lastJobStatusRef.current !== jobData.status);
         
-       /*
-        // Process the messages and update state
-        await Promise.all([
-          // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
-          processProgressTreeResponse(progressTreeResponse, jobId)
-        ]);
-        */
-        await Promise.all([
-          // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
-          processProgressTreeResponse(progressTreeResponse, jobId)
-        ]);
-        
-        // Update previous messages for next comparison
-        // previousAIMessagesRef.current = messagesResponse.data.ai_messages;
+        // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
+        if ((jobData.status !== "completed" && jobData.status !== "error") || 
+            lastJobStatusRef.current === null || 
+            lastJobStatusRef.current !== jobData.status) {
+                    
+          const progressTreeResponse = await auditService.getAIMessages(jobId);
+          console.log("BackendIntegration: ", "fetchAIMessages completed : ", progressTreeResponse)
+          await Promise.all([
+            processProgressTreeResponse(progressTreeResponse.data, jobId)
+          ]);
+        // Update last status
+          lastJobStatusRef.current = jobData.status;
+          // Update previous messages for next comparison
+          // previousAIMessagesRef.current = messagesResponse.data.ai_messages;
+        }
       }
     } catch (error) {
-      console.error("Error fetching AI messages:", error);
+      console.error("BackendIntegration: ", "Error fetching AI messages:", error);
     }
   };
 
@@ -604,7 +634,7 @@ export const AuditPage: React.FC = () => {
         } else {
           fetchAIMessages(jobId, false); 
         }
-      }, 400000); 
+      }, 8000); 
     }
 
     return () => {

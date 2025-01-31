@@ -6,6 +6,9 @@ export interface ApiResponse<T> {
 
 export interface AIMessagesResponse {
   ai_messages: string;
+  new_ai_messages?: string[];
+  last_position?: number;
+  filtered_data?: TreeNode[];
   findings?: {
     pd: Finding[];
     ae: Finding[];
