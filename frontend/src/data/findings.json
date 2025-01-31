@@ -1,0 +1,64 @@
+{
+  "findings": {
+    "discrepancy_data_activity_id_AE_SAE_001": {
+      "conclusion": "### Are all AEs/SAEs in final disposition in RAVE, ie. end dates?\n\nBased on the data, none of the adverse events (AEs) for the subjects listed have end dates provided, and one serious adverse event (SAE) for Subject 221026 (SCROTAL PAIN) lacks an end date. Therefore, **not all AEs and SAEs are in final disposition in RAVE** due to missing end dates in the dataset.\n",
+      "table": [
+        {
+          "SiteGroupName": "KOR",
+          "Site": "P73-PL10007",
+          "Subject": 221026,
+          "RecordPosition": 4,
+          "What is the adverse event term?": "SCROTAL PAIN",
+          "Toxicity Grade": 2,
+          "outcome": "Recovering or Resolving",
+          "Date of Report": 1677283200000,
+          "Date Investigator/ Investigational Staff became aware": null,
+          "start date": 1677283200000,
+          "start time": null,
+          "end date": null,
+          "end time": null,
+          "concomitant treatment given for AE": "Yes",
+          "Serious AE": "No",
+          "Age at onset of SAE": null,
+          "death": null,
+          "date of death": null,
+          "admission date": null,
+          "hospital discharge date": null,
+          "Required Hospitalization": null,
+          "is this an infection?": "No",
+          "infection treatment": null,
+          "Action taken with Amivantamab": "Dose Not Changed",
+          "Action taken with Lazertinib": "Dose Not Changed",
+          "Action taken with Carboplatin": "Not Applicable",
+          "Action taken with Pemetrexed": "Not Applicable",
+          "Relationship to Amivantamab SC-CF": "Not Related",
+          "Relationship to Lazertinib": "Not Related",
+          "Relationship to Carboplatin": "Not Applicable",
+          "Relationship to Pemetrexed": "Not Applicable",
+          "AE of special interest as per protocol": "No",
+          "page": "Adverse Events/Serious AEs"
+        }
+      ]
+    },
+    "discrepancy_data_activity_id_PD_001": {
+      "conclusion": "Analysis of Protocol Deviations (PDs) reveals several significant findings: Three subjects have reported PDs related to missed study procedures, and one subject has a deviation regarding medication compliance. All PDs require immediate review and potential corrective actions.",
+      "table": [
+        {
+          "SiteGroupName": "KOR",
+          "Site": "P73-PL10007",
+          "Subject": 221026,
+          "RecordPosition": 1,
+          "Deviation Category": "Study Procedures",
+          "Deviation Type": "Missed Visit",
+          "Description": "Subject missed Week 4 follow-up visit",
+          "Start Date": 1677283200000,
+          "End Date": 1677283200000,
+          "Impact on Subject Safety": "No",
+          "Impact on Study Data": "Yes",
+          "Corrective Action": "Rescheduled visit for following week",
+          "Preventive Action": "Additional reminder calls implemented"
+        }
+      ]
+    }
+  }
+}
