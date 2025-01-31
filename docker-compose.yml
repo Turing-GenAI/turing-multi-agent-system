@@ -20,16 +20,16 @@ services:
     ports:
       - "6379:6379"
 
-  frontend:
-    build: ./react_app
-    image: auditcopilot.azurecr.io/frontend:v1
-    command: ["npm", "run", "start"]
-    ports:
-      - "3000:3000"
-    depends_on:
-      - web
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000
-    volumes:
-      - ./react_app:/app
-      - /app/node_modules
+  # frontend:
+  #   build: ./react_app
+  #   image: auditcopilot.azurecr.io/frontend:v1
+  #   command: ["npm", "run", "start"]
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - web
+  #   environment:
+  #     - REACT_APP_API_URL=http://localhost:8000
+  #   volumes:
+  #     - ./react_app:/app
+  #     - /app/node_modules
