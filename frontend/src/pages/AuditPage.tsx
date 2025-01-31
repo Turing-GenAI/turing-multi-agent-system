@@ -44,6 +44,7 @@ export const AuditPage: React.FC = () => {
   const currentActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
   const lastAIMessagePositionRef = useRef<number>(0);
+  const awaitingForFeedbackRef = useRef<boolean>(false);
   const [messagesByAgent, setMessagesByAgent] = useState<Record<AgentType, Message[]>>({
     trial_master: [],
     inspection_master: [],
@@ -86,7 +87,6 @@ export const AuditPage: React.FC = () => {
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
-  const [awaitingForFeedback, setAwaitingForFeedback] = useState(false);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -566,10 +566,10 @@ export const AuditPage: React.FC = () => {
       }
 
       // If we found an unknown node, add its content as a regular message after a delay
-      if (humanFeedbackPrompt) {
+      if (humanFeedbackPrompt && !awaitingForFeedbackRef.current) {
         console.log("Human feedback prompt:", humanFeedbackPrompt)
+        awaitingForFeedbackRef.current = true;
         setTimeout(() => {
-          setAwaitingForFeedback(true);
           addAgentMessage(humanFeedbackPrompt);
         }, 10000); // 10 seconds delay
       }
@@ -579,6 +579,7 @@ export const AuditPage: React.FC = () => {
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false, retryCount: number = 3) => {
     try {
       if (!jobId) return;
+      if(awaitingForFeedbackRef.current) return;
       console.log("BackendIntegration", "fetchAIMessages...");
 
       // First, get the current job status
@@ -599,9 +600,7 @@ export const AuditPage: React.FC = () => {
         " lastAIMessagePositionRef: ", lastAIMessagePositionRef.current);
 
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
-      if ((jobData.status !== "completed" && jobData.status !== "error") ||
-        lastJobStatusRef.current === null ||
-        lastJobStatusRef.current !== jobData.status) {
+      if ((jobData.status !== "completed" && jobData.status !== "error")) {
 
         try {
           const progressTreeResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
@@ -633,6 +632,8 @@ export const AuditPage: React.FC = () => {
             addAgentMessage("Failed to fetch AI messages after multiple attempts. Please try again later.", undefined, { agentPrefix: '', nodeName: '' });
           }
         }
+      } else {
+        setIsProcessing(false);
       }
 
       // If job is completed and withFindings is true, fetch findings
@@ -708,7 +709,7 @@ export const AuditPage: React.FC = () => {
             setIsProcessing(false);
           }
         } else {
-          if(!awaitingForFeedback) {
+          if(!awaitingForFeedbackRef.current) {
             fetchAIMessages(jobId, false); 
           }
           
@@ -748,25 +749,31 @@ export const AuditPage: React.FC = () => {
     }));
 
     // Check if we're awaiting feedback
-    if (awaitingForFeedback) {
+    if (awaitingForFeedbackRef.current) {
       try {
         auditService.updateJobFeedback(jobId!, userInput[agent]).then(() => {
           
-          setMessagesByAgent(prev => {
-            const messages = prev[agent];
-            console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
-            // Find the last index of a message with toolType = 'progresstree'
-            const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
-            console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
-            return {
-              ...prev,
-              [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
-            }
-          });
-
-          delay(8000).then(() => {
-            setAwaitingForFeedback(false); // Reset the feedback state
-            fetchAIMessages(jobId!, true);
+          addAgentMessage("Thanks for your input. I'm processing your feedback now...")
+          
+          delay(5000).then(() => {
+            auditService.getJobDetails(jobId!).then((res) => {
+              if(res.data.status === "got_human_feedback") {
+                setMessagesByAgent(prev => {
+                  const messages = prev[agent];
+                  console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
+                  // Find the last index of a message with toolType = 'progresstree'
+                  const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
+                  console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
+                  return {
+                    ...prev,
+                    [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
+                  }
+                });
+                awaitingForFeedbackRef.current = false; // Reset the feedback state
+                fetchAIMessages(jobId!, true);
+              }
+            })
+            
           })
         });
         
