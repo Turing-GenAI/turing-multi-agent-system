@@ -116,24 +116,28 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         setCurrentStep('site');
         const sitesForTrial = sites[value] || [];
         const siteCount = sitesForTrial.length;
-        const siteText = siteCount === 1 ? 'clinical site' : 'clinical sites';
-        addAgentMessage(`I've located ${siteCount} ${siteText} associated with this trial. Which site would you like to review?`, 'site');
+        addAgentMessage(
+          siteCount === 1
+            ? `I've located 1 clinical site associated with this trial. Would you like to review it?`
+            : `I've located ${siteCount} clinical sites associated with this trial. Which site would you like to review?`,
+          'site'
+        );
         break;
       case 'site':
         setSelectedSite(value);
         setCurrentStep('date');
-        addAgentMessage(`Please specify the time period for analysis:`, 'date');
+        addAgentMessage(`Please select the audit review period for the compliance preparedness assessment:`, 'date');
         break;
       case 'date':
         setDateRange(value);
         if (value.from && value.to) {
           setCurrentStep('confirm');
           addAgentMessage(
-            `📋 Please review the analysis parameters:\n\n` +
-            `🔹 Trial ID:          ${selectedTrial}\n` +
-            `🔹 Site ID:           ${selectedSite}\n` +
-            `🔹 Analysis Period:   ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
-            `Please confirm to proceed with the analysis.`,
+            `📋 Compliance Preparedness Assessment Parameters:\n\n` +
+            `🔹 Clinical Trial ID:    ${selectedTrial}\n` +
+            `🔹 Clinical Site ID:     ${selectedSite}\n` +
+            `🔹 Review Period:     ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
+            `Please confirm to initiate the compliance preparedness review.`,
             'button'
           );
           onInputComplete({
@@ -167,7 +171,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
                 </AvatarFallback>
               </Avatar>
               <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">
-                <p className="text-sm mb-2">Greetings! Would you like to start a Trial Analysis?</p>
+                <p className="text-sm mb-2">Would you like to initiate a compliance check?</p>
                 <ToolUI
                   type="button"
                   value={false}
