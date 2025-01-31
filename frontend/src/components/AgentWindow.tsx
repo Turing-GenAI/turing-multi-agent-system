@@ -126,7 +126,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
       case 'site':
         setSelectedSite(value);
         setCurrentStep('date');
-        addAgentMessage(`Please select the audit review period for the compliance preparedness assessment:`, 'date');
+        addAgentMessage(`Please specify the audit review period for the compliance preparedness assessment:`, 'date');
         break;
       case 'date':
         setDateRange(value);
@@ -177,7 +177,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
                   value={false}
                   onChange={() => handleToolInput('button', true)}
                   options={{
-                    buttonText: 'Yes, Proceed',
+                    buttonText: 'Begin Compliance Review',
                   }}
                 />
               </div>

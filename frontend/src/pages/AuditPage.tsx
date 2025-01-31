@@ -152,7 +152,7 @@ export const AuditPage: React.FC = () => {
               tool: {
                 type: toolType,
                 message,
-                options: options || (toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined),
+                options: options || (toolType === 'button' ? { buttonText: 'Begin Compliance Review' } : undefined),
               },
             }),
             timestamp: new Date(),
@@ -166,7 +166,7 @@ export const AuditPage: React.FC = () => {
             tool: {
               type: toolType,
               message,
-              options: options || (toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined),
+              options: options || (toolType === 'button' ? { buttonText: 'Begin Compliance Review' } : undefined),
             },
           });
           console.log("processQueue : ",  cont, ', newMessage: ', JSON.stringify(newMessage))
@@ -704,7 +704,7 @@ export const AuditPage: React.FC = () => {
           if (status === 'completed') {
             fetchAIMessages(jobId, true); 
           } else {
-            addAgentMessage(`Analysis failed! Error: ${status}`, undefined, { agentPrefix: '', nodeName: '' });
+            addAgentMessage(`Compliance Review Process Halted: ${status}. Please review and try again.`, undefined, { agentPrefix: '', nodeName: '' });
             setIsProcessing(false);
           }
         } else {
@@ -824,13 +824,13 @@ export const AuditPage: React.FC = () => {
       setJobId(job_id);
       setJobStatus('queued');
       
-      addAgentMessage(`I've scheduled the Job for analysis! Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Compliance Review Process Initiated - Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
       
       return job_id;
     } catch (error) {
-      console.error('Error scheduling analysis job:', error);
+      console.error('Error initiating compliance review:', error);
       
-      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Unable to initiate compliance review: ${error instanceof Error ? error.message : 'An unexpected issue occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
       
       throw error;
     }
