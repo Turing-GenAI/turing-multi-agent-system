@@ -26,6 +26,7 @@ export interface Finding {
 export interface AIMessagesRequest {
   ai_messages: boolean;
   findings: boolean;
+  last_position?: number;
 }
 
 export interface ScheduleJobRequest {

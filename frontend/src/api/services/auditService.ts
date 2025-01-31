@@ -47,12 +47,14 @@ const realAuditService = {
    */
   getAIMessages: async (
     jobId: string,
-    withFindings: boolean = false
+    withFindings: boolean = false,
+    last_position: number = 0
   ): Promise<ApiResponse<AIMessagesResponse>> => {
     const endpoint = `/get_ai_messages/${encodeURIComponent(jobId)}`;
     const body: AIMessagesRequest = {
       ai_messages: true,
       findings: withFindings,
+      last_position:last_position
     };
 
     return apiClient.put<AIMessagesResponse>(endpoint, body);
@@ -140,7 +142,8 @@ const realAuditService = {
 const mockAuditService = {
   getAIMessages: async (
     jobId: string,
-    withFindings: boolean = false
+    withFindings: boolean = false,
+    last_position: number = 0
   ): Promise<ApiResponse<AIMessagesResponse>> => {
     const responses = [get_ai_messages1, get_ai_message2];
     apiCallCount = 0;
