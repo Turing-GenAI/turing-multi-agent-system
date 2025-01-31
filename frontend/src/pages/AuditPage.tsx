@@ -475,7 +475,7 @@ export const AuditPage: React.FC = () => {
     const { node: lastLeaf, parent } = findLastLeafNode(lastActivity);
 
     // If the last leaf has name "unknown", remove it and return its content
-    if (lastLeaf && lastLeaf.name === "Unknown") {
+    if (lastLeaf && lastLeaf.name === "Unknown" && !lastLeaf.content?.includes("User input -> Human Feedback:")) {
       const humanFeedbackPrompt = lastLeaf.content;
       
       // Remove the unknown node from its parent
@@ -592,9 +592,11 @@ export const AuditPage: React.FC = () => {
 
       setJobStatus(jobData.status);
       console.log("BackendIntegration", "fetchAIMessages: jobData: condition: ",
-        (jobData.status !== "completed" && jobData.status !== "error") ||
+        ((jobData.status !== "completed" && jobData.status !== "error") || 
         lastJobStatusRef.current === null ||
-        lastJobStatusRef.current !== jobData.status);
+        lastJobStatusRef.current !== jobData.status), " reason : job status: ", 
+        jobData.status, ", lastJobStatusRef: ", lastJobStatusRef.current,
+        " lastAIMessagePositionRef: ", lastAIMessagePositionRef.current);
 
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
       if ((jobData.status !== "completed" && jobData.status !== "error") ||
@@ -602,7 +604,7 @@ export const AuditPage: React.FC = () => {
         lastJobStatusRef.current !== jobData.status) {
 
         try {
-          const progressTreeResponse = await auditService.getAIMessages(jobId, false, lastAIMessagePositionRef.current);
+          const progressTreeResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
           console.log("BackendIntegration: ", "fetchAIMessages completed : ", progressTreeResponse);
 
           if (!progressTreeResponse.data) {
@@ -706,9 +708,12 @@ export const AuditPage: React.FC = () => {
             setIsProcessing(false);
           }
         } else {
-          fetchAIMessages(jobId, false); 
+          if(!awaitingForFeedback) {
+            fetchAIMessages(jobId, false); 
+          }
+          
         }
-      }, 8000); 
+      }, 4000); 
     }
 
     return () => {
@@ -746,7 +751,7 @@ export const AuditPage: React.FC = () => {
     if (awaitingForFeedback) {
       try {
         auditService.updateJobFeedback(jobId!, userInput[agent]).then(() => {
-          setAwaitingForFeedback(false); // Reset the feedback state
+          
           setMessagesByAgent(prev => {
             const messages = prev[agent];
             console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
@@ -759,8 +764,9 @@ export const AuditPage: React.FC = () => {
             }
           });
 
-          delay(1000).then(() => {
-            fetchAIMessages(jobId!, false);
+          delay(8000).then(() => {
+            setAwaitingForFeedback(false); // Reset the feedback state
+            fetchAIMessages(jobId!, true);
           })
         });
         
@@ -886,7 +892,7 @@ export const AuditPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
-              <h1 className="text-xl font-semibold text-gray-800"> Audit Copilot</h1>
+              <h1 className="text-xl font-semibold text-gray-800"> Audit Compliance Assistant</h1>
             </div>
             {/* <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-3">

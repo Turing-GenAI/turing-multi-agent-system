@@ -13,7 +13,7 @@ import {
 } from '../types';
 import { activities } from '../../data/activities';
 import { agentactivities, agentActivities1, agentActivities2 } from '../../data/agent_activities';
-import { get_ai_messages1, get_ai_message2 } from '../../data/get_ai_responses';
+import { get_ai_messages1, get_ai_messages1_2,get_ai_message2 } from '../../data/get_ai_responses';
 
 let apiCallCount = 0;
 const parentNodes = [ "inspection - site_area_agent", "trial supervisor - inspection_master_agent"]
@@ -97,8 +97,9 @@ const realAuditService = {
     jobId: string,
     feedback: string
   ): Promise<ApiResponse<JobFeedbackResponse>> => {
-    const endpoint = `/jobs/${encodeURIComponent(jobId)}/feedback`;
+    const endpoint = `/update-job/${encodeURIComponent(jobId)}`;
     const body: JobFeedbackRequest = {
+      status: "got_human_feedback",
       feedback,
     };
 
@@ -145,9 +146,11 @@ const mockAuditService = {
     withFindings: boolean = false,
     last_position: number = 0
   ): Promise<ApiResponse<AIMessagesResponse>> => {
-    const responses = [get_ai_messages1, get_ai_message2];
+    // last_position = 1;
+    console.log("backendintegration : ", " auditService.getAIMessages() called with last_position: ", last_position);
+    const responses = [get_ai_messages1, get_ai_messages1_2];
     apiCallCount = 0;
-    const responseStr = responses[apiCallCount];
+    const responseStr = responses[last_position];
     
     if(apiCallCount >= responses.length) {
       apiCallCount = responses.length - 1;
@@ -187,7 +190,7 @@ const mockAuditService = {
     return {
       data: {
         job_id: jobId,
-        status: 'completed',
+        status: 'running',
         job_details: {
           job_id: jobId,
           site_id: 'mock-site-123',

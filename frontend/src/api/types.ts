@@ -42,6 +42,7 @@ export interface ScheduleJobResponse {
 }
 
 export interface JobFeedbackRequest {
+  status:string
   feedback: string;
 }
 

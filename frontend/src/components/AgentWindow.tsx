@@ -122,14 +122,14 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
       case 'site':
         setSelectedSite(value);
         setCurrentStep('date');
-        addAgentMessage(`Please specify the time period for analysis:`, 'date');
+        addAgentMessage(`Please specify the time period for the compliance check:`, 'date');
         break;
       case 'date':
         setDateRange(value);
         if (value.from && value.to) {
           setCurrentStep('confirm');
           addAgentMessage(
-            `📋 Please review the analysis parameters:\n\n` +
+            `📋 Please review the compliance preparedness:\n\n` +
             `🔹 Trial ID:          ${selectedTrial}\n` +
             `🔹 Site ID:           ${selectedSite}\n` +
             `🔹 Analysis Period:   ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
@@ -167,7 +167,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
                 </AvatarFallback>
               </Avatar>
               <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">
-                <p className="text-sm mb-2">Greetings! Would you like to start a Trial Analysis?</p>
+                <p className="text-sm mb-2">Greetings! Would you like to initiate the compliance check?</p>
                 <ToolUI
                   type="button"
                   value={false}

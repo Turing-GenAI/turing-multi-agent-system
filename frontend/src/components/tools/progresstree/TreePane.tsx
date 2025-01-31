@@ -143,7 +143,6 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const [showPopup, setShowPopup] = React.useState(false);
 
   const handleNodeSelect = () => {
-    if(node.name.includes("Unknown")) return;
     onNodeSelect({ ...node, path: nodePath });
   };
 
@@ -298,7 +297,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                   whiteSpace: 'nowrap'
                 }}
               >
-                {getAgentDisplayNameByNode(node.name)}
+                {(node.name === "Unknown" && node.content?.includes("User input -> Human Feedback:")) ? "User Feedback Captured" : getAgentDisplayNameByNode(node.name)}
               </Typography>
               {node.summary && (
                 <AnimatedText 
