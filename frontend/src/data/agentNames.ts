@@ -26,7 +26,7 @@ export const agentName = {
     "SelfRAG - site_data_retriever": "Self RAG  - Site Data Retriever",
     "inspection - generate_findings_agent": "Inspection - Generate Findings Agent",
     "Inspection - discrepancy_data_generator_node": "Inspection - Discrepancy Data Generator",
-    "Unknown": "Captured User Feedback"
+    "Unknown": "Require Human Feedback"
 } as const;
 
 export const agentNodeName = {
