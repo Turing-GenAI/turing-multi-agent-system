@@ -1,7 +1,7 @@
 import { Message } from '../../types';
 
 export const getMessageBackgroundColor = (message: Message) => {
-  if (message.isUser) return 'bg-gradient-to-br from-blue-500 to-blue-600 text-white';
+  if (message.isUser) return 'bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900';
   
   switch (message.nodeName) {
     case 'critique_agent':
@@ -11,6 +11,6 @@ export const getMessageBackgroundColor = (message: Message) => {
     case 'feedback_agent':
       return 'bg-gradient-to-br from-yellow-50 to-yellow-100 text-gray-900 border-yellow-200';
     default:
-      return 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 border-gray-200';
+      return 'bg-gradient-to-br from-slate-50 to-slate-100 text-gray-900 border-slate-200';
   }
 };

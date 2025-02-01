@@ -103,11 +103,11 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
       transition={{ type: "spring", stiffness: 100 }}
       elevation={0}
       sx={{
-        height: '100%',
-        p: 3,
+        height: '500px',
+        display: 'flex',
+        flexDirection: 'column',
         bgcolor: nodeBackground,
         borderRadius: 2,
-        overflow: 'auto',
         position: 'relative',
         '&::before': {
           content: '""',
@@ -120,264 +120,273 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
         }
       }}
     >
-      <Typography
-        variant="h5"
-        sx={{
-          fontWeight: 600,
-          color: nodeColor,
-          position: 'relative',
-          display: 'inline-block',
-          mb: 3,
-          '&:after': {
-            content: '""',
-            position: 'absolute',
-            bottom: -4,
-            left: 0,
-            width: '2em',
-            height: '2px',
-            backgroundColor: nodeColor,
-            opacity: 0.5,
-          }
-        }}
-      >
-        {getAgentDisplayNameByNode(selectedNode.name)}
-      </Typography>
-
-      {selectedNode.content ? (
-        <Paper
-          elevation={0}
+      <Box sx={{ p: 3, flexShrink: 0 }}>
+        <Typography
+          variant="h5"
           sx={{
-            p: 3,
-            height: 'calc(100% - 80px)',
-            bgcolor: nodeBackground,
-            border: '1px solid',
-            borderColor: theme.palette.divider,
-            borderRadius: 2,
-            overflow: 'auto',
-            '&::-webkit-scrollbar': {
-              width: '8px',
-              backgroundColor: 'transparent',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.divider,
-              borderRadius: '4px',
-              '&:hover': {
-                backgroundColor: theme.palette.action.hover,
-              },
-            },
+            fontWeight: 600,
+            color: nodeColor,
+            position: 'relative',
+            display: 'inline-block',
+            '&:after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -4,
+              left: 0,
+              width: '2em',
+              height: '2px',
+              backgroundColor: nodeColor,
+              opacity: 0.5,
+            }
           }}
         >
-          <Box
+          {getAgentDisplayNameByNode(selectedNode.name)}
+        </Typography>
+      </Box>
+
+      <Box sx={{ 
+        flex: 1,
+        minHeight: 0,
+        px: 3,
+        pb: 3,
+        overflow: 'auto'
+      }}>
+        {selectedNode.content ? (
+          <Paper
+            elevation={0}
             sx={{
-              color: theme.palette.text.primary,
-              fontFamily: '"Segoe UI", "Roboto", sans-serif',
-              fontSize: '0.95rem',
-              lineHeight: 1.8,
+              p: 3,
+              bgcolor: nodeBackground,
+              border: '1px solid',
+              borderColor: theme.palette.divider,
+              borderRadius: 2,
+              height: '100%',
+              overflow: 'auto',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                backgroundColor: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.divider,
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: theme.palette.action.hover,
+                },
+              },
             }}
           >
-            {selectedNode.content?.split('\n').map((paragraph, index, array) => {
-              // Decode special characters in the paragraph
-              const decodedParagraph = decodeSpecialChars(paragraph);
-              
-              // Skip empty lines but preserve spacing
-              if (!decodedParagraph.trim()) {
-                return <Box key={index} sx={{ height: '0.5rem' }} />;
-              }
-
-              // Check if line starts with bullet point (including encoded bullets)
-              const isBullet = decodedParagraph.trim().startsWith('•') || 
-                             decodedParagraph.trim().startsWith('-') ||
-                             decodedParagraph.trim().startsWith('\u00e2\u20ac\u00a2'); // encoded bullet
-              
-              // Check if line is a heading (starts with # or is in all caps)
-              const isHeading = decodedParagraph.trim().startsWith('#') || 
-                             (decodedParagraph.trim() === decodedParagraph.trim().toUpperCase() && 
-                              decodedParagraph.trim().length > 3);
-
-              // Check if this is a code block (indented by 4 spaces or tab)
-              const isCodeBlock = decodedParagraph.startsWith('    ') || decodedParagraph.startsWith('\t');
-
-              // Format code blocks (text between backticks)
-              const formattedText = decodedParagraph.split('`').map((part, i) => {
-                if (i % 2 === 1) { // Text between backticks
-                  return (
-                    <Box
-                      key={i}
-                      component="code"
-                      sx={{
-                        backgroundColor: theme.palette.action.hover,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontFamily: 'Consolas, monospace',
-                        fontSize: '0.9em',
-                        color: theme.palette.primary.main,
-                      }}
-                    >
-                      {part}
-                    </Box>
-                  );
+            <Box
+              sx={{
+                color: theme.palette.text.primary,
+                fontFamily: '"Segoe UI", "Roboto", sans-serif',
+                fontSize: '0.95rem',
+                lineHeight: 1.8,
+              }}
+            >
+              {selectedNode.content?.split('\n').map((paragraph, index, array) => {
+                // Decode special characters in the paragraph
+                const decodedParagraph = decodeSpecialChars(paragraph);
+                
+                // Skip empty lines but preserve spacing
+                if (!decodedParagraph.trim()) {
+                  return <Box key={index} sx={{ height: '0.5rem' }} />;
                 }
-                // Check for bold text (between ** or __)
-                return part.split(/(\*\*.*?\*\*|__.*?__)/g).map((text, j) => {
-                  if (text.startsWith('**') || text.startsWith('__')) {
+
+                // Check if line starts with bullet point (including encoded bullets)
+                const isBullet = decodedParagraph.trim().startsWith('•') || 
+                               decodedParagraph.trim().startsWith('-') ||
+                               decodedParagraph.trim().startsWith('\u00e2\u20ac\u00a2'); // encoded bullet
+                
+                // Check if line is a heading (starts with # or is in all caps)
+                const isHeading = decodedParagraph.trim().startsWith('#') || 
+                               (decodedParagraph.trim() === decodedParagraph.trim().toUpperCase() && 
+                                decodedParagraph.trim().length > 3);
+
+                // Check if this is a code block (indented by 4 spaces or tab)
+                const isCodeBlock = decodedParagraph.startsWith('    ') || decodedParagraph.startsWith('\t');
+
+                // Format code blocks (text between backticks)
+                const formattedText = decodedParagraph.split('`').map((part, i) => {
+                  if (i % 2 === 1) { // Text between backticks
                     return (
                       <Box
-                        key={`${i}-${j}`}
-                        component="strong"
+                        key={i}
+                        component="code"
                         sx={{
-                          color: theme.palette.primary.main,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {text.slice(2, -2)}
-                      </Box>
-                    );
-                  }
-                  return text;
-                });
-              });
-
-              if (isHeading) {
-                const headingText = decodedParagraph.replace(/^#\s*/, '');
-                return (
-                  <Typography
-                    key={index}
-                    variant="h6"
-                    sx={{
-                      color: nodeColor,
-                      fontWeight: 600,
-                      mt: index === 0 ? 0 : 2.5,
-                      mb: 1.5,
-                      fontSize: '1.2rem',
-                      borderBottom: `1px solid ${nodeColor}`,
-                      pb: 0.5,
-                      opacity: 0.9
-                    }}
-                  >
-                    {headingText}
-                  </Typography>
-                );
-              }
-
-              if (isCodeBlock) {
-                return (
-                  <Box
-                    key={index}
-                    sx={{
-                      backgroundColor: theme.palette.action.hover,
-                      borderRadius: '6px',
-                      p: 2,
-                      my: 1.5,
-                      fontFamily: 'Consolas, monospace',
-                      fontSize: '0.9em',
-                      color: theme.palette.text.primary,
-                      whiteSpace: 'pre-wrap',
-                      overflowX: 'auto',
-                    }}
-                  >
-                    {decodedParagraph.replace(/^(\t|    )/, '')}
-                  </Box>
-                );
-              }
-
-              if (isBullet) {
-                const bulletText = decodedParagraph.replace(/^[•\u00e2\u20ac\u00a2-]\s*/, '');
-                return (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      mt: 1,
-                      ml: 2,
-                    }}
-                  >
-                    <Box
-                      component="span"
-                      sx={{
-                        color: nodeColor,
-                        mr: 1.5,
-                        fontWeight: 'bold',
-                        lineHeight: 1.8,
-                        opacity: 0.9
-                      }}
-                    >
-                      •
-                    </Box>
-                    <Typography
-                      sx={{
-                        flex: 1,
-                        '& code': {
                           backgroundColor: theme.palette.action.hover,
                           padding: '2px 6px',
                           borderRadius: '4px',
                           fontFamily: 'Consolas, monospace',
                           fontSize: '0.9em',
                           color: theme.palette.primary.main,
-                        },
+                        }}
+                      >
+                        {part}
+                      </Box>
+                    );
+                  }
+                  // Check for bold text (between ** or __)
+                  return part.split(/(\*\*.*?\*\*|__.*?__)/g).map((text, j) => {
+                    if (text.startsWith('**') || text.startsWith('__')) {
+                      return (
+                        <Box
+                          key={`${i}-${j}`}
+                          component="strong"
+                          sx={{
+                            color: theme.palette.primary.main,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {text.slice(2, -2)}
+                        </Box>
+                      );
+                    }
+                    return text;
+                  });
+                });
+
+                if (isHeading) {
+                  const headingText = decodedParagraph.replace(/^#\s*/, '');
+                  return (
+                    <Typography
+                      key={index}
+                      variant="h6"
+                      sx={{
+                        color: nodeColor,
+                        fontWeight: 600,
+                        mt: index === 0 ? 0 : 2.5,
+                        mb: 1.5,
+                        fontSize: '1.2rem',
+                        borderBottom: `1px solid ${nodeColor}`,
+                        pb: 0.5,
+                        opacity: 0.9
                       }}
                     >
-                      {formattedText}
+                      {headingText}
                     </Typography>
-                  </Box>
+                  );
+                }
+
+                if (isCodeBlock) {
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        backgroundColor: theme.palette.action.hover,
+                        borderRadius: '6px',
+                        p: 2,
+                        my: 1.5,
+                        fontFamily: 'Consolas, monospace',
+                        fontSize: '0.9em',
+                        color: theme.palette.text.primary,
+                        whiteSpace: 'pre-wrap',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {decodedParagraph.replace(/^(\t|    )/, '')}
+                    </Box>
+                  );
+                }
+
+                if (isBullet) {
+                  const bulletText = decodedParagraph.replace(/^[•\u00e2\u20ac\u00a2-]\s*/, '');
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        mt: 1,
+                        ml: 2,
+                      }}
+                    >
+                      <Box
+                        component="span"
+                        sx={{
+                          color: nodeColor,
+                          mr: 1.5,
+                          fontWeight: 'bold',
+                          lineHeight: 1.8,
+                          opacity: 0.9
+                        }}
+                      >
+                        •
+                      </Box>
+                      <Typography
+                        sx={{
+                          flex: 1,
+                          '& code': {
+                            backgroundColor: theme.palette.action.hover,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontFamily: 'Consolas, monospace',
+                            fontSize: '0.9em',
+                            color: theme.palette.primary.main,
+                          },
+                        }}
+                      >
+                        {formattedText}
+                      </Typography>
+                    </Box>
+                  );
+                }
+
+                // Check if next line is a heading to add more space
+                const nextIsHeading = array[index + 1]?.trim().startsWith('#') ||
+                                   (array[index + 1]?.trim() === array[index + 1]?.trim().toUpperCase() &&
+                                    array[index + 1]?.trim().length > 3);
+
+                return (
+                  <Typography
+                    key={index}
+                    paragraph
+                    sx={{
+                      mt: index === 0 ? 0 : 1.5,
+                      mb: nextIsHeading ? 2 : 0,
+                      textAlign: 'justify',
+                      hyphens: 'auto',
+                      '& code': {
+                        backgroundColor: theme.palette.action.hover,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontFamily: 'Consolas, monospace',
+                        fontSize: '0.9em',
+                        color: theme.palette.primary.main,
+                      },
+                    }}
+                  >
+                    {formattedText}
+                  </Typography>
                 );
+              })}
+            </Box>
+          </Paper>
+        ) : (
+          <Typography
+            color="text.secondary"
+            sx={{
+              fontSize: '0.95rem',
+              letterSpacing: '0.01em',
+              lineHeight: 1.6,
+              opacity: 0.9,
+              '& span': {
+                color: nodeColor,
+                fontWeight: 500,
+                opacity: 0.9
               }
-
-              // Check if next line is a heading to add more space
-              const nextIsHeading = array[index + 1]?.trim().startsWith('#') ||
-                                 (array[index + 1]?.trim() === array[index + 1]?.trim().toUpperCase() &&
-                                  array[index + 1]?.trim().length > 3);
-
-              return (
-                <Typography
-                  key={index}
-                  paragraph
-                  sx={{
-                    mt: index === 0 ? 0 : 1.5,
-                    mb: nextIsHeading ? 2 : 0,
-                    textAlign: 'justify',
-                    hyphens: 'auto',
-                    '& code': {
-                      backgroundColor: theme.palette.action.hover,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontFamily: 'Consolas, monospace',
-                      fontSize: '0.9em',
-                      color: theme.palette.primary.main,
-                    },
-                  }}
-                >
-                  {formattedText}
-                </Typography>
-              );
-            })}
-          </Box>
-        </Paper>
-      ) : (
-        <Typography
-          color="text.secondary"
-          sx={{
-            fontSize: '0.95rem',
-            letterSpacing: '0.01em',
-            lineHeight: 1.6,
-            opacity: 0.9,
-            '& span': {
-              color: nodeColor,
-              fontWeight: 500,
-              opacity: 0.9
-            }
-          }}
-        >
-          {!selectedNode.children ? (
-            'This node has no content to display.'
-          ) : (
-            <>
-              This is a parent node with <span>{selectedNode.children?.length || 0} sub-activities</span>.
-              Select a sub-activity to view its details.
-            </>
-          )}
-        </Typography>
-      )}
+            }}
+          >
+            {!selectedNode.children ? (
+              'This node has no content to display.'
+            ) : (
+              <>
+                This is a parent node with <span>{selectedNode.children?.length || 0} sub-activities</span>.
+                Select a sub-activity to view its details.
+              </>
+            )}
+          </Typography>
+        )}
+      </Box>
     </Paper>
   );
 };
