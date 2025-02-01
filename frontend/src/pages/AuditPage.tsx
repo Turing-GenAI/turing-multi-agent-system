@@ -578,7 +578,7 @@ export const AuditPage: React.FC = () => {
 
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false, retryCount: number = 3) => {
     try {
-      if (!jobId) return;
+      if (!jobId || jobStatus === "completed" || jobStatus === "error") return;
       if(awaitingForFeedbackRef.current) return;
       console.log("BackendIntegration", "fetchAIMessages...");
 
@@ -601,7 +601,8 @@ export const AuditPage: React.FC = () => {
 
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
       if ((jobData.status !== "completed" && jobData.status !== "error")) {
-
+        if(!isProcessing && !awaitingForFeedbackRef.current)
+        setIsProcessing(true);
         try {
           const progressTreeResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
           console.log("BackendIntegration: ", "fetchAIMessages completed : ", progressTreeResponse);
@@ -664,62 +665,63 @@ export const AuditPage: React.FC = () => {
   };
 
   const checkJobStatus = async (jobId: string) => {
-    try {
-      // Simulate job status progression
-      const currentStatus = jobStatus || 'queued';
-      let newStatus = currentStatus;
-      
-      switch (currentStatus) {
-        case 'queued':
-          newStatus = 'processing';
-          break;
-        case 'processing':
-          // Simulate job completion after a few cycles
-          if (Math.random() > 0.7) {
-            newStatus = 'completed';
-          }
-          break;
-        default:
-          newStatus = currentStatus;
-      }
-      
-      setJobStatus(newStatus);
-      return newStatus;
-    } catch (error) {
-      console.error("Error checking job status:", error);
-      return null;
-    }
+   
+   return jobStatus
   };
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    console.log("Effect triggered - jobId:", jobId, "isProcessing:", isProcessing);
+    
+    if (!jobId) return;
 
-    if (jobId) {
-      checkJobStatus(jobId);
-      fetchAIMessages(jobId, false);
-
-      intervalId = setInterval(async () => {
-        const status = await checkJobStatus(jobId);
+    const pollJobStatus = async () => {
+      try {
+        console.log("Polling job status for jobId:", jobId);
+        const status = jobStatus
+        console.log("Received job status:", status);
+        
         if (status === 'completed' || status === 'error') {
-          clearInterval(intervalId);
           if (status === 'completed') {
-            fetchAIMessages(jobId, true); 
+            console.log("Job completed, fetching final messages");
+            await fetchAIMessages(jobId, true);
+            addAgentMessage(`Compliance Review Process completed.`);
+            clearTimeout(timeoutId);
           } else {
+            console.log("Job error, stopping process");
             addAgentMessage(`Compliance Review Process Halted: ${status}. Please review and try again.`, undefined, { agentPrefix: '', nodeName: '' });
             setIsProcessing(false);
           }
-        } else {
-          if(!awaitingForFeedbackRef.current) {
-            fetchAIMessages(jobId, false); 
-          }
-          
+          return;
         }
-      }, 4000); 
-    }
 
+        if (!awaitingForFeedbackRef.current) {
+          console.log("Fetching messages during polling");
+          await fetchAIMessages(jobId, false);
+        } else {
+          console.log("Skipping message fetch - awaiting feedback");
+        }
+      } catch (error) {
+        console.error('Error in polling cycle:', error);
+      }
+    };
+
+    let timeoutId: NodeJS.Timeout;
+    
+    const startPolling = async () => {
+      await pollJobStatus();
+      if(jobStatus !== "completed" && jobStatus !== "error") {
+        timeoutId = setTimeout(startPolling, 4000);
+      }
+      
+    };
+
+    // Start the polling
+    startPolling();
+
+    // Cleanup
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
   }, [jobId]);
@@ -754,6 +756,7 @@ export const AuditPage: React.FC = () => {
         auditService.updateJobFeedback(jobId!, userInput[agent]).then(() => {
           
           addAgentMessage("Thanks for your input. I'm processing your feedback now...")
+          setIsProcessing(true);
           
           delay(5000).then(() => {
             auditService.getJobDetails(jobId!).then((res) => {
@@ -832,6 +835,7 @@ export const AuditPage: React.FC = () => {
       setJobStatus('queued');
       
       addAgentMessage(`Compliance Review Process Initiated - Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      setIsProcessing(true);
       
       return job_id;
     } catch (error) {
@@ -940,6 +944,7 @@ export const AuditPage: React.FC = () => {
                 handleRunClick={handleRunClick}
                 addAgentMessage={addAgentMessage}
                 onToolInput={handleToolInput}
+                isThinking={isProcessing && !awaitingForFeedbackRef.current}
               />
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

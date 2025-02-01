@@ -35,4 +35,5 @@ export interface MessageInputProps {
   userInput: string;
   updateUserInput: (value: string) => void;
   handleSendMessage: (e: React.FormEvent) => void;
+  disabled?: boolean;
 }
