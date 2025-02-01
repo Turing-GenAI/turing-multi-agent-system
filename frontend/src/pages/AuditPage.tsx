@@ -2,11 +2,13 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AgentWindow } from '../components/AgentWindow';
 import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
+import { FindingsSummary } from '../components/findings/FindingsSummary';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 import { TreeNode } from '../data/activities';
+import { AIMessagesResponse } from '../api';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -40,6 +42,10 @@ export const AuditPage: React.FC = () => {
   const [selectedAgentTab, setSelectedAgentTab] = useState<AgentType>('trial_master');
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const currentActivitiesRef = useRef<TreeNode[]>([]);
+  const lastJobStatusRef = useRef<string | null>(null);
+  const lastAIMessagePositionRef = useRef<number>(0);
+  const awaitingForFeedbackRef = useRef<boolean>(false);
   const [messagesByAgent, setMessagesByAgent] = useState<Record<AgentType, Message[]>>({
     trial_master: [],
     inspection_master: [],
@@ -52,37 +58,13 @@ export const AuditPage: React.FC = () => {
   });
   const [selectedFindingTab, setSelectedFindingTab] = useState('pd');
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
-  const [findings, setFindings] = useState<{
-    pd: Array<{
-      id: string;
-      agent: string;
-      content: string;
-      timestamp: string;
-    }>;
-    ae: Array<{
-      id: string;
-      agent: string;
-      content: string;
-      timestamp: string;
-    }>;
-    sgr: Array<{
-      id: string;
-      agent: string;
-      content: string;
-      timestamp: string;
-    }>;
-  }>({
-    pd: [],
-    ae: [],
-    sgr: []
-  });
+  const [findings, setFindings] = useState<unknown>();
 
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
   const previousAIMessagesRef = useRef<string>('');
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
-  const [awaitingForFeedback, setAwaitingForFeedback] = useState(false);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -148,7 +130,7 @@ export const AuditPage: React.FC = () => {
               tool: {
                 type: toolType,
                 message,
-                options: options || (toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined),
+                options: options || (toolType === 'button' ? { buttonText: 'Begin Compliance Review' } : undefined),
               },
             }),
             timestamp: new Date(),
@@ -162,7 +144,7 @@ export const AuditPage: React.FC = () => {
             tool: {
               type: toolType,
               message,
-              options: options || (toolType === 'button' ? { buttonText: 'Yes, Proceed' } : undefined),
+              options: options || (toolType === 'button' ? { buttonText: 'Begin Compliance Review' } : undefined),
             },
           });
           console.log("processQueue : ",  cont, ', newMessage: ', JSON.stringify(newMessage))
@@ -267,159 +249,184 @@ export const AuditPage: React.FC = () => {
   };
 
   const processAIMessages = async (data: { ai_messages: string }, previousMessages: string, withFindings: boolean = false) => {
-    // Handle processing message
-    if (data.ai_messages === "Agent is processing!") {
-      if (!isMessageProcessed(data.ai_messages, '')) {
-        addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
-        markMessageAsProcessed(data.ai_messages, '');
+    try {
+      // Handle processing message
+      if (data.ai_messages === "Agent is processing!") {
+        if (!isMessageProcessed(data.ai_messages, '')) {
+          addAgentMessage(data.ai_messages, undefined, { agentPrefix: '', nodeName: '' });
+          markMessageAsProcessed(data.ai_messages, '');
+        }
+        return;
       }
-      return;
-    }
 
-    console.log("Received new messages, current length:", data.ai_messages.length);
-    console.log("Previous messages length:", previousMessages.length);
+      console.log("Received new messages, current length:", data.ai_messages.length);
+      console.log("Previous messages length:", previousMessages.length);
 
-    // Get only the new messages by comparing with previous state
-    const newContent = getNewMessages(data.ai_messages, previousMessages);
-    
-    // If there's no new content, return early
-    if (!newContent) {
-      console.log("No new content found");
-      return;
-    }
+      // Get only the new messages by comparing with previous state
+      const newContent = getNewMessages(data.ai_messages, previousMessages);
 
-    console.log("Processing new content, length:", newContent.length);
+      // If there's no new content, return early
+      if (!newContent) {
+        console.log("No new content found");
+        return;
+      }
 
-    // Process the split messages
-    const split_delimiters = [
-      "================================== Ai Message ==================================", 
-      "================================= Tool Message ================================="
-    ];
-    
-    const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
-    const splittedMessages = newContent.split(splitPattern);
+      console.log("Processing new content, length:", newContent.length);
 
-    for (const message of splittedMessages) {
-      if (message.length > 0) {
-        await delay(1000);
-        
-        if (message.includes("Name:")) {
-          const messageNode = message.split("Name: ")[1];
-          const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase()??'';
-          const agentPrefix = agentNode.split('-')[0]?.trim()??'';
-          const nodeName = agentNode.split('-')[1]?.trim()?? '';
-          const timestamp = new Date().toISOString();
-          
-          if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
-            continue;
-          }
+      // Process the split messages
+      const split_delimiters = [
+        "================================== Ai Message ==================================",
+        "================================= Tool Message ================================="
+      ];
 
-          let content = messageNode || '';
-          
-          if (content.includes("content=")) {
-            const parts = content.split("content=");
-            if (parts.length > 1) {
-              const contentParts = parts[1].split("additional_kwargs=");
-              content = contentParts[0] || '';
-              content = content.replace(/^['"]|['"]$/g, '');
+      const splitPattern = new RegExp(split_delimiters.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+      const splittedMessages = newContent.split(splitPattern);
+
+      // Process messages in sequence
+      for (const message of splittedMessages) {
+        if (!message.trim()) continue;
+
+        try {
+          await delay(1000);
+
+          if (message.includes("Name:")) {
+            const messageNode = message.split("Name: ")[1];
+            if (!messageNode) continue;
+
+            const agentNode = messageNode.split(/[:.\r\n]/)[0]?.toLowerCase() ?? '';
+            const agentPrefix = agentNode.split('-')[0]?.trim() ?? '';
+            const nodeName = agentNode.split('-')[1]?.trim() ?? '';
+            const timestamp = new Date().toISOString();
+
+            // Skip certain agent types
+            if (agentPrefix.includes('crm') || agentPrefix.includes('trial') || nodeName.includes('tool')) {
+              continue;
             }
-          }
-          
-          content = content.replace(/\{[^}]+\}/g, '')
-                         .replace(/response_metadata=.*?(?=\n|$)/g, '')
-                         .replace(/id='.*?'/g, '')
-                         .replace(/usage_metadata=.*?(?=\n|$)/g, '')
-                         .replace(/<class '.*?'>/g, '')
-                         .trim();
-          
-          if (agentNode.includes("generate_response_agent") || 
+
+            let content = messageNode || '';
+
+            // Extract content from message
+            if (content.includes("content=")) {
+              const parts = content.split("content=");
+              if (parts.length > 1) {
+                const contentParts = parts[1].split("additional_kwargs=");
+                content = contentParts[0] || '';
+                content = content.replace(/^['"]|['"]$/g, '');
+              }
+            }
+
+            // Clean up content
+            content = content.replace(/\{[^}]+\}/g, '')
+              .replace(/response_metadata=.*?(?=\n|$)/g, '')
+              .replace(/id='.*?'/g, '')
+              .replace(/usage_metadata=.*?(?=\n|$)/g, '')
+              .replace(/<class '.*?'>/g, '')
+              .trim();
+
+            // Handle different agent types
+            if (agentNode.includes("generate_response_agent") ||
               agentNode.includes("generate_findings_agent")) {
-            
-            const findingId = `${nodeName}-${content}`.trim();
-            if (!isMessageProcessed(findingId, nodeName)) {
-              setFindings(prev => ({
-                ...prev,
-                pd: [...prev.pd, {
-                  id: generateTimeBasedUUID(),
-                  agent: nodeName || "findings",
-                  content: content.trim(),
-                  timestamp
-                }]
-              }));
-              markMessageAsProcessed(findingId, nodeName);
+
+              const findingId = `${nodeName}-${content}`.trim();
+              if (!isMessageProcessed(findingId, nodeName)) {
+                setFindings(prev => ({
+                  ...prev,
+                  pd: [...prev.pd, {
+                    id: crypto.randomUUID(),
+                    agent: nodeName || "findings",
+                    content: content.trim(),
+                    timestamp
+                  }]
+                }));
+                markMessageAsProcessed(findingId, nodeName);
+              }
+            } else {
+              let cleanedContent = content;
+
+              // Clean up agent-specific prefixes
+              if (content.startsWith("trial supervisor - ")) {
+                cleanedContent = content.replace("trial supervisor - ", "").trim();
+              } else if (content.startsWith("CRM - ")) {
+                cleanedContent = content.replace("CRM - ", "").trim();
+              }
+
+              if (!isMessageProcessed(cleanedContent, nodeName)) {
+                addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
+                markMessageAsProcessed(cleanedContent, nodeName);
+              }
             }
           } else {
-            let cleanedContent = content;
-            
-            if (content.startsWith("trial supervisor - ")) {
-              cleanedContent = content.replace("trial supervisor - ", "").trim();
-            } else if (content.startsWith("CRM - ")) {
-              cleanedContent = content.replace("CRM - ", "").trim();
-            }
-            
-            if (!isMessageProcessed(cleanedContent, nodeName)) {
-              addAgentMessage(cleanedContent.trim(), undefined, { agentPrefix, nodeName });
-              markMessageAsProcessed(cleanedContent, nodeName);
+            // Handle messages without "Name:" prefix
+            if (!isMessageProcessed(message, '')) {
+              const cleanedMessage = message.trim();
+              if (cleanedMessage) {
+                addAgentMessage(cleanedMessage, undefined, { agentPrefix: '', nodeName: '' });
+                markMessageAsProcessed(cleanedMessage, '');
+              }
             }
           }
-        } else {
-          if (!isMessageProcessed(message, '')) {
-            addAgentMessage(message.trim(), undefined, { agentPrefix: '', nodeName: '' });
-            markMessageAsProcessed(message, '');
-          }
+        } catch (error) {
+          console.error("Error processing message:", error);
+          // Continue processing other messages even if one fails
+          continue;
         }
       }
-    }
 
-    if (withFindings) {
-      await delay(1500);
-      
-      const timestamp = new Date().toISOString();
-      const mockFindings = {
-        PD: [
-          {
-            id: generateTimeBasedUUID(),
-            agent: "inspection",
-            content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
-            timestamp
-          }
-        ],
-        AE: [
-          {
-            id: generateTimeBasedUUID(),
-            agent: "inspection",
-            content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
-            timestamp
-          }
-        ],
-        SGR: []
-      };
+      // Handle findings if requested
+      if (withFindings) {
+        await delay(1500);
 
-      for (const finding of mockFindings.PD) {
-        if (!isMessageProcessed(finding.content, finding.agent)) {
-          await delay(800);
-          setFindings(prev => ({
-            ...prev,
-            pd: [...prev.pd, finding]
-          }));
-          markMessageAsProcessed(finding.content, finding.agent);
+        const timestamp = new Date().toISOString();
+        const mockFindings = {
+          PD: [
+            {
+              id: crypto.randomUUID(),
+              agent: "inspection",
+              content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
+              timestamp
+            }
+          ],
+          AE: [
+            {
+              id: crypto.randomUUID(),
+              agent: "inspection",
+              content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
+              timestamp
+            }
+          ],
+          SGR: []
+        };
+
+        // Process PD findings
+        for (const finding of mockFindings.PD) {
+          if (!isMessageProcessed(finding.content, finding.agent)) {
+            await delay(800);
+            setFindings(prev => ({
+              ...prev,
+              pd: [...prev.pd, finding]
+            }));
+            markMessageAsProcessed(finding.content, finding.agent);
+          }
+        }
+
+        // Process AE findings
+        for (const finding of mockFindings.AE) {
+          if (!isMessageProcessed(finding.content, finding.agent)) {
+            await delay(800);
+            setFindings(prev => ({
+              ...prev,
+              ae: [...prev.ae, finding]
+            }));
+            markMessageAsProcessed(finding.content, finding.agent);
+          }
         }
       }
-      
-      for (const finding of mockFindings.AE) {
-        if (!isMessageProcessed(finding.content, finding.agent)) {
-          await delay(800);
-          setFindings(prev => ({
-            ...prev,
-            ae: [...prev.ae, finding]
-          }));
-          markMessageAsProcessed(finding.content, finding.agent);
-        }
-      }
+    } catch (error) {
+      console.error("Error in processAIMessages:", error);
+      addAgentMessage("An error occurred while processing messages. Some messages may be missing.", undefined, { agentPrefix: '', nodeName: '' });
     }
   };
 
-  // Helper function to find and remove the last leaf node with name "unknown"
   const findAndRemoveUnknownNode = (activities: TreeNode[]): { updatedActivities: TreeNode[], humanFeedbackPrompt: string | undefined } => {
     if (!activities || activities.length === 0) {
       return { updatedActivities: [], humanFeedbackPrompt: undefined };
@@ -446,7 +453,7 @@ export const AuditPage: React.FC = () => {
     const { node: lastLeaf, parent } = findLastLeafNode(lastActivity);
 
     // If the last leaf has name "unknown", remove it and return its content
-    if (lastLeaf && lastLeaf.name === "Unknown") {
+    if (lastLeaf && lastLeaf.name === "Unknown" && !lastLeaf.content?.includes("User input -> Human Feedback:")) {
       const humanFeedbackPrompt = lastLeaf.content;
       
       // Remove the unknown node from its parent
@@ -473,10 +480,86 @@ export const AuditPage: React.FC = () => {
     };
   };
 
-  const processProgressTreeResponse = async (response: { data: { activities: TreeNode[] } }, jobId: string) => {
-    if (response.data && response.data.activities && response.data.activities.length > 0) {
+  const buildTreeFromFilteredData = (filteredActivities: TreeNode[] | undefined) => {
+    if (!filteredActivities || filteredActivities.length === 0) return currentActivitiesRef.current;
+
+    const activities = [...currentActivitiesRef.current];
+    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
+    
+    filteredActivities.forEach((activity) => {
+      if (parentNodes.includes(activity.name)) {
+        // If it's a parent node, add it directly to activities
+        activities.push(activity);
+      } else {
+        // If it's a child node, add it to the last parent's children
+        const lastParentNode = activities[activities.length - 1];
+        if (lastParentNode) {
+          if (!lastParentNode.children) {
+            lastParentNode.children = [];
+          }
+          lastParentNode.children.push(activity);
+        } else {
+          // If no parent exists, add directly to activities
+          activities.push(activity);
+        }
+      }
+    });
+
+    return activities;
+  };
+
+  const buildTreeFromFilteredDataWithoutPreviousTree = (filteredActivities: TreeNode[] | undefined) => {
+    if (!filteredActivities || filteredActivities.length === 0) return [];
+
+    const previousActivities = currentActivitiesRef.current
+    const activities: TreeNode[] = []
+    if (previousActivities && previousActivities.length > 0) {
+      const lastParentNode = previousActivities[previousActivities.length - 1]
+      const parentNode: TreeNode = {
+        name: lastParentNode.name,
+        children: []
+      }
+      activities.push(parentNode)
+    }
+    
+    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
+    
+    filteredActivities.forEach((activity) => {
+      if (parentNodes.includes(activity.name)) {
+        // If it's a parent node, add it directly to activities
+        activities.push(activity);
+      } else {
+        // If it's a child node, add it to the last parent's children
+        const lastParentNode = activities[activities.length - 1];
+        if (lastParentNode) {
+          if (!lastParentNode.children) {
+            lastParentNode.children = [];
+          }
+          lastParentNode.children.push(activity);
+        } else {
+          // If no parent exists, add directly to activities
+          activities.push(activity);
+        }
+      }
+    
+    });
+
+    return activities;
+  };
+
+  const processProgressTreeResponse = async (aiMessageResponse: AIMessagesResponse, jobId: string) => {
+    console.log("BackendIntegration: ", "processProgressTreeResponse  : ", aiMessageResponse)
+    console.log("processProgressTreeResponse:", aiMessageResponse);
+    const filteredActivities = aiMessageResponse.filtered_data
+    if(!filteredActivities || filteredActivities.length == 0) return
+    const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
+    // Update the ref with new activities
+    // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
+    currentActivitiesRef.current = activities;
+    console.log("Activities length: ", activities?.length, " new activites : ", filteredActivities, " after building tree activities: ", activities);
+    if (activities && activities?.length > 0) {
       // Process the activities to handle unknown node
-      const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(response.data.activities);
+      const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(activities);
       console.log("humanFeedbackPrompt:", humanFeedbackPrompt);
       // If we have regular activities, add them as a progress tree
       if (updatedActivities.length > 0) {
@@ -485,7 +568,7 @@ export const AuditPage: React.FC = () => {
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
+            // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
             value: updatedActivities,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -503,129 +586,174 @@ export const AuditPage: React.FC = () => {
       }
 
       // If we found an unknown node, add its content as a regular message after a delay
-      if (humanFeedbackPrompt) {
+      if (humanFeedbackPrompt && !awaitingForFeedbackRef.current) {
         console.log("Human feedback prompt:", humanFeedbackPrompt)
+        awaitingForFeedbackRef.current = true;
         setTimeout(() => {
-          setAwaitingForFeedback(true);
           addAgentMessage(humanFeedbackPrompt);
         }, 10000); // 10 seconds delay
       }
     }
   };
 
-  const fetchAIMessages = async (jobId: string, withFindings: boolean = false) => {
+  const fetchAIMessages = async (jobId: string, withFindings: boolean = false, retryCount: number = 3) => {
     try {
-      if (!jobId) return;
+      if (!jobId || jobStatus === "completed" || jobStatus === "error") return;
+      if(awaitingForFeedbackRef.current) return;
+      console.log("BackendIntegration", "fetchAIMessages...");
 
       // First, get the current job status
-      const jobResponse = await auditService.getJobDetails(jobId);
-      const jobData = jobResponse.data;
-      
-      // Update job status
-      setJobStatus(jobData.status);
+      const jobDetailsResponse = await auditService.getJobDetails(jobId);
+      const jobData = jobDetailsResponse.data;
+      console.log("BackendIntegration", "fetchAIMessages: jobData: ", jobData, ", lastJobStatusRef: ", lastJobStatusRef.current);
 
-      if (jobData.status === "completed" || jobData.status === "running") {
-        // Fetch AI messages and progress tree
-        /*
-        const [messagesResponse, progressTreeResponse] = await Promise.all([
-          auditService.getAIMessages(jobId, withFindings),
-          auditService.getAgentProgress(jobId)
-        ]);
-        */
-        const [progressTreeResponse] = await Promise.all([
-          auditService.getAgentProgress(jobId)
-        ]);
-        
-       /*
-        // Process the messages and update state
-        await Promise.all([
-          // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
-          processProgressTreeResponse(progressTreeResponse, jobId)
-        ]);
-        */
-        await Promise.all([
-          // processAIMessages(messagesResponse.data, previousAIMessagesRef.current, withFindings),
-          processProgressTreeResponse(progressTreeResponse, jobId)
-        ]);
-        
-        // Update previous messages for next comparison
-        // previousAIMessagesRef.current = messagesResponse.data.ai_messages;
+      if (!jobData) {
+        throw new Error("Failed to fetch job details");
       }
+
+      setJobStatus(jobData.status);
+      
+
+      // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
+      if ((jobData.status !== "completed" && jobData.status !== "error")) {
+        withFindings = true;
+        if(!isProcessing && !awaitingForFeedbackRef.current)
+        setIsProcessing(true);
+        try {
+          const progressTreeResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
+          console.log("BackendIntegration: ", "fetchAIMessages completed : ", progressTreeResponse);
+
+          if (!progressTreeResponse.data) {
+            throw new Error("Failed to fetch AI messages");
+          }
+
+          // Update last message position if available
+          if (progressTreeResponse.data.last_position !== undefined) {
+            lastAIMessagePositionRef.current = progressTreeResponse.data.last_position;
+          }
+
+          // Process the response
+          await processProgressTreeResponse(progressTreeResponse.data, jobId);
+
+          // Update last status
+          lastJobStatusRef.current = jobData.status;
+        } catch (error) {
+          console.error("Error fetching AI messages:", error);
+          
+          // Retry logic for AI messages fetch
+          if (retryCount > 0) {
+            console.log(`Retrying AI messages fetch. Attempts remaining: ${retryCount - 1}`);
+            await delay(2000); // Wait 2 seconds before retry
+            return fetchAIMessages(jobId, withFindings, retryCount - 1);
+          } else {
+            addAgentMessage("Failed to fetch AI messages after multiple attempts. Please try again later.", undefined, { agentPrefix: '', nodeName: '' });
+          }
+        }
+      } else {
+        setIsProcessing(false);
+      }
+      console.log("BackendIntegration", "fetchAIMessages: before job (jobData.status === completed) ", jobData.status)
+      // If job is completed and withFindings is true, fetch findings
+      if (jobData.status === "completed") {
+        setJobStatus(jobData.status)
+        lastJobStatusRef.current = jobData.status;
+        try {
+          const findingsResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
+          if (findingsResponse.data && findingsResponse.data.findings) {
+            setFindings(findingsResponse.data);
+          }
+          addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
+        } catch (error) {
+          console.error("Error fetching findings:", error);
+          addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
+        }
+      }
+      lastJobStatusRef.current = jobData.status;
     } catch (error) {
-      console.error("Error fetching AI messages:", error);
+      
+      console.error("BackendIntegration: ", "Error in fetchAIMessages:", error);
+      
+      // Retry logic for job details fetch
+      if (retryCount > 0) {
+        console.log(`Retrying job details fetch. Attempts remaining: ${retryCount - 1}`);
+        await delay(2000); // Wait 2 seconds before retry
+        return fetchAIMessages(jobId, withFindings, retryCount - 1);
+      } else {
+        lastJobStatusRef.current = "error";
+        addAgentMessage("Failed to fetch job details after multiple attempts. Please try again later.", undefined, { agentPrefix: '', nodeName: '' });
+      }
     }
   };
 
   const checkJobStatus = async (jobId: string) => {
-    try {
-      // Simulate job status progression
-      const currentStatus = jobStatus || 'queued';
-      let newStatus = currentStatus;
-      
-      switch (currentStatus) {
-        case 'queued':
-          newStatus = 'processing';
-          break;
-        case 'processing':
-          // Simulate job completion after a few cycles
-          if (Math.random() > 0.7) {
-            newStatus = 'completed';
-          }
-          break;
-        default:
-          newStatus = currentStatus;
-      }
-      
-      setJobStatus(newStatus);
-      return newStatus;
-    } catch (error) {
-      console.error("Error checking job status:", error);
-      return null;
-    }
+   
+   return jobStatus
   };
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    console.log("Effect triggered - jobId:", jobId, "isProcessing:", isProcessing);
+    
+    if (!jobId) return;
 
-    if (jobId) {
-      checkJobStatus(jobId);
-      fetchAIMessages(jobId, false);
-
-      intervalId = setInterval(async () => {
-        const status = await checkJobStatus(jobId);
+    const pollJobStatus = async () => {
+      try {
+        console.log("Polling job status for jobId:", jobId);
+        const status = lastJobStatusRef.current
+        console.log("Received job status:", status);
+        
         if (status === 'completed' || status === 'error') {
-          clearInterval(intervalId);
           if (status === 'completed') {
-            fetchAIMessages(jobId, true); 
+            console.log("Job completed, fetching final messages");
+            await fetchAIMessages(jobId, true);
+            // addAgentMessage(`Compliance Review Process completed.`);
+            clearTimeout(timeoutId);
           } else {
-            addAgentMessage(`Analysis failed! Error: ${status}`, undefined, { agentPrefix: '', nodeName: '' });
+            console.log("Job error, stopping process");
+            addAgentMessage(`Compliance Review Process Halted: ${status}. Please review and try again.`, undefined, { agentPrefix: '', nodeName: '' });
             setIsProcessing(false);
           }
-        } else {
-          fetchAIMessages(jobId, false); 
+          return;
         }
-      }, 400000); 
-    }
 
+        if (!awaitingForFeedbackRef.current) {
+          console.log("Fetching messages during polling");
+          await fetchAIMessages(jobId, false);
+        } else {
+          console.log("Skipping message fetch - awaiting feedback");
+        }
+      } catch (error) {
+        console.error('Error in polling cycle:', error);
+      }
+    };
+
+    let timeoutId: NodeJS.Timeout;
+    
+    const startPolling = async () => {
+      await pollJobStatus();
+      const status = lastJobStatusRef.current
+      if(status !== "completed" && status !== "error") {
+        timeoutId = setTimeout(startPolling, 8000);
+      }
+      
+    };
+
+    // Start the polling
+    startPolling();
+
+    // Cleanup
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
   }, [jobId]);
-
-  
-
-  function generateTimeBasedUUID() {
-    return 'uuid-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
-}
 
   const handleSendMessage = (agent: AgentType, e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput[agent].trim()) return;
 
     const newMessage: Message = {
-      id: generateTimeBasedUUID(),
+      id: crypto.randomUUID(),
       agent,
       content: userInput[agent],
       timestamp: new Date(),
@@ -645,24 +773,33 @@ export const AuditPage: React.FC = () => {
     }));
 
     // Check if we're awaiting feedback
-    if (awaitingForFeedback) {
+    if (awaitingForFeedbackRef.current) {
       try {
         auditService.updateJobFeedback(jobId!, userInput[agent]).then(() => {
-          setAwaitingForFeedback(false); // Reset the feedback state
-          setMessagesByAgent(prev => {
-            const messages = prev[agent];
-            console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
-            // Find the last index of a message with toolType = 'progresstree'
-            const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
-            console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
-            return {
-              ...prev,
-              [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
-            }
-          });
-
-          delay(1000).then(() => {
-            fetchAIMessages(jobId!, false);
+          
+          addAgentMessage("Thanks for your input. I'm processing your feedback now...")
+          setIsProcessing(true);
+          awaitingForFeedbackRef.current = false; // Reset the feedback state
+          
+          delay(5000).then(() => {
+            auditService.getJobDetails(jobId!).then((res) => {
+              if(res.data.status === "got_human_feedback") {
+                // setMessagesByAgent(prev => {
+                //   const messages = prev[agent];
+                //   console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
+                //   // Find the last index of a message with toolType = 'progresstree'
+                //   const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
+                //   console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
+                //   return {
+                //     ...prev,
+                //     [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
+                //   }
+                // });
+                
+                fetchAIMessages(jobId!, true);
+              }
+            })
+            
           })
         });
         
@@ -718,15 +855,16 @@ export const AuditPage: React.FC = () => {
       
       const { job_id } = response.data;
       setJobId(job_id);
-      setJobStatus('queued');
+      // setJobStatus('queued');
       
-      addAgentMessage(`I've scheduled the Job for analysis! Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Compliance Review Process Initiated - Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      setIsProcessing(true);
       
       return job_id;
     } catch (error) {
-      console.error('Error scheduling analysis job:', error);
+      console.error('Error initiating compliance review:', error);
       
-      addAgentMessage(`Error scheduling analysis job: ${error instanceof Error ? error.message : 'Unknown error occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Unable to initiate compliance review: ${error instanceof Error ? error.message : 'An unexpected issue occurred'}`, undefined, { agentPrefix: '', nodeName: '' });
       
       throw error;
     }
@@ -788,7 +926,7 @@ export const AuditPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
-              <h1 className="text-xl font-semibold text-gray-800"> Audit Copilot</h1>
+              <h1 className="text-xl font-semibold text-gray-800"> Audit Compliance Assistant</h1>
             </div>
             {/* <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-3">
@@ -829,17 +967,22 @@ export const AuditPage: React.FC = () => {
                 handleRunClick={handleRunClick}
                 addAgentMessage={addAgentMessage}
                 onToolInput={handleToolInput}
+                isThinking={isProcessing && !awaitingForFeedbackRef.current}
               />
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <FindingsTable 
-                findings={getCurrentFindings()}
-                selectedTreeNode={selectedTreeNode}
-                selectedFindingTab={selectedFindingTab}
-                setSelectedFindingTab={setSelectedFindingTab}
-                expandedRows={expandedRows}
-                setExpandedRows={setExpandedRows}
-              />
+              <div className="flex flex-col flex-1">
+                <div className="flex flex-col space-y-4 p-4">
+                  <FindingsTable 
+                    findings={findings}
+                    selectedTreeNode={selectedTreeNode}
+                    selectedFindingTab={selectedFindingTab}
+                    setSelectedFindingTab={setSelectedFindingTab}
+                    expandedRows={expandedRows}
+                    setExpandedRows={setExpandedRows}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

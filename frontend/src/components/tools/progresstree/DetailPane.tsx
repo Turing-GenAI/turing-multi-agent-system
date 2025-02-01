@@ -69,8 +69,8 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
             }
           }}
         >
-          Select an activity from the tree
-          <span>Choose any node to view its details</span>
+          {/* Select an activity from the tree */}
+          {/* <span>Choose any node to view its details</span> */}
         </Typography>
       </Paper>
     );

@@ -13,8 +13,10 @@ import {
 } from '../types';
 import { activities } from '../../data/activities';
 import { agentactivities, agentActivities1, agentActivities2 } from '../../data/agent_activities';
+import { get_ai_messages1, get_ai_messages1_2,get_ai_message2, get_final_response } from '../../data/get_ai_responses';
 
 let apiCallCount = 0;
+const parentNodes = [ "inspection - site_area_agent", "trial supervisor - inspection_master_agent"]
 
 interface JobDetails {
   job_id: string;
@@ -45,12 +47,14 @@ const realAuditService = {
    */
   getAIMessages: async (
     jobId: string,
-    withFindings: boolean = false
+    withFindings: boolean = false,
+    last_position: number = 0
   ): Promise<ApiResponse<AIMessagesResponse>> => {
     const endpoint = `/get_ai_messages/${encodeURIComponent(jobId)}`;
     const body: AIMessagesRequest = {
       ai_messages: true,
       findings: withFindings,
+      last_position:last_position
     };
 
     return apiClient.put<AIMessagesResponse>(endpoint, body);
@@ -79,7 +83,7 @@ const realAuditService = {
   },
   
   getJobDetails: async (status: string): Promise<ApiResponse<JobResponse>> => {
-    const endpoint = `/jobs/?status=${encodeURIComponent(status)}`;
+    const endpoint = `/job-status/${encodeURIComponent(status)}`;
     return apiClient.get<JobResponse>(endpoint);
   },
 
@@ -93,8 +97,9 @@ const realAuditService = {
     jobId: string,
     feedback: string
   ): Promise<ApiResponse<JobFeedbackResponse>> => {
-    const endpoint = `/jobs/${encodeURIComponent(jobId)}/feedback`;
+    const endpoint = `/update-job/${encodeURIComponent(jobId)}`;
     const body: JobFeedbackRequest = {
+      status: "got_human_feedback",
       feedback,
     };
 
@@ -138,53 +143,25 @@ const realAuditService = {
 const mockAuditService = {
   getAIMessages: async (
     jobId: string,
-    withFindings: boolean = false
+    withFindings: boolean = false,
+    last_position: number = 0
   ): Promise<ApiResponse<AIMessagesResponse>> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Fetch mock messages from file
-    const response = await fetch('/mockMessages.txt');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // last_position = 1;
+    console.log("backendintegration : ", " auditService.getAIMessages() called with last_position: ", last_position);
+    const responses = [get_ai_messages1, get_ai_messages1_2];
+    apiCallCount = 0;
+    const responseStr = responses[last_position];
+    
+    if(apiCallCount >= responses.length) {
+      apiCallCount = responses.length - 1;
     }
-    const mockMessages = await response.text();
+    apiCallCount++;
 
-    const mockResponse: AIMessagesResponse = {
-      ai_messages: mockMessages,
-      ...(withFindings && {
-        findings: {
-          pd: [
-            {
-              id: 'pd1',
-              agent: 'trial_master',
-              content: 'Protocol deviation found: Missing patient data in visit 3',
-              timestamp: new Date().toISOString()
-            }
-          ],
-          ae: [
-            {
-              id: 'ae1',
-              agent: 'inspection_master',
-              content: 'Adverse event not properly documented within 24 hours',
-              timestamp: new Date().toISOString()
-            }
-          ],
-          sgr: [
-            {
-              id: 'sgr1',
-              agent: 'crm_master',
-              content: 'Site generated report shows inconsistency in drug administration',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        }
-      })
-    };
+    const response: AIMessagesResponse = JSON.parse(responseStr);
 
     return {
-      data: mockResponse,
       status: 200,
+      data: response
     };
   },
 
@@ -236,7 +213,7 @@ const mockAuditService = {
   ): Promise<ApiResponse<JobFeedbackResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    apiCallCount++
     return {
       data: {
         job_id: jobId,
@@ -288,23 +265,27 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
-
-    const responses = [agentActivities1, agentActivities2, agentactivities]
-    const activities = responses[apiCallCount]
-    apiCallCount++
+    const responses = [get_final_response, get_ai_messages1, get_ai_message2];
+    
     if(apiCallCount >= responses.length) {
-      apiCallCount = responses.length - 1
+      apiCallCount = responses.length - 1;
     }
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          status: 200,
-          data: {
-            activities: JSON.parse(JSON.stringify(activities)) // Deep clone the activities
-          }
-        });
-      }, 500);
+
+    apiCallCount = 0;
+    const responseStr = responses[apiCallCount];
+    const response = JSON.parse(responseStr);
+    const activitiesJson = response.filtered_data || [];
+    
+    activitiesJson.forEach((activity: any) => {
+      parentNodes.includes(activity.name);
     });
+
+    return {
+      status: 200,
+      data: {
+        activities: JSON.parse(JSON.stringify(activities)) // Deep clone the activities
+      }
+    };
   }
 };
 

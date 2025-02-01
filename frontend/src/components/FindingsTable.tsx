@@ -59,18 +59,6 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
             <FindingsSummary findings={findings} />
           </div>
           <DetailPane selectedNode={selectedTreeNode} />
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-4">
-              {filteredFindings.map((finding) => (
-                <FindingCard 
-                  key={finding.id} 
-                  finding={finding}
-                  isExpanded={expandedRows.includes(finding.id)}
-                  onToggle={() => toggleRow(finding.id)}
-                />
-              ))}
-            </div>
-          </div>
         </div>
       </Box>
     </Box>
