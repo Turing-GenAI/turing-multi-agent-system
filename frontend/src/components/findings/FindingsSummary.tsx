@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, AlertTriangle, CircleDot } from 'lucide-react';
+import { AlertCircle, AlertTriangle, AlertOctagon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -80,7 +80,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({ findings }) =>
             className="flex items-center cursor-pointer hover:opacity-80"
             onClick={() => handleFindingsClick('pd')}
           >
-            <CircleDot className="w-4 h-4 mr-2 text-blue-500" />
+            <AlertOctagon className="w-4 h-4 mr-2 text-blue-500" />
             <span className="text-gray-600">Protocol Deviation Alerts:</span>
             <span className="ml-1.5 font-semibold">{pdFindings}</span>
           </div>
