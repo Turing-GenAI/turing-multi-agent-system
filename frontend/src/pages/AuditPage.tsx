@@ -548,22 +548,20 @@ export const AuditPage: React.FC = () => {
     const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     
     filteredActivities.forEach((activity) => {
-      if(activity.name !== "Unknown") {
-        if (parentNodes.includes(activity.name)) {
-          // If it's a parent node, add it directly to activities
-          activities.push(activity);
-        } else {
-          // If it's a child node, add it to the last parent's children
-          const lastParentNode = activities[activities.length - 1];
-          if (lastParentNode) {
-            if (!lastParentNode.children) {
-              lastParentNode.children = [];
-            }
-            lastParentNode.children.push(activity);
-          } else {
-            // If no parent exists, add directly to activities
-            activities.push(activity);
+      if (parentNodes.includes(activity.name)) {
+        // If it's a parent node, add it directly to activities
+        activities.push(activity);
+      } else {
+        // If it's a child node, add it to the last parent's children
+        const lastParentNode = activities[activities.length - 1];
+        if (lastParentNode) {
+          if (!lastParentNode.children) {
+            lastParentNode.children = [];
           }
+          lastParentNode.children.push(activity);
+        } else {
+          // If no parent exists, add directly to activities
+          activities.push(activity);
         }
       }
     
@@ -682,9 +680,10 @@ export const AuditPage: React.FC = () => {
       } else {
         setIsProcessing(false);
       }
-
+      console.log("BackendIntegration", "fetchAIMessages: before job (jobData.status === completed) ", jobData.status)
       // If job is completed and withFindings is true, fetch findings
-      if (jobData.status === "completed" && withFindings) {
+      if (jobData.status === "completed") {
+        setJobStatus(jobData.status)
         try {
           const findingsResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
           if (findingsResponse.data && findingsResponse.data.findings) {
