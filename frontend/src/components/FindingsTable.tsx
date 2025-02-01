@@ -45,33 +45,30 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
     return findings || [];
   }, [findings]);
 
+  // Convert findings to the format expected by FindingsSummary
+  const summaryFindings = useMemo(() => ({
+    pd: filteredFindings.filter(f => f.agent.toLowerCase().includes('protocol')),
+    ae: filteredFindings.filter(f => f.agent.toLowerCase().includes('adverse')),
+    sgr: filteredFindings.filter(f => !f.agent.toLowerCase().includes('protocol') && !f.agent.toLowerCase().includes('adverse'))
+  }), [filteredFindings]);
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* DetailPane Section */}
-      {/* <Box sx={{ flex: '0 0 auto', height: '300px', p: 2 }}>
-        <DetailPane selectedNode={selectedTreeNode} />
-      </Box> */}
-
-      {/* Findings Section */}
-      <Box sx={{ flex: '1 1 auto', overflow: 'auto' }}>
-        <div className="bg-white rounded-lg shadow-sm flex flex-col">
-          <div className="p-4 border-b space-y-4">
-            <FindingsSummary findings={findings} />
-          </div>
-          <DetailPane selectedNode={selectedTreeNode} />
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-4">
-              {filteredFindings.map((finding) => (
-                <FindingCard 
-                  key={finding.id} 
-                  finding={finding}
-                  isExpanded={expandedRows.includes(finding.id)}
-                  onToggle={() => toggleRow(finding.id)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+      <Box sx={{ p: 2, borderBottom: '1px solid #e5e7eb' }}>
+        <FindingsSummary findings={summaryFindings} />
+      </Box>
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+        {selectedTreeNode && (
+          <DetailPane node={selectedTreeNode} />
+        )}
+        {filteredFindings.map((finding) => (
+          <FindingCard
+            key={finding.id}
+            finding={finding}
+            isExpanded={expandedRows.includes(finding.id)}
+            onToggle={() => toggleRow(finding.id)}
+          />
+        ))}
       </Box>
     </Box>
   );

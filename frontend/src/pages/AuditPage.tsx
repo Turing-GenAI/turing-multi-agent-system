@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AgentWindow } from '../components/AgentWindow';
 import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
+import { FindingsSummary } from '../components/findings/FindingsSummary';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
@@ -648,7 +649,6 @@ export const AuditPage: React.FC = () => {
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
         }
       }
-
     } catch (error) {
       console.error("BackendIntegration: ", "Error in fetchAIMessages:", error);
       
@@ -943,14 +943,18 @@ export const AuditPage: React.FC = () => {
               />
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <FindingsTable 
-                findings={getCurrentFindings()}
-                selectedTreeNode={selectedTreeNode}
-                selectedFindingTab={selectedFindingTab}
-                setSelectedFindingTab={setSelectedFindingTab}
-                expandedRows={expandedRows}
-                setExpandedRows={setExpandedRows}
-              />
+              <div className="flex flex-col flex-1">
+                <div className="flex flex-col space-y-4 p-4">
+                  <FindingsTable 
+                    findings={getCurrentFindings()}
+                    selectedTreeNode={selectedTreeNode}
+                    selectedFindingTab={selectedFindingTab}
+                    setSelectedFindingTab={setSelectedFindingTab}
+                    expandedRows={expandedRows}
+                    setExpandedRows={setExpandedRows}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
