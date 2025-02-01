@@ -18,6 +18,7 @@ interface AgentWindowProps {
   userInput: string;
   updateUserInput: (value: string) => void;
   handleSendMessage: () => void;
+  isThinking?: boolean;
 }
 
 export const AgentWindow: React.FC<AgentWindowProps> = ({
@@ -31,6 +32,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   handleRunClick,
   addAgentMessage,
   onToolInput,
+  isThinking = false,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -200,6 +202,22 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
               isAnalysisStarted={isAnalysisStarted}
             />
           ))}
+          {isThinking && (
+            <div className="flex items-start space-x-2">
+              <Avatar className="h-8 w-8 bg-gray-100">
+                <AvatarFallback className="text-gray-700">
+                  AI
+                </AvatarFallback>
+              </Avatar>
+              <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -209,6 +227,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           userInput={userInput}
           updateUserInput={updateUserInput}
           handleSendMessage={handleSendMessage}
+          disabled={isThinking}
         />
       </div>
     </div>
