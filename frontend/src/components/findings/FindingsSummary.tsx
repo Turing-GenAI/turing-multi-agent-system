@@ -81,14 +81,14 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({ findings }) =>
             onClick={() => handleFindingsClick('pd')}
           >
             <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
-            <span className="font-medium">{pdFindings} Protocol Deviations</span>
+            <span className="font-medium">Protocol Deviations: {pdFindings}</span>
           </div>
           <div 
             className="flex items-center cursor-pointer hover:opacity-80"
             onClick={() => handleFindingsClick('ae')}
           >
             <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-            <span className="font-medium">{aeFindings} Adverse Events</span>
+            <span className="font-medium">Adverse Events: {aeFindings}</span>
           </div>
         </div>
       </div>
