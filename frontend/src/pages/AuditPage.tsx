@@ -248,6 +248,11 @@ export const AuditPage: React.FC = () => {
     }
   };
 
+
+  function generateTimeBasedUUID() {
+    return 'uuid-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+}
+
   const processAIMessages = async (data: { ai_messages: string }, previousMessages: string, withFindings: boolean = false) => {
     try {
       // Handle processing message
@@ -332,7 +337,7 @@ export const AuditPage: React.FC = () => {
                 setFindings(prev => ({
                   ...prev,
                   pd: [...prev.pd, {
-                    id: crypto.randomUUID(),
+                    id: generateTimeBasedUUID(),
                     agent: nodeName || "findings",
                     content: content.trim(),
                     timestamp
@@ -380,7 +385,7 @@ export const AuditPage: React.FC = () => {
         const mockFindings = {
           PD: [
             {
-              id: crypto.randomUUID(),
+              id: generateTimeBasedUUID(),
               agent: "inspection",
               content: "Protocol Deviation Finding: All identified protocol deviations were resolved within acceptable timeframes (2-4 weeks). Effective measures included enhanced training and re-consent procedures.",
               timestamp
@@ -388,7 +393,7 @@ export const AuditPage: React.FC = () => {
           ],
           AE: [
             {
-              id: crypto.randomUUID(),
+              id: generateTimeBasedUUID(),
               agent: "inspection",
               content: "Adverse Events Finding: All AEs/SAEs have been properly documented with final dispositions and end dates in RAVE.",
               timestamp
@@ -753,7 +758,7 @@ export const AuditPage: React.FC = () => {
     if (!userInput[agent].trim()) return;
 
     const newMessage: Message = {
-      id: crypto.randomUUID(),
+      id: generateTimeBasedUUID(),
       agent,
       content: userInput[agent],
       timestamp: new Date(),
