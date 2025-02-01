@@ -528,8 +528,47 @@ export const AuditPage: React.FC = () => {
       }
     });
 
-    // Update the ref with new activities
-    currentActivitiesRef.current = activities;
+    return activities;
+  };
+
+  const buildTreeFromFilteredDataWithoutPreviousTree = (filteredActivities: TreeNode[] | undefined) => {
+    if (!filteredActivities || filteredActivities.length === 0) return [];
+
+    const previousActivities = currentActivitiesRef.current
+    const activities: TreeNode[] = []
+    if (previousActivities && previousActivities.length > 0) {
+      const lastParentNode = previousActivities[previousActivities.length - 1]
+      const parentNode: TreeNode = {
+        name: lastParentNode.name,
+        children: []
+      }
+      activities.push(parentNode)
+    }
+    
+    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
+    
+    filteredActivities.forEach((activity) => {
+      if(activity.name !== "Unknown") {
+        if (parentNodes.includes(activity.name)) {
+          // If it's a parent node, add it directly to activities
+          activities.push(activity);
+        } else {
+          // If it's a child node, add it to the last parent's children
+          const lastParentNode = activities[activities.length - 1];
+          if (lastParentNode) {
+            if (!lastParentNode.children) {
+              lastParentNode.children = [];
+            }
+            lastParentNode.children.push(activity);
+          } else {
+            // If no parent exists, add directly to activities
+            activities.push(activity);
+          }
+        }
+      }
+    
+    });
+
     return activities;
   };
 
@@ -537,7 +576,11 @@ export const AuditPage: React.FC = () => {
     console.log("BackendIntegration: ", "processProgressTreeResponse  : ", aiMessageResponse)
     console.log("processProgressTreeResponse:", aiMessageResponse);
     const filteredActivities = aiMessageResponse.filtered_data
-    const activities = buildTreeFromFilteredData(filteredActivities)
+    if(!filteredActivities || filteredActivities.length == 0) return
+    const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
+    // Update the ref with new activities
+    // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
+    currentActivitiesRef.current = activities;
     console.log("Activities length: ", activities?.length, " new activites : ", filteredActivities, " after building tree activities: ", activities);
     if (activities && activities?.length > 0) {
       // Process the activities to handle unknown node
@@ -550,7 +593,7 @@ export const AuditPage: React.FC = () => {
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
+            // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
             value: updatedActivities,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -603,6 +646,7 @@ export const AuditPage: React.FC = () => {
 
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
       if ((jobData.status !== "completed" && jobData.status !== "error")) {
+        withFindings = true;
         if(!isProcessing && !awaitingForFeedbackRef.current)
         setIsProcessing(true);
         try {
@@ -646,6 +690,7 @@ export const AuditPage: React.FC = () => {
           if (findingsResponse.data && findingsResponse.data.findings) {
             setFindings(findingsResponse.data.findings);
           }
+          addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
         } catch (error) {
           console.error("Error fetching findings:", error);
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
@@ -711,7 +756,7 @@ export const AuditPage: React.FC = () => {
     const startPolling = async () => {
       await pollJobStatus();
       if(jobStatus !== "completed" && jobStatus !== "error") {
-        timeoutId = setTimeout(startPolling, 4000);
+        timeoutId = setTimeout(startPolling, 8000);
       }
       
     };
@@ -758,22 +803,23 @@ export const AuditPage: React.FC = () => {
           
           addAgentMessage("Thanks for your input. I'm processing your feedback now...")
           setIsProcessing(true);
+          awaitingForFeedbackRef.current = false; // Reset the feedback state
           
           delay(5000).then(() => {
             auditService.getJobDetails(jobId!).then((res) => {
               if(res.data.status === "got_human_feedback") {
-                setMessagesByAgent(prev => {
-                  const messages = prev[agent];
-                  console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
-                  // Find the last index of a message with toolType = 'progresstree'
-                  const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
-                  console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
-                  return {
-                    ...prev,
-                    [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
-                  }
-                });
-                awaitingForFeedbackRef.current = false; // Reset the feedback state
+                // setMessagesByAgent(prev => {
+                //   const messages = prev[agent];
+                //   console.log("Current messages:", messages.map(m => ({ id: m.id, toolType: m.toolType })));
+                //   // Find the last index of a message with toolType = 'progresstree'
+                //   const lastProgressTreeIndex = messages.map(m => m?.toolType === 'progresstree').lastIndexOf(true);
+                //   console.log("lastProgressTreeIndex:", lastProgressTreeIndex)
+                //   return {
+                //     ...prev,
+                //     [agent]: lastProgressTreeIndex >= 0 ? messages.slice(0, lastProgressTreeIndex + 1) : messages
+                //   }
+                // });
+                
                 fetchAIMessages(jobId!, true);
               }
             })
