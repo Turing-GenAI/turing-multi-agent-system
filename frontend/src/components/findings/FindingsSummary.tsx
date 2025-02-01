@@ -80,21 +80,24 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({ findings }) =>
             className="flex items-center cursor-pointer hover:opacity-80"
             onClick={() => handleFindingsClick('pd')}
           >
-            <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
-            <span className="font-medium">Protocol Deviations: {pdFindings}</span>
+            <CircleDot className="w-4 h-4 mr-2 text-blue-500" />
+            <span className="text-gray-600">Protocol Deviation Alerts:</span>
+            <span className="ml-1.5 font-semibold">{pdFindings}</span>
           </div>
+
           <div 
             className="flex items-center cursor-pointer hover:opacity-80"
             onClick={() => handleFindingsClick('ae')}
           >
-            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-            <span className="font-medium">Adverse Events: {aeFindings}</span>
+            <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
+            <span className="text-gray-600">Adverse Event Alerts:</span>
+            <span className="ml-1.5 font-semibold">{aeFindings}</span>
           </div>
         </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-[90vw] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
