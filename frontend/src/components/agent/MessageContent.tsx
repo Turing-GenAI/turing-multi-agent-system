@@ -141,7 +141,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         </div>
       )}
       <div className="space-y-2">
-        <p className={`text-sm leading-relaxed ${message.isUser ? 'text-white' : 'text-gray-700'}`}>
+        <p className={`text-sm leading-relaxed ${message.isUser ? 'text-gray-900' : 'text-gray-700'}`}>
           <TypewriterText text={content} />
           {isTyping && <span className="animate-pulse ml-0.5">▋</span>}
         </p>
