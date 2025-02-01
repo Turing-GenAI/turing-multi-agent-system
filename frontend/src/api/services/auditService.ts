@@ -13,7 +13,7 @@ import {
 } from '../types';
 import { activities } from '../../data/activities';
 import { agentactivities, agentActivities1, agentActivities2 } from '../../data/agent_activities';
-import { get_ai_messages1, get_ai_messages1_2,get_ai_message2 } from '../../data/get_ai_responses';
+import { get_ai_messages1, get_ai_messages1_2,get_ai_message2, get_final_response } from '../../data/get_ai_responses';
 
 let apiCallCount = 0;
 const parentNodes = [ "inspection - site_area_agent", "trial supervisor - inspection_master_agent"]
@@ -190,14 +190,14 @@ const mockAuditService = {
     return {
       data: {
         job_id: jobId,
-        status: 'running',
+        status: 'completed',
         job_details: {
           job_id: jobId,
           site_id: 'mock-site-123',
           date: '2022-01-01',
           trial_id: 'mock-trial-123',
           run_at: '2022-01-01T12:00:00',
-          status: 'running',
+          status: 'completed',
           feedback: 'Job completed successfully',
           processing_start_time: '2022-01-01T11:00:00',
           completed_time: '2022-01-01T12:00:00',
@@ -265,12 +265,13 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
-    const responses = [get_ai_messages1, get_ai_message2];
+    const responses = [get_final_response, get_ai_messages1, get_ai_message2];
     
     if(apiCallCount >= responses.length) {
       apiCallCount = responses.length - 1;
     }
 
+    apiCallCount = 0;
     const responseStr = responses[apiCallCount];
     const response = JSON.parse(responseStr);
     const activitiesJson = response.filtered_data || [];

@@ -58,30 +58,7 @@ export const AuditPage: React.FC = () => {
   });
   const [selectedFindingTab, setSelectedFindingTab] = useState('pd');
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
-  const [findings, setFindings] = useState<{
-    pd: Array<{
-      id: string;
-      agent: string;
-      content: string;
-      timestamp: string;
-    }>;
-    ae: Array<{
-      id: string;
-      agent: string;
-      content: string;
-      timestamp: string;
-    }>;
-    sgr: Array<{
-      id: string;
-      agent: string;
-      content: string;
-      timestamp: string;
-    }>;
-  }>({
-    pd: [],
-    ae: [],
-    sgr: []
-  });
+  const [findings, setFindings] = useState<unknown>();
 
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
   const previousAIMessagesRef = useRef<string>('');
@@ -684,10 +661,11 @@ export const AuditPage: React.FC = () => {
       // If job is completed and withFindings is true, fetch findings
       if (jobData.status === "completed") {
         setJobStatus(jobData.status)
+        lastJobStatusRef.current = jobData.status;
         try {
           const findingsResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
           if (findingsResponse.data && findingsResponse.data.findings) {
-            setFindings(findingsResponse.data.findings);
+            setFindings(findingsResponse.data);
           }
           addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
         } catch (error) {
@@ -722,14 +700,14 @@ export const AuditPage: React.FC = () => {
     const pollJobStatus = async () => {
       try {
         console.log("Polling job status for jobId:", jobId);
-        const status = jobStatus
+        const status = lastJobStatusRef.current
         console.log("Received job status:", status);
         
         if (status === 'completed' || status === 'error') {
           if (status === 'completed') {
             console.log("Job completed, fetching final messages");
             await fetchAIMessages(jobId, true);
-            addAgentMessage(`Compliance Review Process completed.`);
+            // addAgentMessage(`Compliance Review Process completed.`);
             clearTimeout(timeoutId);
           } else {
             console.log("Job error, stopping process");
@@ -878,7 +856,7 @@ export const AuditPage: React.FC = () => {
       
       const { job_id } = response.data;
       setJobId(job_id);
-      setJobStatus('queued');
+      // setJobStatus('queued');
       
       addAgentMessage(`Compliance Review Process Initiated - Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
       setIsProcessing(true);
@@ -997,7 +975,7 @@ export const AuditPage: React.FC = () => {
               <div className="flex flex-col flex-1">
                 <div className="flex flex-col space-y-4 p-4">
                   <FindingsTable 
-                    findings={getCurrentFindings()}
+                    findings={findings}
                     selectedTreeNode={selectedTreeNode}
                     selectedFindingTab={selectedFindingTab}
                     setSelectedFindingTab={setSelectedFindingTab}
