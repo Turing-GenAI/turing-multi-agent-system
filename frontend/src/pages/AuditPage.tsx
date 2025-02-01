@@ -504,7 +504,7 @@ export const AuditPage: React.FC = () => {
   };
 
   const buildTreeFromFilteredData = (filteredActivities: TreeNode[] | undefined) => {
-    if (!filteredActivities || filteredActivities.length === 0) return;
+    if (!filteredActivities || filteredActivities.length === 0) return currentActivitiesRef.current;
 
     const activities = [...currentActivitiesRef.current];
     const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
@@ -538,6 +538,7 @@ export const AuditPage: React.FC = () => {
     console.log("processProgressTreeResponse:", aiMessageResponse);
     const filteredActivities = aiMessageResponse.filtered_data
     const activities = buildTreeFromFilteredData(filteredActivities)
+    console.log("Activities length: ", activities?.length, " new activites : ", filteredActivities, " after building tree activities: ", activities);
     if (activities && activities?.length > 0) {
       // Process the activities to handle unknown node
       const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(activities);
