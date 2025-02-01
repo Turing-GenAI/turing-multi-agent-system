@@ -612,12 +612,7 @@ export const AuditPage: React.FC = () => {
       }
 
       setJobStatus(jobData.status);
-      console.log("BackendIntegration", "fetchAIMessages: jobData: condition: ",
-        ((jobData.status !== "completed" && jobData.status !== "error") || 
-        lastJobStatusRef.current === null ||
-        lastJobStatusRef.current !== jobData.status), " reason : job status: ", 
-        jobData.status, ", lastJobStatusRef: ", lastJobStatusRef.current,
-        " lastAIMessagePositionRef: ", lastAIMessagePositionRef.current);
+      
 
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
       if ((jobData.status !== "completed" && jobData.status !== "error")) {
@@ -673,7 +668,9 @@ export const AuditPage: React.FC = () => {
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
         }
       }
+      lastJobStatusRef.current = jobData.status;
     } catch (error) {
+      
       console.error("BackendIntegration: ", "Error in fetchAIMessages:", error);
       
       // Retry logic for job details fetch
@@ -682,6 +679,7 @@ export const AuditPage: React.FC = () => {
         await delay(2000); // Wait 2 seconds before retry
         return fetchAIMessages(jobId, withFindings, retryCount - 1);
       } else {
+        lastJobStatusRef.current = "error";
         addAgentMessage("Failed to fetch job details after multiple attempts. Please try again later.", undefined, { agentPrefix: '', nodeName: '' });
       }
     }
@@ -732,7 +730,8 @@ export const AuditPage: React.FC = () => {
     
     const startPolling = async () => {
       await pollJobStatus();
-      if(jobStatus !== "completed" && jobStatus !== "error") {
+      const status = lastJobStatusRef.current
+      if(status !== "completed" && status !== "error") {
         timeoutId = setTimeout(startPolling, 8000);
       }
       
