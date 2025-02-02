@@ -73,7 +73,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             message.isUser ? 'bg-blue-500 shadow-sm' : 'bg-gray-100 border border-gray-200'
           }`}
         >
-          <AvatarFallback className={message.isUser ? 'text-white' : 'text-gray-700'}>
+          <AvatarFallback className={message.isUser ? 'text-blue-700' : 'text-gray-700'}>
             <User className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
