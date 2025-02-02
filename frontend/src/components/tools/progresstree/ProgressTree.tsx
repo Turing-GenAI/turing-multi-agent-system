@@ -59,7 +59,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
 
     return tree1.every((node1, index) => {
       const node2 = tree2[index];
-      if (node1.name !== node2.name || node1.status !== node2.status) return false;
+      if (node1.name !== node2.name || node1.id != node2.id || node1.status !== node2.status) return false;
       if (node1.children && node2.children) {
         return areTreesEqual(node1.children, node2.children);
       }
@@ -72,7 +72,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     const result: { node: TreeNode; path: string }[] = [];
     
     nodes.forEach(node => {
-      const currentPath = parentPath ? `${parentPath}.${node.name}` : node.name;
+      const currentPath = parentPath ? `${parentPath}.${node.name}-${node.id}` : `${node.name}-${node.id}`;
       result.push({ node, path: currentPath });
       
       if (node.children) {
@@ -86,13 +86,13 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   // Function to add a node to the tree at its correct position
   const addNodeToTree = useCallback((tree: TreeNode[], path: string[], node: TreeNode): TreeNode[] => {
     if (path.length === 1) {
-      if (!tree.find(n => n.name === path[0])) {
+      if (!tree.find(n => `${n.name}-${n.id}` === path[0])) {
         tree.push({ ...node, children: [], status: 'pending' });
       }
       return tree;
     }
 
-    let parent = tree.find(n => n.name === path[0]);
+    let parent = tree.find(n => `${n.name}-${n.id}` === path[0]);
     if (!parent) {
       parent = { name: path[0], children: [], status: 'pending' };
       tree.push(parent);
@@ -114,7 +114,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
   const hasAllChildren = useCallback((node: TreeNode, allNodes: Set<string>): boolean => {
     if (!node.children) return true;
     return node.children.every(child => {
-      const childPath = `${node.name}.${child.name}`;
+      const childPath = `${node.name}-${node.id}.${child.name}-${child.id}`;
       return allNodes.has(childPath) && hasAllChildren(child, allNodes);
     });
   }, []);
@@ -125,7 +125,7 @@ const ProgressTree: React.FC<ProgressTreeProps> = ({
     const updatedNodes = nodes.map(node => {
       if (path.length === 0) return node;
 
-      if (node.name === path[0]) {
+      if (`${node.name}-${node.id}` === path[0]) {
         if (path.length === 1) {
           // For leaf nodes, allow direct status update
           if (isLeafNode(node)) {

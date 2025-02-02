@@ -7,8 +7,7 @@ import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } fro
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
-import { TreeNode } from '../data/activities';
-import { AIMessagesResponse } from '../api';
+import { AIMessagesResponse, TreeNode } from '../api';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -490,7 +489,7 @@ export const AuditPage: React.FC = () => {
     filteredActivities.forEach((activity) => {
       if (parentNodes.includes(activity.name)) {
         // If it's a parent node, add it directly to activities
-        activities.push(activity);
+        activities.push(deepCloneTreeNode(activity));
       } else {
         // If it's a child node, add it to the last parent's children
         const lastParentNode = activities[activities.length - 1];
@@ -498,10 +497,10 @@ export const AuditPage: React.FC = () => {
           if (!lastParentNode.children) {
             lastParentNode.children = [];
           }
-          lastParentNode.children.push(activity);
+          lastParentNode.children.push(deepCloneTreeNode(activity));
         } else {
           // If no parent exists, add directly to activities
-          activities.push(activity);
+          activities.push(deepCloneTreeNode(activity));
         }
       }
     });
@@ -571,7 +570,7 @@ export const AuditPage: React.FC = () => {
     const filteredActivities = aiMessageResponse.filtered_data
     if(!filteredActivities || filteredActivities.length == 0) return
     const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
-    // allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
+    allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     // Update the ref with new activities
     // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     currentActivitiesRef.current = activities;
@@ -683,6 +682,7 @@ export const AuditPage: React.FC = () => {
           }
           addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
           if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
+            console.log("Final summary of All Agents activities : ", allActivitiesRef.current);
             await delay(2000);
             addAgentMessage(
               "",  // Empty message since we're just showing the tree
