@@ -509,34 +509,43 @@ export const AuditPage: React.FC = () => {
     return activities;
   };
 
+  const deepCloneTreeNode = (node: TreeNode): TreeNode => {
+    const clonedNode: TreeNode = {
+      ...node,
+      children: node.children ? node.children.map(child => deepCloneTreeNode(child)) : undefined
+    };
+    return clonedNode;
+  };
+
   const buildTreeFromFilteredDataWithoutPreviousTree = (filteredActivities: TreeNode[] | undefined) => {
     if (!filteredActivities || filteredActivities.length === 0) return [];
-
+    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     const previousActivities = currentActivitiesRef.current
     const activities: TreeNode[] = []
-    if (previousActivities && previousActivities.length > 0) {
+    const firstNewNode = filteredActivities[0]
+    if (previousActivities && previousActivities.length > 0 && !parentNodes.includes(firstNewNode.name)) {
       const lastParentNode = previousActivities[previousActivities.length - 1]
       const parentNode: TreeNode = {
+        id: lastParentNode.id,
         name: lastParentNode.name,
         children: []
       }
       activities.push(parentNode)
     }
     
-    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     
     // Find the last Unknown activity if it exists
-    const lastUnknownActivity = [...filteredActivities].reverse().find(activity => activity.name === "Unknown");
+    // const lastUnknownActivity = [...filteredActivities].reverse().find(activity => activity.name === "Unknown");
     
     filteredActivities.forEach((activity) => {
       // Skip Unknown activities except for the last one
-      if (activity.name === "Unknown" && activity !== lastUnknownActivity) {
-        return;
-      }
+      // if (activity.name === "Unknown" && activity !== lastUnknownActivity) {
+      //   return;
+      // }
       
       if (parentNodes.includes(activity.name)) {
-        // If it's a parent node, add it directly to activities
-        activities.push(activity);
+        // If it's a parent node, deep clone and add it
+        activities.push(deepCloneTreeNode(activity));
       } else {
         // If it's a child node, add it to the last parent's children
         const lastParentNode = activities[activities.length - 1];
@@ -544,10 +553,11 @@ export const AuditPage: React.FC = () => {
           if (!lastParentNode.children) {
             lastParentNode.children = [];
           }
-          lastParentNode.children.push(activity);
+          // Deep clone the child before adding
+          lastParentNode.children.push(deepCloneTreeNode(activity));
         } else {
-          // If no parent exists, add directly to activities
-          activities.push(activity);
+          // If no parent exists, deep clone and add directly to activities
+          activities.push(deepCloneTreeNode(activity));
         }
       }
     });
@@ -561,7 +571,7 @@ export const AuditPage: React.FC = () => {
     const filteredActivities = aiMessageResponse.filtered_data
     if(!filteredActivities || filteredActivities.length == 0) return
     const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
-    allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
+    // allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     // Update the ref with new activities
     // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     currentActivitiesRef.current = activities;

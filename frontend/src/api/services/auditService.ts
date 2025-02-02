@@ -157,15 +157,17 @@ const mockAuditService = {
   ): Promise<ApiResponse<AIMessagesResponse>> => {
     // last_position = 1;
     console.log("backendintegration : ", " auditService.getAIMessages() called with last_position: ", last_position);
-    apiCallCount = 0;
-    const responseStr = responses[apiCallCount];
+    
+    
     
     if(apiCallCount >= responses.length) {
       apiCallCount = responses.length - 1;
     }
-    apiCallCount++;
-
+    
+    const responseStr = responses[apiCallCount];
+    console.log("API Call count : ", apiCallCount);
     const response: AIMessagesResponse = JSON.parse(responseStr);
+    apiCallCount++;
 
     return {
       status: 200,
@@ -254,7 +256,6 @@ const mockAuditService = {
   ): Promise<ApiResponse<JobFeedbackResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
-    apiCallCount++
     return {
       data: {
         job_id: jobId,
@@ -307,15 +308,17 @@ const mockAuditService = {
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
     
-    
-    if(apiCallCount >= responses.length) {
-      apiCallCount = responses.length - 1;
+    // First check and increment apiCallCount
+    if (apiCallCount >= responses.length) {
+      apiCallCount = 0; // Reset to start if we've reached the end
     }
-
-    apiCallCount = 0;
+    
     const responseStr = responses[apiCallCount];
     const response = JSON.parse(responseStr);
     const activitiesJson = response.filtered_data || [];
+    
+    // Increment for next call
+    apiCallCount++;
     
     activitiesJson.forEach((activity: any) => {
       parentNodes.includes(activity.name);
