@@ -43,6 +43,7 @@ export const AuditPage: React.FC = () => {
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
+  const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
   const lastAIMessagePositionRef = useRef<number>(0);
   const awaitingForFeedbackRef = useRef<boolean>(false);
@@ -481,9 +482,9 @@ export const AuditPage: React.FC = () => {
   };
 
   const buildTreeFromFilteredData = (filteredActivities: TreeNode[] | undefined) => {
-    if (!filteredActivities || filteredActivities.length === 0) return currentActivitiesRef.current;
+    if (!filteredActivities || filteredActivities.length === 0) return allActivitiesRef.current;
 
-    const activities = [...currentActivitiesRef.current];
+    const activities = [...allActivitiesRef.current];
     const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     
     filteredActivities.forEach((activity) => {
@@ -524,7 +525,15 @@ export const AuditPage: React.FC = () => {
     
     const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     
+    // Find the last Unknown activity if it exists
+    const lastUnknownActivity = [...filteredActivities].reverse().find(activity => activity.name === "Unknown");
+    
     filteredActivities.forEach((activity) => {
+      // Skip Unknown activities except for the last one
+      if (activity.name === "Unknown" && activity !== lastUnknownActivity) {
+        return;
+      }
+      
       if (parentNodes.includes(activity.name)) {
         // If it's a parent node, add it directly to activities
         activities.push(activity);
@@ -541,7 +550,6 @@ export const AuditPage: React.FC = () => {
           activities.push(activity);
         }
       }
-    
     });
 
     return activities;
@@ -553,6 +561,7 @@ export const AuditPage: React.FC = () => {
     const filteredActivities = aiMessageResponse.filtered_data
     if(!filteredActivities || filteredActivities.length == 0) return
     const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
+    allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     // Update the ref with new activities
     // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     currentActivitiesRef.current = activities;
@@ -663,6 +672,29 @@ export const AuditPage: React.FC = () => {
             setFindings(findingsResponse.data);
           }
           addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
+          if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
+            await delay(2000);
+            addAgentMessage(
+              "",  // Empty message since we're just showing the tree
+              "progresstree",
+              {
+                // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
+                value: allActivitiesRef.current,
+                onChange: (updatedTree: TreeNode) => {
+                  setProgressTree(updatedTree);
+                },
+                progressTreeProps: {
+                  showBreadcrumbs: true,
+                  showMiniMap: true,
+                  showKeyboardNav: true,
+                  showQuickActions: true,
+                  initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
+                  animationDuration: 200
+                }
+              }
+            );
+          }
+          
         } catch (error) {
           console.error("Error fetching findings:", error);
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
