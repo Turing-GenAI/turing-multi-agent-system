@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Message } from '../../types';
@@ -20,7 +20,21 @@ interface MessageBubbleProps {
   isAnalysisStarted: boolean;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({
+// Custom comparison function for React.memo
+const arePropsEqual = (prevProps: MessageBubbleProps, nextProps: MessageBubbleProps) => {
+  // Only re-render if these props change
+  return (
+    prevProps.message === nextProps.message &&
+    prevProps.showDatePicker === nextProps.showDatePicker &&
+    prevProps.isAnalysisStarted === nextProps.isAnalysisStarted &&
+    prevProps.selectedTrial === nextProps.selectedTrial &&
+    prevProps.selectedSite === nextProps.selectedSite &&
+    prevProps.dateRange.from === nextProps.dateRange.from &&
+    prevProps.dateRange.to === nextProps.dateRange.to
+  );
+};
+
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   message,
   selectedTrial,
   selectedSite,
@@ -34,7 +48,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   setShowDatePicker,
   isAnalysisStarted,
 }) => {
-  console.log("MessageBubble: ", message);
+  useEffect(() => {
+    console.log("MessageBubble: ", message);
+  }, [message]);
+
   // Get background color based on message type
   const backgroundStyle = getMessageBackgroundColor(message);
   
@@ -88,4 +105,4 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       </div>
     </div>
   );
-};
+}, arePropsEqual);

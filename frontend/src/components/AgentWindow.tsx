@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { User } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ToolUI } from './ToolUI';
@@ -65,11 +65,13 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     }
   };
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     setShouldAutoScroll(isScrolledToBottom());
-  };
+  }, []);
 
-  console.log("AgentWindow messages", messages);
+  useEffect(() => {
+    console.log("AgentWindow messages", messages);
+  }, [messages]);
 
   useEffect(() => {
     const container = messageContainerRef.current;
@@ -77,7 +79,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
       container.addEventListener('scroll', handleScroll);
       return () => container.removeEventListener('scroll', handleScroll);
     }
-  }, []);
+  }, [handleScroll]);
 
   useEffect(() => {
     scrollToBottom();
