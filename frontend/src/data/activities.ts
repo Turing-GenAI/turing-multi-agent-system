@@ -1,4 +1,5 @@
 export interface TreeNode {
+  id: number;
   name: string;
   summary?: string;
   content?: string;
