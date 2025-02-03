@@ -133,6 +133,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onToggleExpand,
   parentPath = ''
 }) => {
+  if (node.name === "Unknown" && node.content?.includes("User input -> Human Feedback:")) {
+    return null
+  }
   // Create a unique path for this node based on its position in the tree
   const nodePath = parentPath ? `${parentPath}.${node.name}-${node.id}` : `${node.name}-${node.id}`;
   const isSelected = selectedNode && selectedNode.path === nodePath;

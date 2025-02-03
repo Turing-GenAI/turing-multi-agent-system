@@ -129,7 +129,7 @@ class RedisAppRunner:
 
         findings_feedback = 'y'
         i=0
-        while i<360:
+        while i<1200:
             i+=1
             res = self.get(run_id)
             status = res.get("status")
@@ -137,7 +137,7 @@ class RedisAppRunner:
                 findings_feedback = res.get("job_details", {}).get("feedback")
                 break
             else:
-                time.sleep(10)
+                time.sleep(3)
                 continue
 
         if i>=360:
