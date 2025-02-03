@@ -35,9 +35,10 @@ export const FloatingDatePicker = forwardRef<HTMLDivElement, FloatingDatePickerP
     >
       <DayPicker
         mode="range"
-        defaultMonth={dateRange.from}
+        defaultMonth={dateRange?.from}
         selected={dateRange}
         onSelect={onSelect}
+        disabled={{ after: new Date() }}
         numberOfMonths={2}
         className="p-3"
         modifiersStyles={{
