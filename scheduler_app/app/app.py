@@ -84,8 +84,8 @@ async def schedule_job(job_input: JobInput):
 
     # Check for existing jobs with specified statuses
     job_ids = redis_client.zrange("job_queue", 0, -1)
-    blocked_statuses = ["processing", "queued", "take_human_feedback", "got_human_feedback"]
-    
+    # blocked_statuses = ["processing", "queued", "take_human_feedback", "got_human_feedback"]
+    blocked_statuses = []
     for job_id in job_ids:
         job_hash_key = f"job_status:{job_id}"
         job_data = redis_client.hgetall(job_hash_key)

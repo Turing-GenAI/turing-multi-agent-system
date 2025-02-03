@@ -104,6 +104,10 @@ class RedisAppRunner:
         graph_inputs["trigger_list"][0].update(
             {"site_id": site_id, "trial_id": trial_id, "date": input_date}
         )
+        graph_config = {
+           "configurable": {"thread_id": run_id},  # Thread ID used to manage specific graph configurations
+           "recursion_limit": 100,  # Sets a limit on recursion depth to prevent stack overflow
+        }
 
         self._process_graph(
             graph_inputs,
