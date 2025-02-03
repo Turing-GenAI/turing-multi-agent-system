@@ -67,6 +67,7 @@ export interface JobStatistics {
 }
 
 export interface TreeNode {
+  id: number;
   name: string;
   children?: TreeNode[];
   summary?: string;

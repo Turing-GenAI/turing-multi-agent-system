@@ -12,12 +12,11 @@ import {
   AgentProgressResponse
 } from '../types';
 import { activities } from '../../data/activities';
-import { agentactivities, agentActivities1, agentActivities2 } from '../../data/agent_activities';
-import { get_ai_messages1, get_ai_messages1_2,get_ai_message2, get_final_response } from '../../data/get_ai_responses';
+import { get_progress_tree_response1, get_progress_tree_response2, get_progress_tree_response3, get_progress_tree_response4, get_progress_tree_response5, get_progress_tree_response6, get_progress_tree_response7, get_progress_tree_response8} from '../../data/get_ai_responses';
 
 let apiCallCount = 0;
 const parentNodes = [ "inspection - site_area_agent", "trial supervisor - inspection_master_agent"]
-
+const responses = [get_progress_tree_response1,get_progress_tree_response2, get_progress_tree_response3, get_progress_tree_response4, get_progress_tree_response5, get_progress_tree_response6, get_progress_tree_response7, get_progress_tree_response8];
 interface JobDetails {
   job_id: string;
   site_id: string;
@@ -37,6 +36,9 @@ interface JobResponse {
   job_details: JobDetails;
 }
 
+interface GetJobsResponse {
+  jobs: JobDetails[];
+}
 
 const realAuditService = {
   /**
@@ -82,9 +84,16 @@ const realAuditService = {
     return apiClient.post<ScheduleJobResponse>(endpoint, body);
   },
   
+  // getJob
   getJobDetails: async (status: string): Promise<ApiResponse<JobResponse>> => {
     const endpoint = `/job-status/${encodeURIComponent(status)}`;
     return apiClient.get<JobResponse>(endpoint);
+  },
+
+  // Get all jobs
+  getJobs: async (): Promise<ApiResponse<GetJobsResponse>> => {
+    const endpoint = '/jobs/';
+    return apiClient.get<GetJobsResponse>(endpoint);
   },
 
   /**
@@ -148,16 +157,17 @@ const mockAuditService = {
   ): Promise<ApiResponse<AIMessagesResponse>> => {
     // last_position = 1;
     console.log("backendintegration : ", " auditService.getAIMessages() called with last_position: ", last_position);
-    const responses = [get_ai_messages1, get_ai_messages1_2];
-    apiCallCount = 0;
-    const responseStr = responses[last_position];
+    
+    
     
     if(apiCallCount >= responses.length) {
       apiCallCount = responses.length - 1;
     }
-    apiCallCount++;
-
+    
+    const responseStr = responses[apiCallCount];
+    console.log("API Call count : ", apiCallCount);
     const response: AIMessagesResponse = JSON.parse(responseStr);
+    apiCallCount++;
 
     return {
       status: 200,
@@ -186,22 +196,55 @@ const mockAuditService = {
   getJobDetails: async (jobId: string): Promise<ApiResponse<JobResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    const status = apiCallCount < responses.length ? 'running' : 'completed';
     return {
       data: {
         job_id: jobId,
-        status: 'completed',
+        status: status,
         job_details: {
           job_id: jobId,
           site_id: 'mock-site-123',
           date: '2022-01-01',
           trial_id: 'mock-trial-123',
           run_at: '2022-01-01T12:00:00',
-          status: 'completed',
+          status: status,
           feedback: 'Job completed successfully',
           processing_start_time: '2022-01-01T11:00:00',
           completed_time: '2022-01-01T12:00:00',
         }
+      },
+      status: 200,
+    };
+  },
+
+  getJobs: async (): Promise<ApiResponse<GetJobsResponse>> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+      data: {
+        jobs: [
+          {
+            job_id: 'mock-job-123',
+            site_id: 'mock-site-123',
+            date: '2022-01-01',
+            trial_id: 'mock-trial-123',
+            run_at: '2022-01-01T12:00:00',
+            status: 'completed',
+            feedback: 'Job completed successfully',
+            processing_start_time: '2022-01-01T11:00:00',
+          },
+          {
+            job_id: 'mock-job-456',
+            site_id: 'mock-site-456',
+            date: '2022-01-02',
+            trial_id: 'mock-trial-456',
+            run_at: '2022-01-02T12:00:00',
+            status: 'in_progress',
+            feedback: '',
+            processing_start_time: '2022-01-02T11:00:00',
+          }
+        ]
       },
       status: 200,
     };
@@ -213,7 +256,6 @@ const mockAuditService = {
   ): Promise<ApiResponse<JobFeedbackResponse>> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
-    apiCallCount++
     return {
       data: {
         job_id: jobId,
@@ -265,16 +307,18 @@ const mockAuditService = {
   getAgentProgress: async (
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
-    const responses = [get_final_response, get_ai_messages1, get_ai_message2];
     
-    if(apiCallCount >= responses.length) {
-      apiCallCount = responses.length - 1;
+    // First check and increment apiCallCount
+    if (apiCallCount >= responses.length) {
+      apiCallCount = 0; // Reset to start if we've reached the end
     }
-
-    apiCallCount = 0;
+    
     const responseStr = responses[apiCallCount];
     const response = JSON.parse(responseStr);
     const activitiesJson = response.filtered_data || [];
+    
+    // Increment for next call
+    apiCallCount++;
     
     activitiesJson.forEach((activity: any) => {
       parentNodes.includes(activity.name);

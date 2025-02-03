@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getAgentDisplayNameByNode } from '../../../data/agentNames';
 
 interface TreeNodeData {
+  id: number;
   name: string;
   summary?: string;
   content?: string;
@@ -133,7 +134,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   parentPath = ''
 }) => {
   // Create a unique path for this node based on its position in the tree
-  const nodePath = parentPath ? `${parentPath}.${node.name}` : node.name;
+  const nodePath = parentPath ? `${parentPath}.${node.name}-${node.id}` : `${node.name}-${node.id}`;
   const isSelected = selectedNode && selectedNode.path === nodePath;
   const isExpanded = expandedNodes.includes(nodePath);
   const hasChildren = node.children && node.children.length > 0;

@@ -7,8 +7,7 @@ import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } fro
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
-import { TreeNode } from '../data/activities';
-import { AIMessagesResponse } from '../api';
+import { AIMessagesResponse, TreeNode } from '../api';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -43,6 +42,7 @@ export const AuditPage: React.FC = () => {
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
+  const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
   const lastAIMessagePositionRef = useRef<number>(0);
   const awaitingForFeedbackRef = useRef<boolean>(false);
@@ -485,15 +485,15 @@ export const AuditPage: React.FC = () => {
   };
 
   const buildTreeFromFilteredData = (filteredActivities: TreeNode[] | undefined) => {
-    if (!filteredActivities || filteredActivities.length === 0) return currentActivitiesRef.current;
+    if (!filteredActivities || filteredActivities.length === 0) return allActivitiesRef.current;
 
-    const activities = [...currentActivitiesRef.current];
+    const activities = [...allActivitiesRef.current];
     const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     
     filteredActivities.forEach((activity) => {
       if (parentNodes.includes(activity.name)) {
         // If it's a parent node, add it directly to activities
-        activities.push(activity);
+        activities.push(deepCloneTreeNode(activity));
       } else {
         // If it's a child node, add it to the last parent's children
         const lastParentNode = activities[activities.length - 1];
@@ -501,10 +501,10 @@ export const AuditPage: React.FC = () => {
           if (!lastParentNode.children) {
             lastParentNode.children = [];
           }
-          lastParentNode.children.push(activity);
+          lastParentNode.children.push(deepCloneTreeNode(activity));
         } else {
           // If no parent exists, add directly to activities
-          activities.push(activity);
+          activities.push(deepCloneTreeNode(activity));
         }
       }
     });
@@ -512,26 +512,43 @@ export const AuditPage: React.FC = () => {
     return activities;
   };
 
+  const deepCloneTreeNode = (node: TreeNode): TreeNode => {
+    const clonedNode: TreeNode = {
+      ...node,
+      children: node.children ? node.children.map(child => deepCloneTreeNode(child)) : undefined
+    };
+    return clonedNode;
+  };
+
   const buildTreeFromFilteredDataWithoutPreviousTree = (filteredActivities: TreeNode[] | undefined) => {
     if (!filteredActivities || filteredActivities.length === 0) return [];
-
+    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     const previousActivities = currentActivitiesRef.current
     const activities: TreeNode[] = []
-    if (previousActivities && previousActivities.length > 0) {
+    const firstNewNode = filteredActivities[0]
+    if (previousActivities && previousActivities.length > 0 && !parentNodes.includes(firstNewNode.name)) {
       const lastParentNode = previousActivities[previousActivities.length - 1]
       const parentNode: TreeNode = {
+        id: lastParentNode.id,
         name: lastParentNode.name,
         children: []
       }
       activities.push(parentNode)
     }
     
-    const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
+    
+    // Find the last Unknown activity if it exists
+    // const lastUnknownActivity = [...filteredActivities].reverse().find(activity => activity.name === "Unknown");
     
     filteredActivities.forEach((activity) => {
+      // Skip Unknown activities except for the last one
+      // if (activity.name === "Unknown" && activity !== lastUnknownActivity) {
+      //   return;
+      // }
+      
       if (parentNodes.includes(activity.name)) {
-        // If it's a parent node, add it directly to activities
-        activities.push(activity);
+        // If it's a parent node, deep clone and add it
+        activities.push(deepCloneTreeNode(activity));
       } else {
         // If it's a child node, add it to the last parent's children
         const lastParentNode = activities[activities.length - 1];
@@ -539,13 +556,13 @@ export const AuditPage: React.FC = () => {
           if (!lastParentNode.children) {
             lastParentNode.children = [];
           }
-          lastParentNode.children.push(activity);
+          // Deep clone the child before adding
+          lastParentNode.children.push(deepCloneTreeNode(activity));
         } else {
-          // If no parent exists, add directly to activities
-          activities.push(activity);
+          // If no parent exists, deep clone and add directly to activities
+          activities.push(deepCloneTreeNode(activity));
         }
       }
-    
     });
 
     return activities;
@@ -557,6 +574,7 @@ export const AuditPage: React.FC = () => {
     const filteredActivities = aiMessageResponse.filtered_data
     if(!filteredActivities || filteredActivities.length == 0) return
     const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
+    allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     // Update the ref with new activities
     // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
     currentActivitiesRef.current = activities;
@@ -667,6 +685,30 @@ export const AuditPage: React.FC = () => {
             setFindings(findingsResponse.data);
           }
           addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
+          if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
+            console.log("Final summary of All Agents activities : ", allActivitiesRef.current);
+            await delay(2000);
+            addAgentMessage(
+              "",  // Empty message since we're just showing the tree
+              "progresstree",
+              {
+                // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
+                value: allActivitiesRef.current,
+                onChange: (updatedTree: TreeNode) => {
+                  setProgressTree(updatedTree);
+                },
+                progressTreeProps: {
+                  showBreadcrumbs: true,
+                  showMiniMap: true,
+                  showKeyboardNav: true,
+                  showQuickActions: true,
+                  initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
+                  animationDuration: 200
+                }
+              }
+            );
+          }
+          
         } catch (error) {
           console.error("Error fetching findings:", error);
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
