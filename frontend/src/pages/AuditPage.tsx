@@ -649,6 +649,10 @@ export const AuditPage: React.FC = () => {
             throw new Error("Failed to fetch AI messages");
           }
 
+          if (progressTreeResponse.data && progressTreeResponse.data.findings) {
+            setFindings(progressTreeResponse.data);
+          }
+
           // Update last message position if available
           if (progressTreeResponse.data.last_position !== undefined) {
             lastAIMessagePositionRef.current = progressTreeResponse.data.last_position;
