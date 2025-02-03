@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "scheduler-app"
+version = "0.1.0"
+description = ""
+authors = ["Sai Vignan M <sai.m1@weather.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.115.0"
+celery = "^5.4.0"
+redis = "^5.1.1"
+streamlit = "^1.39.0"
+uvicorn = "^0.31.0"
+
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.13.2"
+black = "^24.10.0"
+flake8 = "^7.1.1"
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 125
+target-version = ['py310']
+
+[tool.flake8]
+max-line-length = 125
+ignore = ["E203", "W503"]
+exclude = ".venv, .git, __pycache__, build, dist"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
