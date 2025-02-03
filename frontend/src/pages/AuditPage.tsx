@@ -248,7 +248,6 @@ export const AuditPage: React.FC = () => {
     }
   };
 
-
   function generateTimeBasedUUID() {
     return 'uuid-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
 }

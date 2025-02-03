@@ -194,7 +194,7 @@ class selfragNodes:
                 "selfrag_messages": AIMessage(
                     name=f"{bold_start}SelfRAG - reflection_agent{bold_end}",
                     content=(
-                        "Fetched documents are not relevant. Updating the retrival for sub-activity\n"
+                        "Fetched documents are not relevant. Updating the retrieval for sub-activity\n"
                         "Invoking SelfRAG - reflection_agent :\nUpdated sub-activity: " + response.content
                     ),
                 ),
