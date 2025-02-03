@@ -571,7 +571,8 @@ export const AuditPage: React.FC = () => {
   const processProgressTreeResponse = async (aiMessageResponse: AIMessagesResponse, jobId: string) => {
     console.log("BackendIntegration: ", "processProgressTreeResponse  : ", aiMessageResponse)
     console.log("processProgressTreeResponse:", aiMessageResponse);
-    const filteredActivities = aiMessageResponse.filtered_data
+    let filteredActivities = aiMessageResponse.filtered_data
+    filteredActivities = filteredActivities?.filter(node => !(node.name === "Unknown" && node.content?.includes("User input -> Human Feedback:")))
     if(!filteredActivities || filteredActivities.length == 0) return
     const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
     allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
@@ -647,6 +648,10 @@ export const AuditPage: React.FC = () => {
 
           if (!progressTreeResponse.data) {
             throw new Error("Failed to fetch AI messages");
+          }
+
+          if (progressTreeResponse.data && progressTreeResponse.data.findings) {
+            setFindings(progressTreeResponse.data);
           }
 
           // Update last message position if available
