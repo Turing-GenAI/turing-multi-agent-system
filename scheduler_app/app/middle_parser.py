@@ -25,8 +25,8 @@ def parse_ai_messages(full_text: str):
     """
 
     # 1. Split on the known delimiter
-    # delimiter = "================================== Ai Message =================================="
-    delimiter = "==================================^[[1m Ai Message ^[[0m=================================="
+    delimiter = "================================== Ai Message =================================="
+    # delimiter = "==================================^[[1m Ai Message ^[[0m=================================="
     raw_chunks = full_text.split(delimiter)
 
     # Clean and filter out empty chunks
