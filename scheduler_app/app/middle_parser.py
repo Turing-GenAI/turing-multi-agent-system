@@ -25,7 +25,8 @@ def parse_ai_messages(full_text: str):
     """
 
     # 1. Split on the known delimiter
-    delimiter = "================================== Ai Message =================================="
+    # delimiter = "================================== Ai Message =================================="
+    delimiter = "==================================^[[1m Ai Message ^[[0m=================================="
     raw_chunks = full_text.split(delimiter)
 
     # Clean and filter out empty chunks
@@ -38,7 +39,7 @@ def parse_ai_messages(full_text: str):
     # Regex for "* Sub-Activity:" lines
     sub_activity_regex = re.compile(r"^\*?\s*Sub-Activity:\s*(?P<value>.+)$", re.IGNORECASE)
     # Regex for "* Sub-Activity outcome:" lines
-    sub_activity_outcome_regex = re.compile(r"^\*?\s*Sub-Activity outcome:\s*(?P<value>.+)$", re.IGNORECASE)
+    sub_activity_outcome_regex = re.compile(r"^\*?\s*Sub-Activity Outcome:\s*(?P<value>.+)$", re.IGNORECASE)
     
     for idx, chunk in enumerate(chunks, start=1):
         lines = [line.strip() for line in chunk.split('\n') if line.strip()]

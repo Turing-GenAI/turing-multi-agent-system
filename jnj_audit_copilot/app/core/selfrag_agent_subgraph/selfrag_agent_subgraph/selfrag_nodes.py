@@ -47,7 +47,7 @@ class selfragNodes:
             relevancy_check_counter = 0
             self_rag_ai_message = AIMessage(
                 name=f"{bold_start} SelfRAG - self_rag_agent{bold_end}",
-                content="Invoking Self rag node for the sub-activity: " + sub_activity,
+                content="Invoking SelfRAG node for the sub-activity: \n\n" + sub_activity,
             )
             return {
                 "activity": activity,
@@ -282,7 +282,7 @@ class selfragNodes:
                 name=f"{bold_start}SelfRAG - generate_response_agent{bold_end}",
                 content=(
                     "Fetched documents are relevant.\n"
-                    "\n* Sub-Activity:  " + question + "\n* Sub-Activity outcome:" + str(response)
+                    "\n* Sub-Activity: " + question + "\n\n* Sub-Activity Outcome:\n" + str(response)
                 ),
             ),
         }
