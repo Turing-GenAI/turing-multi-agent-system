@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StatCard } from '../components/dashboard/StatCard';
 import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { ActionItems } from '../components/dashboard/ActionItems';
+import { TimelineCard } from '../components/dashboard/TimelineCard';
 
 // Mock data - Replace with actual data from your backend
 const mockStats = {
@@ -105,6 +106,11 @@ export const Dashboard: React.FC = () => {
           icon={CheckCircle}
           trend={{ value: 8, isPositive: true }}
         />
+      </div>
+
+      {/* Clinical Trials Timeline */}
+      <div className="mb-6">
+        <TimelineCard />
       </div>
 
       {/* Two Column Layout */}
