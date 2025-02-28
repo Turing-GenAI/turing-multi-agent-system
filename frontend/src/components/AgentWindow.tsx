@@ -12,7 +12,7 @@ interface AgentWindowProps {
   sites: { [key: string]: Array<{ id: string; status: string }> };
   onInputComplete: (data: { selectedTrial: string; selectedSite: string; dateRange: { from: Date; to: Date } }) => void;
   handleRunClick: () => void;
-  addAgentMessage: (message: string, type?: string) => void;
+  addAgentMessage: (message: string, type?: string, options?: { messageId: string }) => void;
   onToolInput?: (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => void;
   messages: any[];
   userInput: string;
@@ -136,13 +136,17 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         setDateRange(value);
         if (value.from && value.to) {
           setCurrentStep('confirm');
+          // Use a consistent ID for the confirmation message to allow updates
+          const confirmationMessageId = 'confirmation-summary';
+          
           addAgentMessage(
             `📋 Compliance Preparedness Assessment Parameters:\n\n` +
             `🔹 Clinical Trial ID:    ${selectedTrial}\n` +
             `🔹 Clinical Site ID:     ${selectedSite}\n` +
             `🔹 Review Period:     ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
             `Please confirm to initiate the compliance preparedness review.`,
-            'button'
+            'button',
+            { messageId: confirmationMessageId }
           );
           onInputComplete({
             selectedTrial,

@@ -109,6 +109,7 @@ export const AuditPage: React.FC = () => {
       nodeName?: string;
       messageId?: string;  // Optional ID for updating existing messages
     };
+    messageId?: string;
   }>>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
@@ -123,7 +124,7 @@ export const AuditPage: React.FC = () => {
         // For tool UI messages, add or update them instantly
         if (toolType) {
           const newMessage: Message = {
-            id: messageId,
+            id: messageId || options?.messageId || Date.now().toString(),
             agent: 'trial_master_agent',
             content: JSON.stringify({
               type: 'tool_ui',
@@ -163,7 +164,7 @@ export const AuditPage: React.FC = () => {
 
         // For regular messages, either stream them or add instantly based on SKIP_ANIMATION
         const newMessage: Message = {
-          id: messageId,
+          id: messageId || options?.messageId || Date.now().toString(),
           agent: 'trial_master_agent',
           content: SKIP_ANIMATION ? message : '', // If skipping animation, add full content immediately
           timestamp: new Date(),
