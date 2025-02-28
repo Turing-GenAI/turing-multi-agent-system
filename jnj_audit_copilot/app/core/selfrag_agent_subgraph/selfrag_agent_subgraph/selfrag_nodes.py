@@ -281,7 +281,6 @@ class selfragNodes:
             "selfrag_messages": AIMessage(
                 name=f"{bold_start}SelfRAG - generate_response_agent{bold_end}",
                 content=(
-                    "Fetched documents are relevant.\n"
                     "\n* Sub-Activity:  " + question + "\n* Sub-Activity outcome:" + str(response)
                 ),
             ),
