@@ -1,12 +1,13 @@
-import React from 'react';
-import { Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Database } from 'lucide-react';
 import { format } from 'date-fns';
 import { FloatingDatePicker } from './FloatingDatePicker';
 import ProgressTree from './tools/progresstree/ProgressTree';
 import { TreeNode } from '../data/activities';
+import { DataViewer } from './tools/DataViewer';
 
 interface ToolUIProps {
-  type: 'trial' | 'site' | 'date' | 'button' | 'progresstree';
+  type: 'trial' | 'site' | 'date' | 'button' | 'progresstree' | 'data_viewer';
   value: any;
   onChange: (value: any) => void;
   options?: {
@@ -32,6 +33,8 @@ interface ToolUIProps {
 }
 
 export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }) => {
+  const [showDataViewer, setShowDataViewer] = useState(false);
+
   switch (type) {
     case 'progresstree': {
       const treeNode = value as TreeNode | null;
@@ -153,6 +156,29 @@ export const ToolUI: React.FC<ToolUIProps> = ({ type, value, onChange, options }
                   setIsOpen?.(false);
                 }
               }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    case 'data_viewer': {
+      return (
+        <div className="mt-4">
+          <button
+            onClick={() => setShowDataViewer(true)}
+            className="w-full p-3 bg-white border border-gray-200 rounded-lg text-left flex items-center gap-3 
+            hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+            focus:outline-none transition-all duration-200 shadow-sm group"
+          >
+            <Database className="w-5 h-5 text-blue-500 group-hover:text-blue-600 transition-colors" />
+            <span className="text-gray-900 flex-1">View Data</span>
+          </button>
+          
+          {showDataViewer && (
+            <DataViewer 
+              data={value} 
+              onClose={() => setShowDataViewer(false)} 
             />
           )}
         </div>

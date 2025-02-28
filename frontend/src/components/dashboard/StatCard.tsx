@@ -9,9 +9,36 @@ interface StatCardProps {
     value: number;
     isPositive: boolean;
   };
+  colorScheme?: 'blue' | 'amber' | 'red' | 'green' | 'purple' | 'orange';
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend }) => {
+export const StatCard: React.FC<StatCardProps> = ({ 
+  title, 
+  value, 
+  icon: Icon, 
+  trend,
+  colorScheme = 'blue'
+}) => {
+  const getColorClasses = () => {
+    switch (colorScheme) {
+      case 'amber':
+        return { bg: 'bg-amber-50', text: 'text-amber-500' };
+      case 'red':
+        return { bg: 'bg-red-50', text: 'text-red-500' };
+      case 'green':
+        return { bg: 'bg-green-50', text: 'text-green-500' };
+      case 'purple':
+        return { bg: 'bg-purple-50', text: 'text-purple-500' };
+      case 'orange':
+        return { bg: 'bg-orange-50', text: 'text-orange-500' };
+      case 'blue':
+      default:
+        return { bg: 'bg-blue-50', text: 'text-blue-500' };
+    }
+  };
+
+  const { bg, text } = getColorClasses();
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between">
@@ -31,8 +58,8 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, tr
             </div>
           )}
         </div>
-        <div className="p-3 bg-blue-50 rounded-full">
-          <Icon className="w-6 h-6 text-blue-500" />
+        <div className={`p-3 ${bg} rounded-full`}>
+          <Icon className={`w-6 h-6 ${text}`} />
         </div>
       </div>
     </div>

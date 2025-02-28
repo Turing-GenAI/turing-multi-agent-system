@@ -4,7 +4,8 @@ export interface Message {
   content: string;
   timestamp: Date;
   isUser?: boolean;
-  toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree';
+  toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree' | 'data_viewer';
+  nodeName?: string;
 }
 
 export interface Finding {

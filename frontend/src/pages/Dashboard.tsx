@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle, AlertCircle, Clock, CheckCircle2, FileCheck } from 'lucide-react';
 import { StatCard } from '../components/dashboard/StatCard';
 import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { ActionItems } from '../components/dashboard/ActionItems';
@@ -8,9 +8,9 @@ import { ActionItems } from '../components/dashboard/ActionItems';
 // Mock data - Replace with actual data from your backend
 const mockStats = {
   totalDeviations: 156,
-  openActions: 23,
+  openAlerts: 23,
   criticalFindings: 8,
-  completedActions: 45,
+  completedAlerts: 45,
 };
 
 const mockActivities = [
@@ -24,7 +24,7 @@ const mockActivities = [
   },
   {
     id: '2',
-    title: 'Action Item Completed',
+    title: 'Alert Item Completed',
     description: 'Documentation update for Protocol XYZ-123',
     timestamp: new Date('2025-01-24T05:45:00'),
     type: 'action',
@@ -86,24 +86,28 @@ export const Dashboard: React.FC = () => {
           value={mockStats.totalDeviations}
           icon={AlertTriangle}
           trend={{ value: 12, isPositive: false }}
+          colorScheme="orange"
         />
         <StatCard
-          title="Open Actions"
-          value={mockStats.openActions}
-          icon={Clock}
+          title="Open Alerts"
+          value={mockStats.openAlerts}
+          icon={AlertCircle}
           trend={{ value: 5, isPositive: true }}
+          colorScheme="amber"
         />
         <StatCard
           title="Critical Findings"
           value={mockStats.criticalFindings}
           icon={AlertCircle}
           trend={{ value: 2, isPositive: false }}
+          colorScheme="red"
         />
         <StatCard
-          title="Completed Actions"
-          value={mockStats.completedActions}
-          icon={CheckCircle}
+          title="Completed Alerts"
+          value={mockStats.completedAlerts}
+          icon={CheckCircle2}
           trend={{ value: 8, isPositive: true }}
+          colorScheme="purple"
         />
       </div>
 

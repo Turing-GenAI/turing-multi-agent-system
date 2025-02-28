@@ -99,6 +99,31 @@ export const AuditPage: React.FC = () => {
   // Helper function to add delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // Add a mock data viewer message with sample data
+  const addMockDataViewerMessage = () => {
+    const mockRagData = {
+      filename: "clinical_trial_protocol.pdf",
+      file_path: "/documents/protocols/",
+      page_number: 42,
+      text: "Subject Eligibility Criteria:\n\nInclusion Criteria:\n1. Male or female subjects aged 18-75 years\n2. Diagnosed with condition X for at least 6 months\n3. Stable on current medication regimen for at least 4 weeks\n\nExclusion Criteria:\n1. History of severe allergic reactions\n2. Participation in another clinical trial within 30 days\n3. Pregnant or breastfeeding women\n4. Significant renal or hepatic impairment",
+      relevance_score: 0.89,
+      metadata: {
+        document_type: "Protocol",
+        version: "2.1",
+        date_created: "2024-01-15"
+      }
+    };
+
+    // Add a message that will display the data viewer button
+    addAgentMessage(
+      'I found relevant information about subject eligibility criteria in the protocol document. Click below to view the details:',
+      "data_viewer",
+      {
+        value: mockRagData
+      }
+    );
+  };
+
   // Queue to store pending messages
   const [messageQueue, setMessageQueue] = useState<Array<{
     message: string;

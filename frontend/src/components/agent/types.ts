@@ -4,7 +4,7 @@ export interface ToolMessage {
   type: 'progress_steps' | 'tool_ui';
   steps?: Step[];
   tool?: {
-    type: 'trial' | 'site' | 'date' | 'button' | 'progresstree';
+    type: 'trial' | 'site' | 'date' | 'button' | 'progresstree' | 'data_viewer';
     message: string;
     options?: {
       value?: unknown;
@@ -28,7 +28,7 @@ export interface AgentWindowProps {
     dateRange: { from: Date | undefined; to: Date | undefined };
   }) => void;
   handleRunClick: () => void;
-  addAgentMessage: (message: string, toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree') => void;
+  addAgentMessage: (message: string, toolType?: 'trial' | 'site' | 'date' | 'button' | 'progresstree' | 'data_viewer') => void;
 }
 
 export interface MessageInputProps {
