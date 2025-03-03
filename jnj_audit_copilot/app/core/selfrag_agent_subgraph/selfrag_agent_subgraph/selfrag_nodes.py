@@ -116,6 +116,7 @@ class selfragNodes:
         output = retrieval_tool_executor.invoke(agent_action)
         tool_call_count = state.get("tool_call_count") + 1
         context = output.get("context", [""])[0]
+        context_dict = output.get("context_dict", {})
         file_summary = output.get("file_summary", "")
         used_site_data_flag = output.get("used_site_data_flag", False)
         tool_message = output.get("selfrag_messages", False)
@@ -123,6 +124,7 @@ class selfragNodes:
             "intermediate_steps": [(agent_action, tool_message)],
             "selfrag_messages": tool_message,
             "context": context,
+            "retrieved_context_dict": [context_dict] if context_dict else [],
             "file_summary": file_summary,
             "used_site_data_flag": used_site_data_flag,
             "tool_call_count": tool_call_count,
@@ -179,7 +181,7 @@ class selfragNodes:
                 "selfrag_messages": AIMessage(
                     name=f"{bold_start}SelfRAG - reflection_agent{bold_end}",
                     content=(
-                        "Fetched documents are not relevant. Updating the retrieval for sub-activity\n"
+                        # "Fetched documents are not relevant. Updating the retrieval for sub-activity\n"
                         "Invoking SelfRAG - reflection_agent :\nFailed to Updated sub-activity: " + response
                     ),
                 ),
@@ -194,7 +196,7 @@ class selfragNodes:
                 "selfrag_messages": AIMessage(
                     name=f"{bold_start}SelfRAG - reflection_agent{bold_end}",
                     content=(
-                        "Fetched documents are not relevant. Updating the retrival for sub-activity\n"
+                        # "Fetched documents are not relevant. Updating the retrival for sub-activity\n"
                         "Invoking SelfRAG - reflection_agent :\nUpdated sub-activity: " + response.content
                     ),
                 ),
@@ -267,7 +269,8 @@ class selfragNodes:
                     }
                 )
             except Exception as e:
-                logger.error(f"rag_chain failed for guidelines data due to {e}")
+                logger.error(
+                    f"rag_chain failed for guidelines data due to {e}")
                 response = "Could not retrieve"
 
         q_a_pair = format_qa_pair(question, response)
@@ -281,8 +284,9 @@ class selfragNodes:
             "selfrag_messages": AIMessage(
                 name=f"{bold_start}SelfRAG - generate_response_agent{bold_end}",
                 content=(
-                    "Fetched documents are relevant.\n"
-                    "\n* Sub-Activity: " + question + "\n\n* Sub-Activity Outcome:\n" + str(response)
+                    # "Fetched documents are relevant.\n"
+                    "\n* Sub-Activity: " + question +
+                    "\n\n* Sub-Activity Outcome:\n" + str(response)
                 ),
             ),
         }
