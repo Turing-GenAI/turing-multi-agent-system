@@ -82,7 +82,7 @@ class inspectionNodes:
                 "all_activities": all_activities,
                 "master_level_answers": prev_master_level_answers,
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}inspection - site_area_agent: {bold_end}",
+                    name=f"{bold_start}inspection - site_area_agent_{site_area_activity_list_index}: {bold_end}",
                     content=trial_supervisor_ai_message,
                 ),
             }
@@ -111,9 +111,11 @@ class inspectionNodes:
             error = "\nbut could not create" + ", ".join(add_msg) + ". Check applications.log for more info"
 
         logger.debug(f"Calling site_area_ingestion_node: Data Ingestion for site area-{site_area} completed!")
+
+        site_area_activity_list_index = state["site_area_activity_list_index"]
         return {
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - data_ingestion node:{bold_end}",
+                name=f"{bold_start}inspection - data_ingestion node_{site_area_activity_list_index}:{bold_end}",
                 content=(
                     f"Ingestion for Site Area: {site_area},  trial_id-{trial_id} " f"and site_id-{site_id} is Done!{error}"
                 ),
@@ -143,6 +145,8 @@ class inspectionNodes:
         else:
             activity = ""
             site_area_agent_ai_message = "All the main-activities are finished, Now generating findings"
+
+        site_area_activity_list_index = state["site_area_activity_list_index"]
         return {
             "all_activities": all_activities,
             "activity": activity,
@@ -152,7 +156,7 @@ class inspectionNodes:
             "relevancy_check_counter": None,
             "all_answers": prev_answers,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - site_area_router:{bold_end} ",
+                name=f"{bold_start}inspection - site_area_router_{site_area_activity_list_index}:{bold_end} ",
                 content=site_area_agent_ai_message,
             ),
         }
@@ -280,9 +284,11 @@ class inspectionNodes:
                 f"{bold_start}WARNING!!{bold_end}\nSummary file is missing. No output table "
                 "will be generated. Check if correct file is present and reingested."
             )
+
+            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
                     content=add_ai_msg,
                 ),
             }
@@ -295,9 +301,11 @@ class inspectionNodes:
         except Exception as e:
             logger.error(f"Error reading data from file in discrepancy_data_generator_node: {e}")
             add_ai_msg = f"{bold_start}WARNING!!{bold_end}\nData file is missing. No output table will be generated."
+
+            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
                     content=add_ai_msg,
                 ),
             }
@@ -359,9 +367,11 @@ class inspectionNodes:
                 f"{bold_start}WARNING!!{bold_end}\nNo relevant rows selected for output table as per the conclusion. "
                 "No output table will be generated."
             )
+
+            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
                     content=add_ai_msg,
                 ),
             }
@@ -381,9 +391,11 @@ class inspectionNodes:
                 f"{bold_start}WARNING!!{bold_end}\n{col} is not present in {df.columns}"
                 " (i.e., Discrepancy Dataset), dropping it."
             )
+
+            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
                     content=ai_warning,
                 ),
             }
@@ -425,11 +437,12 @@ class inspectionNodes:
         try:
             response = model_with_sub_activity_structured_output.invoke(messages)
             # Return the generated sub-activities and the final response
+            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "sub_activities": response,
                 "final_sub_activities": response,
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}inspection - planner_agent:{bold_end}",
+                    name=f"{bold_start}inspection - planner_agent_{site_area_activity_list_index}:{bold_end}",
                     content=(
                         f"Generating sub-activities for: {activity_id}\n\n"
                         "Below are the generated sub-activities:\n" + "\n".join([f"• {x}" for x in response.sub_activities])
@@ -438,9 +451,11 @@ class inspectionNodes:
             }
         except Exception as e:
             logger.error(f"sub-activity generation failed due to error: {e}")
+
+            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}inspection - planner_agent:{bold_end}",
+                    name=f"{bold_start}inspection - planner_agent_{site_area_activity_list_index}:{bold_end}",
                     content=(f"Could not generating sub-activities for: {activity_id} due to error: {e}"),
                 ),
             }
@@ -501,12 +516,13 @@ class inspectionNodes:
             )
 
         # Return the feedback, work_on_feedback flag, and updated revision
+        site_area_activity_list_index = state["site_area_activity_list_index"]
         state_update = {
             "feedback_from": "critique_agent",
             "feedback": response.Feedback_Value,
             "work_on_feedback": feedback_flag,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - critique_agent:{bold_end}",
+                name=f"{bold_start}inspection - critique_agent_{site_area_activity_list_index}:{bold_end}",
                 content=add_ai_msg,
             ),
         }
@@ -544,12 +560,13 @@ class inspectionNodes:
                 [f"{i + 1}. {x}\n" for i, x in enumerate(response.sub_activities)]
             )
         # Return the refined sub_activities and the final response
+        site_area_activity_list_index = state["site_area_activity_list_index"]
         return {
             "sub_activities": response,
             "final_sub_activities": response,
             "revision_number": state.get("revision_number", 0) + 1,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - feedback_agent node:{bold_end}",
+                name=f"{bold_start}inspection - feedback_agent node_{site_area_activity_list_index}:{bold_end}",
                 content=add_ai_msg,
             ),
         }
@@ -623,6 +640,8 @@ class inspectionNodes:
         trigger = state["trigger"]
         trial_id = trigger["trial_id"]
         activity_findings[trial_id] = [all_qa + "\n\nConclusion: \n" + conclusion_response]
+
+        site_area_activity_list_index = state["site_area_activity_list_index"]
         return {
             "last_node": "generate_findings_agent",
             "next_node": "discrepancy_data_generator",
@@ -630,7 +649,7 @@ class inspectionNodes:
             "activity_findings": activity_findings,
             "conclusion": conclusion_response,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - generate_findings_agent:{bold_end}",
+                name=f"{bold_start}inspection - generate_findings_agent_{site_area_activity_list_index}:{bold_end}",
                 content=(
                     f"Generating findings for the activity"
                     f" \n{findings_msg}:\n"

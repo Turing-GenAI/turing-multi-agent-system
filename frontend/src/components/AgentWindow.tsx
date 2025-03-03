@@ -109,7 +109,11 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           setCurrentStep('trial');
           const trialCount = trials?.length || 0;
           const trialText = trialCount === 1 ? 'trial' : 'trials';
-          addAgentMessage(`I've identified ${trialCount} active ${trialText} in the system. Which one would you like to analyze?`, 'trial');
+          addAgentMessage(
+            `I've identified ${trialCount} active ${trialText} in the system. Which one would you like to analyze?`, 
+            'trial',
+            { messageId: 'trial-selection-message' }
+          );
         } else if (currentStep === 'confirm' && !isAnalysisStarted) {
           setIsAnalysisStarted(true);
           handleRunClick();
@@ -124,13 +128,18 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           siteCount === 1
             ? `I've located 1 clinical site associated with this trial. Would you like to review it?`
             : `I've located ${siteCount} clinical sites associated with this trial. Which site would you like to review?`,
-          'site'
+          'site',
+          { messageId: 'site-selection-message' }
         );
         break;
       case 'site':
         setSelectedSite(value);
         setCurrentStep('date');
-        addAgentMessage(`Please specify the audit review period for the compliance preparedness assessment:`, 'date');
+        addAgentMessage(
+          `Please specify the audit review period for the compliance preparedness assessment:`, 
+          'date',
+          { messageId: 'date-selection-message' }
+        );
         break;
       case 'date':
         setDateRange(value);
