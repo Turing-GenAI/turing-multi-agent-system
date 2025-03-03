@@ -67,7 +67,7 @@ class inspectionNodes:
             }
         else:
             all_activities = site_area_activity_list[list(site_area_activity_list.keys())[site_area_activity_list_index]]
-            trial_supervisor_ai_message = "Picked the site area for execution: " + str(
+            trial_supervisor_ai_message = "Picked the domain for execution: " + str(
                 list(site_area_activity_list.keys())[site_area_activity_list_index]
             ) + f"\n\nGot {len(all_activities)} activity(ies) to " "carry out related to " + str(
                 list(site_area_activity_list.keys())[site_area_activity_list_index]
@@ -115,7 +115,7 @@ class inspectionNodes:
             "inspection_messages": AIMessage(
                 name=f"{bold_start}inspection - data_ingestion node:{bold_end}",
                 content=(
-                    f"Ingestion for Site Area: {site_area},  trial_id-{trial_id} " f"and site_id-{site_id} is Done!{error}"
+                    f"Ingestion for Domain: {site_area},  Input-X1-{trial_id} " f"and Input-X2-{site_id} is Done!{error}"
                 ),
             )
         }
@@ -139,10 +139,10 @@ class inspectionNodes:
 
         if parent_index <= len(all_activities) - 1:
             activity = all_activities[parent_index]
-            site_area_agent_ai_message = f"Invoking the site area agent for below main activity:\n\n{activity}"
+            site_area_agent_ai_message = f"Invoking the domain agent for below main activity:\n\n{activity}"
         else:
             activity = ""
-            site_area_agent_ai_message = "All the main-activities are finished, Now generating findings"
+            site_area_agent_ai_message = "All the main-activities are finished, now generating findings..."
         return {
             "all_activities": all_activities,
             "activity": activity,

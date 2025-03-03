@@ -98,7 +98,9 @@ class trialSupervisorNodes:
 
         inspection_agent_node_ai_message = (
             "Invoking Inspection Master Agent \n "
-            "   -> Detected site review areas for audit inspection: " +
+            # "   -> Detected site review areas for audit inspection: " +
+            # str(", ".join(list(site_area_activity_list.keys())))
+            "   -> Detected domain areas for report generation: " + 
             str(", ".join(list(site_area_activity_list.keys())))
         )
         return {
