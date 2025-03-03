@@ -584,15 +584,79 @@ export const AuditPage: React.FC = () => {
     if (activities && activities?.length > 0) {
       // Process the activities to handle unknown node
       const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(activities);
-      console.log("humanFeedbackPrompt:", humanFeedbackPrompt);
-      // If we have regular activities, add them as a progress tree
-      if (updatedActivities.length > 0) {
+      console.log("splitNodes : ", "humanFeedbackPrompt:", humanFeedbackPrompt);
+      console.log("splitNodes : ", "updatedActivities length: ", updatedActivities?.length);
+
+      if(updatedActivities.length > 1) {
+        // Split activities into two trees
+        const firstTree = updatedActivities.slice(0, -1); // All nodes except the last one
+        const secondTree = [updatedActivities[updatedActivities.length - 1]]; // Last node as a separate tree
+        
+        // Get the second last parent node and its last child
+        const secondLastParentNode = firstTree[firstTree.length - 1];
+        const lastChild = secondLastParentNode.children?.length ? 
+          secondLastParentNode.children[secondLastParentNode.children.length - 1] : 
+          null;
+        
+        console.log("splitNodes : ", "Adding first tree with length : ", firstTree.length)
+        
+        // Add the first tree progress
+        addAgentMessage(
+          "",  // Empty message since we're just showing the tree
+          "progresstree",
+          {
+            messageId: `progress-tree-first-${Date.now()}`,  // Unique identifier with timestamp
+            value: firstTree,
+            onChange: (updatedTree: TreeNode) => {
+              setProgressTree(updatedTree);
+            },
+            progressTreeProps: {
+              showBreadcrumbs: true,
+              showMiniMap: true,
+              showKeyboardNav: true,
+              showQuickActions: true,
+              initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
+              animationDuration: 0  // Disable animation for first tree
+            }
+          }
+        );
+        
+        // Then add the content message if it exists
+        if(lastChild && secondLastParentNode.name === "inspection - site_area_agent" && lastChild.content) {
+          console.log("splitNodes : ", "second last child found with content : ", lastChild.content)
+          addAgentMessage(lastChild.content, "text", { messageId: `agent-message-${Date.now()}` })
+        }
+        console.log("splitNodes : ", "Adding second tree with length : ", secondTree.length)
+        addAgentMessage(
+          "",  // Empty message since we're just showing the tree
+          "progresstree",
+          {
+            // messageId: `progress-tree-${secondTree[secondTree.length - 1].id}`,  // Use jobId to make unique identifier
+            value: secondTree,
+            onChange: (updatedTree: TreeNode) => {
+              setProgressTree(updatedTree);
+            },
+            progressTreeProps: {
+              showBreadcrumbs: true,
+              showMiniMap: true,
+              showKeyboardNav: true,
+              showQuickActions: true,
+              initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
+              animationDuration: 200
+            }
+          }
+        );
+        
+      }
+      
+      else if (updatedActivities.length > 0) {
+        // If we have regular activities, add them as a progress tree
         console.log("Progress tree response:", updatedActivities);
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
+            messageId: `progress-tree-${updatedActivities[updatedActivities.length - 1].id}`,  // Use jobId to make unique identifier
             value: updatedActivities,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
