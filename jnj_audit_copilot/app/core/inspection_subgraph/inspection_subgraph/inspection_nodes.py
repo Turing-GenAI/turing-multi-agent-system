@@ -43,7 +43,7 @@ class inspectionNodes:
             prev_master_level_answers = [
                 {
                     list(site_area_activity_list.keys())[site_area_activity_list_index]: state["all_answers"][
-                        -state["parent_index"]:
+                        -state["parent_index"] :
                     ]
                 }
             ]
@@ -66,17 +66,13 @@ class inspectionNodes:
                 "master_level_answers": prev_master_level_answers,
             }
         else:
-            all_activities = site_area_activity_list[list(site_area_activity_list.keys())[
-                site_area_activity_list_index]]
+            all_activities = site_area_activity_list[list(site_area_activity_list.keys())[site_area_activity_list_index]]
             trial_supervisor_ai_message = "Picked the site area for execution: " + str(
-                list(site_area_activity_list.keys())[
-                    site_area_activity_list_index]
-            ) + f"\n\nGot {len(all_activities)} activities to " "carry out related to " + str(
-                list(site_area_activity_list.keys())[
-                    site_area_activity_list_index]
+                list(site_area_activity_list.keys())[site_area_activity_list_index]
+            ) + f"\n\nGot {len(all_activities)} activity(ies) to " "carry out related to " + str(
+                list(site_area_activity_list.keys())[site_area_activity_list_index]
             ) + "\n  *" + str(
-                ",\n  *".join([x.replace(" ### ", " ")
-                              for x in all_activities])
+                ",\n  *".join([x.replace(" ### ", " ") for x in all_activities])
             )
 
             return {
@@ -86,7 +82,7 @@ class inspectionNodes:
                 "all_activities": all_activities,
                 "master_level_answers": prev_master_level_answers,
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}inspection - site_area_agent_{site_area_activity_list_index}: {bold_end}",
+                    name=f"{bold_start}inspection - site_area_agent: {bold_end}",
                     content=trial_supervisor_ai_message,
                 ),
             }
@@ -112,19 +108,14 @@ class inspectionNodes:
             add_msg.append("guidelines_vectorstore")
         error = ""
         if len(add_msg) > 0:
-            error = "\nbut could not create" + \
-                ", ".join(add_msg) + ". Check applications.log for more info"
+            error = "\nbut could not create" + ", ".join(add_msg) + ". Check applications.log for more info"
 
-        logger.debug(
-            f"Calling site_area_ingestion_node: Data Ingestion for site area-{site_area} completed!")
-
-        site_area_activity_list_index = state["site_area_activity_list_index"]
+        logger.debug(f"Calling site_area_ingestion_node: Data Ingestion for site area-{site_area} completed!")
         return {
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - data_ingestion node_{site_area_activity_list_index}:{bold_end}",
+                name=f"{bold_start}inspection - data_ingestion node:{bold_end}",
                 content=(
-                    # f"Ingestion for Site Area: {site_area},  trial_id-{trial_id} " f"and site_id-{site_id} is Done!{error}"
-                    f"Ingestion for domain: {site_area},  Input X1-{trial_id} " f"and Input X2-{site_id} is Done!{error}"
+                    f"Ingestion for Site Area: {site_area},  trial_id-{trial_id} " f"and site_id-{site_id} is Done!{error}"
                 ),
             )
         }
@@ -133,7 +124,7 @@ class inspectionNodes:
         logger.debug("Calling function : site_area_router_node ...")
 
         def get_prev_answers():
-            prev_answers = [{all_activities[parent_index]                             : state["sub_activities_answers"][-state["child_index"]:]}]
+            prev_answers = [{all_activities[parent_index]: state["sub_activities_answers"][-state["child_index"] :]}]
             return prev_answers
 
         all_activities = state["all_activities"]
@@ -152,8 +143,6 @@ class inspectionNodes:
         else:
             activity = ""
             site_area_agent_ai_message = "All the main-activities are finished, Now generating findings"
-
-        site_area_activity_list_index = state["site_area_activity_list_index"]
         return {
             "all_activities": all_activities,
             "activity": activity,
@@ -163,7 +152,7 @@ class inspectionNodes:
             "relevancy_check_counter": None,
             "all_answers": prev_answers,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - site_area_router_{site_area_activity_list_index}:{bold_end} ",
+                name=f"{bold_start}inspection - site_area_router:{bold_end} ",
                 content=site_area_agent_ai_message,
             ),
         }
@@ -187,8 +176,7 @@ class inspectionNodes:
         logger.debug("Calling function : get_discrepancy_function...")
         user_prompt = inspection_prompts["choose_discrepance_function"]
         messages = [
-            SystemMessage(
-                content="You are an expert in routing query to relevant function"),
+            SystemMessage(content="You are an expert in routing query to relevant function"),
             HumanMessage(
                 content=user_prompt.format(
                     main_question=main_question,
@@ -196,8 +184,7 @@ class inspectionNodes:
                 )
             ),
         ]
-        model_with_required_column_structure = model.with_structured_output(
-            DiscrepancyFunction)
+        model_with_required_column_structure = model.with_structured_output(DiscrepancyFunction)
 
         response = model_with_required_column_structure.invoke(messages)
 
@@ -246,8 +233,7 @@ class inspectionNodes:
         os.makedirs(folder, exist_ok=True)
         file_name = os.path.join(
             folder,
-            f"discrepancy_data_{state['activity'].split(' ### ')[0][1:-1] + '.json'}".replace(
-                "#", "_"),
+            f"discrepancy_data_{state['activity'].split(' ### ')[0][1:-1] + '.json'}".replace("#", "_"),
         )
         if len(df) > 0:
             df.to_json(file_name, orient="records", indent=4)
@@ -287,20 +273,16 @@ class inspectionNodes:
         else:
             sheet_name = None
         try:
-            file_summary = self.node_functions.get_file_summary(
-                site_area, sheet_name, input_filepaths_dict)
+            file_summary = self.node_functions.get_file_summary(site_area, sheet_name, input_filepaths_dict)
         except Exception as e:
-            logger.error(
-                f"Error reading summary file file in discrepancy_data_generator_node: {e}")
+            logger.error(f"Error reading summary file file in discrepancy_data_generator_node: {e}")
             add_ai_msg = (
                 f"{bold_start}WARNING!!{bold_end}\nSummary file is missing. No output table "
                 "will be generated. Check if correct file is present and reingested."
             )
-
-            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
                     content=add_ai_msg,
                 ),
             }
@@ -311,14 +293,11 @@ class inspectionNodes:
                 site_area, sheet_name, input_filepaths_dict, site_id, trial_id
             )
         except Exception as e:
-            logger.error(
-                f"Error reading data from file in discrepancy_data_generator_node: {e}")
+            logger.error(f"Error reading data from file in discrepancy_data_generator_node: {e}")
             add_ai_msg = f"{bold_start}WARNING!!{bold_end}\nData file is missing. No output table will be generated."
-
-            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
                     content=add_ai_msg,
                 ),
             }
@@ -331,8 +310,7 @@ class inspectionNodes:
         for col in required_columns_for_output_table:
             if col not in df.columns:
                 required_columns_for_output_table.remove(col)
-                logger.error(
-                    f"{col} is not present in {df.columns}, dropping it")
+                logger.error(f"{col} is not present in {df.columns}, dropping it")
                 dropped_cols.append(col)
 
         df_imp_cols = df[required_columns_for_output_table].copy()
@@ -343,8 +321,7 @@ class inspectionNodes:
         df_imp_cols["Row_ID"] = df.index
         try:
             for i in range(0, n_rows, window_size_for_output_table_generation):
-                temp_df = df_imp_cols[i: i +
-                                      window_size_for_output_table_generation]
+                temp_df = df_imp_cols[i : i + window_size_for_output_table_generation]
 
                 selected_row_ids = self.node_functions.choose_relavant_rows(
                     temp_df.to_html(),
@@ -354,13 +331,11 @@ class inspectionNodes:
                     choose_rows_prompt=inspection_prompts["RELEVANT_ROWS_FOR_OUTPUT_TABLE_FIRST_ITERATION"],
                 )
                 row_ids.extend([row.row_id for row in selected_row_ids])
-            df_filtered = df_imp_cols[df_imp_cols["Row_ID"].isin(
-                row_ids)].copy()
+            df_filtered = df_imp_cols[df_imp_cols["Row_ID"].isin(row_ids)].copy()
         except Exception as e:
             logger.error(f"Error in first iteration for row selection: {e}")
             logger.info("Saving empty dataframe...")
-            df_filtered = pd.DataFrame(
-                columns=required_columns_for_output_table)
+            df_filtered = pd.DataFrame(columns=required_columns_for_output_table)
 
         # second iteration for row selection
         if len(df_filtered) != 0:
@@ -375,22 +350,18 @@ class inspectionNodes:
                 row_ids = [row.row_id for row in row_ids]
                 df_filtered = df[df.index.isin(row_ids)]
             except Exception as e:
-                logger.error(
-                    f"Error in second iteration for row selection: {e}")
+                logger.error(f"Error in second iteration for row selection: {e}")
                 logger.info("Saving empty dataframe...")
-                df_filtered = pd.DataFrame(
-                    columns=required_columns_for_output_table)
+                df_filtered = pd.DataFrame(columns=required_columns_for_output_table)
 
         if len(df_filtered) == 0:
             add_ai_msg = (
                 f"{bold_start}WARNING!!{bold_end}\nNo relevant rows selected for output table as per the conclusion. "
                 "No output table will be generated."
             )
-
-            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
                     content=add_ai_msg,
                 ),
             }
@@ -400,8 +371,7 @@ class inspectionNodes:
         os.makedirs(folder, exist_ok=True)
         file_name = os.path.join(
             folder,
-            f"discrepancy_data_{state['activity'].split(' ### ')[0][1:-1] + '.json'}".replace(
-                "#", "_"),
+            f"discrepancy_data_{state['activity'].split(' ### ')[0][1:-1] + '.json'}".replace("#", "_"),
         )
         if len(df_filtered) > 0:
             df_filtered.to_json(file_name, orient="records", indent=4)
@@ -411,11 +381,9 @@ class inspectionNodes:
                 f"{bold_start}WARNING!!{bold_end}\n{col} is not present in {df.columns}"
                 " (i.e., Discrepancy Dataset), dropping it."
             )
-
-            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}Inspection - discrepancy_data_generator_node_{site_area_activity_list_index}:{bold_end}",
+                    name=f"{bold_start}Inspection - discrepancy_data_generator_node:{bold_end}",
                     content=ai_warning,
                 ),
             }
@@ -444,8 +412,7 @@ class inspectionNodes:
         activity_name = state["activity"].split("###")[1]
         activity_id = state["activity"].split("###")[0]
 
-        prompt = inspection_prompts["GENERATE_SUB_ACTIVITIES_PROMPT"].format(
-            activity=activity_name)
+        prompt = inspection_prompts["GENERATE_SUB_ACTIVITIES_PROMPT"].format(activity=activity_name)
 
         # Prepare the messages to be passed to the model
         messages = [
@@ -456,31 +423,25 @@ class inspectionNodes:
         # Invoke the model to get the structured response with refined
         # sub_activities
         try:
-            response = model_with_sub_activity_structured_output.invoke(
-                messages)
+            response = model_with_sub_activity_structured_output.invoke(messages)
             # Return the generated sub-activities and the final response
-            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "sub_activities": response,
                 "final_sub_activities": response,
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}inspection - planner_agent_{site_area_activity_list_index}:{bold_end}",
+                    name=f"{bold_start}inspection - planner_agent:{bold_end}",
                     content=(
                         f"Generating sub-activities for: {activity_id}\n\n"
-                        "Below are the generated sub-activities:\n" +
-                        "\n".join([f"• {x}" for x in response.sub_activities])
+                        "Below are the generated sub-activities:\n" + "\n".join([f"-> {x}" for x in response.sub_activities])
                     ),
                 ),
             }
         except Exception as e:
             logger.error(f"sub-activity generation failed due to error: {e}")
-
-            site_area_activity_list_index = state["site_area_activity_list_index"]
             return {
                 "inspection_messages": AIMessage(
-                    name=f"{bold_start}inspection - planner_agent_{site_area_activity_list_index}:{bold_end}",
-                    content=(
-                        f"Could not generating sub-activities for: {activity_id} due to error: {e}"),
+                    name=f"{bold_start}inspection - planner_agent:{bold_end}",
+                    content=(f"Could not generating sub-activities for: {activity_id} due to error: {e}"),
                 ),
             }
 
@@ -505,8 +466,7 @@ class inspectionNodes:
         exception = False
         # Validate the sub_activities using the feedback process
         try:
-            response = self.node_functions.validate_sub_activity(
-                state["sub_activities"])
+            response = self.node_functions.validate_sub_activity(state["sub_activities"])
             logger.debug("Obtained response from : validate_sub_activity_node")
         except Exception as e:
             add_ai_msg = f"Faced error in obtaining response from validate_sub_activity_node: {e}"
@@ -520,10 +480,9 @@ class inspectionNodes:
         if state["revision_number"] >= state["max_revisions"]:
             feedback_flag = False
         else:
-            logger.debug(
-                "As per response from validate_sub_activity_node, need to rewrite the sub-activities")
+            logger.debug("As per response from validate_sub_activity_node, need to rewrite the sub-activities")
             feedback_flag = response.Need_to_rewrite
-
+        
         extra_state_for_next_step = None
         if not feedback_flag:
             extra_state_for_next_step = {
@@ -542,13 +501,12 @@ class inspectionNodes:
             )
 
         # Return the feedback, work_on_feedback flag, and updated revision
-        site_area_activity_list_index = state["site_area_activity_list_index"]
         state_update = {
             "feedback_from": "critique_agent",
             "feedback": response.Feedback_Value,
             "work_on_feedback": feedback_flag,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - critique_agent_{site_area_activity_list_index}:{bold_end}",
+                name=f"{bold_start}inspection - critique_agent:{bold_end}",
                 content=add_ai_msg,
             ),
         }
@@ -578,23 +536,23 @@ class inspectionNodes:
         feedback = state["feedback"]
 
         # Generate refined sub_activities based on the feedback
-        response, status = self.node_functions.work_on_feedback(
-            feedback, state["activity"])
+        response, status = self.node_functions.work_on_feedback(feedback, state["activity"])
         if status == 500:
             add_ai_msg = f"{bold_start}WARNING!!{bold_end}\nWorking on feedback\n{response}"
         else:
+            # add_ai_msg = "Working on feedback\nUpdated sub-activities:\n" + "".join(
+                # [f"{i + 1}. {x}\n" for i, x in enumerate(response.sub_activities)]
+            # )
             add_ai_msg = "Working on feedback\nUpdated sub-activities:\n" + "".join(
-                [f"{i + 1}. {x}\n" for i,
-                    x in enumerate(response.sub_activities)]
+                [f"-> {x}\n" for i, x in enumerate(response.sub_activities)]
             )
         # Return the refined sub_activities and the final response
-        site_area_activity_list_index = state["site_area_activity_list_index"]
         return {
             "sub_activities": response,
             "final_sub_activities": response,
             "revision_number": state.get("revision_number", 0) + 1,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - feedback_agent node_{site_area_activity_list_index}:{bold_end}",
+                name=f"{bold_start}inspection - feedback_agent node:{bold_end}",
                 content=add_ai_msg,
             ),
         }
@@ -624,12 +582,10 @@ class inspectionNodes:
             findings_msg = "Here is the generated summary"
 
         sub_activities = state["final_sub_activities"].sub_activities
-        sub_activities_answers = [
-            v for x in state["sub_activities_answers"] for k, v in x.items()]
+        sub_activities_answers = [v for x in state["sub_activities_answers"] for k, v in x.items()]
 
         SUMMARY_PROMPT = inspection_prompts["GENERATE_FINDINGS_SUMMARY_PROMPT"]
-        chain = ChatPromptTemplate.from_template(
-            SUMMARY_PROMPT) | model | StrOutputParser()
+        chain = ChatPromptTemplate.from_template(SUMMARY_PROMPT) | model | StrOutputParser()
 
         all_qa = (
             "Main Activity: "
@@ -640,14 +596,13 @@ class inspectionNodes:
                     "Sub Activity: " + q + "\n" + "-> Output: " + a
                     for q, a in zip(
                         sub_activities,
-                        sub_activities_answers[-len(sub_activities):],
+                        sub_activities_answers[-len(sub_activities) :],
                     )
                 ]
             )
         )
 
-        conclusion_response = chain.invoke(
-            {"QnA_Summary": all_qa, "Special_instruction": special_instruction})
+        conclusion_response = chain.invoke({"QnA_Summary": all_qa, "Special_instruction": special_instruction})
         file_name = state["activity"].split(" ### ")[0][1:-1]
         run_id = state["run_id"]
         file_path = os.path.join(
@@ -656,10 +611,8 @@ class inspectionNodes:
             f"{file_name + '.txt'}".replace("#", "_"),
         )
         full_content = all_qa + "\n\nConclusion: \n" + conclusion_response
-        self.node_functions.store_output_to_file(
-            content=full_content, file_path=file_path)  # save all findings
-        conclusion_file_name = "conclusion_" + \
-            state["activity"].split(" ### ")[0][1:-1]
+        self.node_functions.store_output_to_file(content=full_content, file_path=file_path)  # save all findings
+        conclusion_file_name = "conclusion_" + state["activity"].split(" ### ")[0][1:-1]
         conclusion_file_path = os.path.join(
             FINDINGS_OUTPUT_FOLDER,
             run_id,
@@ -672,10 +625,7 @@ class inspectionNodes:
         activity_findings = state.get("activity_findings", {})
         trigger = state["trigger"]
         trial_id = trigger["trial_id"]
-        activity_findings[trial_id] = [
-            all_qa + "\n\nConclusion: \n" + conclusion_response]
-
-        site_area_activity_list_index = state["site_area_activity_list_index"]
+        activity_findings[trial_id] = [all_qa + "\n\nConclusion: \n" + conclusion_response]
         return {
             "last_node": "generate_findings_agent",
             "next_node": "discrepancy_data_generator",
@@ -683,19 +633,17 @@ class inspectionNodes:
             "activity_findings": activity_findings,
             "conclusion": conclusion_response,
             "inspection_messages": AIMessage(
-                name=f"{bold_start}inspection - generate_findings_agent_{site_area_activity_list_index}:{bold_end}",
+                name=f"{bold_start}inspection - generate_findings_agent:{bold_end}",
                 content=(
                     f"Generating findings for the activity"
                     f" \n{findings_msg}:\n"
-                    f"\n{bold_start}Conclusion:{bold_end}\n" +
-                    conclusion_response
+                    f"\n{bold_start}Conclusion:{bold_end}\n" + conclusion_response
                 ),
             ),
         }
 
     def add_human_in_the_loop_for_validating_findings(self, state: InspectionAgentState):
-        logger.debug(
-            "Calling function : add_human_in_the_loop_for_validating_findings ...")
+        logger.debug("Calling function : add_human_in_the_loop_for_validating_findings ...")
         if "human_feedback" in state.keys():
             special_instruction = state["human_feedback"]
         else:
