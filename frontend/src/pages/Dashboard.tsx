@@ -89,7 +89,7 @@ export const Dashboard: React.FC = () => {
           trend={{ value: 12, isPositive: false }}
         />
         <StatCard
-          title="Open Actions"
+          title="Open Alerts"
           value={mockStats.openActions}
           icon={Clock}
           trend={{ value: 5, isPositive: true }}
@@ -101,7 +101,7 @@ export const Dashboard: React.FC = () => {
           trend={{ value: 2, isPositive: false }}
         />
         <StatCard
-          title="Completed Actions"
+          title="Completed Alerts"
           value={mockStats.completedActions}
           icon={CheckCircle}
           trend={{ value: 8, isPositive: true }}
