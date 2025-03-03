@@ -42,6 +42,12 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
         retrieved_doc_filename = retrieved_docs[0].metadata["filename"]
         logger.debug(f"Retrieved data from file: {retrieved_doc_filename}")
 
+        site_data_context_dict = {}
+        i = 0
+        for doc in retrieved_docs:
+            site_data_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
+            i += 1
+
         summary_df = read_file(
             file_path=input_filepaths_dict[site_area]["summary_df_file_path"],
             file_format="xlsx",
@@ -60,6 +66,7 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
 
         return {
             "context": [retrieved_docs[0].page_content],
+            "context_dict": site_data_context_dict,
             "used_site_data_flag": True,
             "file_summary": file_summary,
             "selfrag_messages": ToolMessage(
@@ -94,6 +101,12 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
     if guidelines_vectorstore:
         guidelines_relevant_docs = guidelines_vectorstore.similarity_search(sub_activity, k=3)
         all_metadata = " ,".join([str(doc.metadata) for doc in guidelines_relevant_docs])
+        guidelines_context_dict = {}
+        i = 0
+        for doc in guidelines_relevant_docs:
+            guidelines_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
+            i += 1
+
         context = ""
         for i, doc in enumerate(guidelines_relevant_docs):
             i1 = i + 1
@@ -110,6 +123,7 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
 
     return {
         "context": [context],
+        "context_dict": guidelines_context_dict,
         "used_site_data_flag": False,
         "selfrag_messages": ToolMessage(
             name=f"{bold_start}SelfRAG - guidelines_retriever tool{bold_end}",
