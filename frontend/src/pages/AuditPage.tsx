@@ -600,12 +600,15 @@ export const AuditPage: React.FC = () => {
         
         console.log("splitNodes : ", "Adding first tree with length : ", firstTree.length)
         
+        // Use unique timestamp for this set of operations
+        const timestamp = Date.now();
+        
         // Add the first tree progress
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            messageId: `progress-tree-first-${Date.now()}`,  // Unique identifier with timestamp
+            messageId: `progress-tree-first-${timestamp}`,  // Unique identifier with timestamp
             value: firstTree,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -621,17 +624,18 @@ export const AuditPage: React.FC = () => {
           }
         );
         
-        // Then add the content message if it exists
+        // Only add content message if it exists in the backend data
         if(lastChild && secondLastParentNode.name === "inspection - site_area_agent" && lastChild.content) {
-          console.log("splitNodes : ", "second last child found with content : ", lastChild.content)
-          addAgentMessage(lastChild.content, "text", { messageId: `agent-message-${Date.now()}` })
+          console.log("splitNodes : ", "second last child found with content : ", lastChild.content);
+          addAgentMessage(lastChild.content, "text", { messageId: `agent-message-${timestamp}` });
         }
+        
         console.log("splitNodes : ", "Adding second tree with length : ", secondTree.length)
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            // messageId: `progress-tree-${secondTree[secondTree.length - 1].id}`,  // Use jobId to make unique identifier
+            messageId: `progress-tree-second-${timestamp}`,  // Use timestamp to make unique identifier
             value: secondTree,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -648,7 +652,6 @@ export const AuditPage: React.FC = () => {
         );
         
       }
-      
       else if (updatedActivities.length > 0) {
         // If we have regular activities, add them as a progress tree
         console.log("Progress tree response:", updatedActivities);
@@ -656,7 +659,7 @@ export const AuditPage: React.FC = () => {
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            messageId: `progress-tree-${updatedActivities[updatedActivities.length - 1].id}`,  // Use jobId to make unique identifier
+            messageId: `progress-tree-${Date.now()}`,  // Use timestamp to make unique identifier
             value: updatedActivities,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
