@@ -57,7 +57,7 @@ class RedisAppRunner:
         response = get_job_status(job_id)
         return response
 
-    def _print_event(self, event, scratchpad_filename=None):
+    def _print_event(self, event, scratchpad_filename=None, max_length=15000):
         for message_type in self.message_types:
             if message_type in event.keys():
                 message = event.get(message_type)
@@ -70,8 +70,8 @@ class RedisAppRunner:
                 for each_message in message:
                     if each_message.id not in self._printed:
                         msg_repr = each_message.pretty_repr(html=True)
-                        if len(msg_repr) > 10000:
-                            msg_repr = msg_repr[:10000] + " ... (truncated)"
+                        if len(msg_repr) > max_length:
+                            msg_repr = msg_repr[:max_length] + " ... (truncated)"
                         self._printed.add(each_message.id)
                         if scratchpad_filename:
                             self._write_to_file(
@@ -103,6 +103,10 @@ class RedisAppRunner:
         graph_inputs["trigger_list"][0].update(
             {"site_id": site_id, "trial_id": trial_id, "date": input_date}
         )
+        graph_config = {
+           "configurable": {"thread_id": run_id},  # Thread ID used to manage specific graph configurations
+           "recursion_limit": 100,  # Sets a limit on recursion depth to prevent stack overflow
+        }
 
         self._process_graph(
             graph_inputs,

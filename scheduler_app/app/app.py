@@ -83,8 +83,8 @@ async def schedule_job(job_input: JobInput):
 
     # Check for existing jobs with specified statuses
     job_ids = redis_client.zrange("job_queue", 0, -1)
-    blocked_statuses = ["processing", "queued", "take_human_feedback", "got_human_feedback"]
-    
+    # blocked_statuses = ["processing", "queued", "take_human_feedback", "got_human_feedback"]
+    blocked_statuses = []
     for job_id in job_ids:
         job_hash_key = f"job_status:{job_id}"
         job_data = redis_client.hgetall(job_hash_key)
@@ -295,7 +295,22 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
                     findings[j.replace(".json", "")] = json_data
 
-    res = {"ai_messages": ai_messages, "findings": findings}
+    try:
+        # Parse and process the latest AI message
+        message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
+        processed_messages = filter_parsed_messages_by_name(message_parser)
+        
+        # Add content and summarize
+        compressed_data = add_content(processed_messages) if processed_messages else []
+        summarized_data = summarize_content(compressed_data) if compressed_data else []
+        
+        # Filter down to essential keys
+        filtered_data = filter_json_keys(summarized_data) if summarized_data else []
+    except Exception as e:
+        logger.error(f"Error processing AI messages: {str(e)}")
+        filtered_data = []
+
+    res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}
     return res
 
 

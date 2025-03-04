@@ -69,7 +69,7 @@ class inspectionNodes:
             all_activities = site_area_activity_list[list(site_area_activity_list.keys())[site_area_activity_list_index]]
             trial_supervisor_ai_message = "Picked the site area for execution: " + str(
                 list(site_area_activity_list.keys())[site_area_activity_list_index]
-            ) + f"\n\nGot {len(all_activities)} activities to " "carry out related to " + str(
+            ) + f"\n\nGot {len(all_activities)} activity(ies) to " "carry out related to " + str(
                 list(site_area_activity_list.keys())[site_area_activity_list_index]
             ) + "\n  *" + str(
                 ",\n  *".join([x.replace(" ### ", " ") for x in all_activities])
@@ -445,7 +445,7 @@ class inspectionNodes:
                     name=f"{bold_start}inspection - planner_agent_{site_area_activity_list_index}:{bold_end}",
                     content=(
                         f"Generating sub-activities for: {activity_id}\n\n"
-                        "Below are the generated sub-activities:\n" + "\n".join([f"• {x}" for x in response.sub_activities])
+                        "Below are the generated sub-activities:\n" + "\n".join([f"-> {x}" for x in response.sub_activities])
                     ),
                 ),
             }
@@ -556,8 +556,11 @@ class inspectionNodes:
         if status == 500:
             add_ai_msg = f"{bold_start}WARNING!!{bold_end}\nWorking on feedback\n{response}"
         else:
+            # add_ai_msg = "Working on feedback\nUpdated sub-activities:\n" + "".join(
+                # [f"{i + 1}. {x}\n" for i, x in enumerate(response.sub_activities)]
+            # )
             add_ai_msg = "Working on feedback\nUpdated sub-activities:\n" + "".join(
-                [f"{i + 1}. {x}\n" for i, x in enumerate(response.sub_activities)]
+                [f"-> {x}\n" for i, x in enumerate(response.sub_activities)]
             )
         # Return the refined sub_activities and the final response
         site_area_activity_list_index = state["site_area_activity_list_index"]
