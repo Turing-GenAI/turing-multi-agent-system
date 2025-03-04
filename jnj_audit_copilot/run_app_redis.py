@@ -58,6 +58,11 @@ class RedisAppRunner:
         response = get_job_status(job_id)
         return response
 
+    def _write_to_file(self, filename, message, message_type=None):
+        all_msg_path = os.path.join(AGENT_SCRATCHPAD_FOLDER, filename)
+        with open(all_msg_path, "a+", errors='ignore') as f:
+            f.writelines(message + "\n\n")
+
     def _print_event(self, event, scratchpad_filename=None, max_length=15000):
         for message_type in self.message_types:
             if message_type in event.keys():
@@ -82,38 +87,6 @@ class RedisAppRunner:
     def stream_all_events(self, events, scratchpad_filename):
         for event in events:
             self._print_event(event[-1], scratchpad_filename=scratchpad_filename)
-
-    def _write_to_file(self, filename, message, message_type=None):
-        all_msg_path = os.path.join(AGENT_SCRATCHPAD_FOLDER, filename)
-        with open(all_msg_path, "a+", errors='ignore') as f:
-            f.writelines(message + "\n\n")
-
-    def run_agent(self, job):
-        run_id = str(job.get("job_id"))
-        site_id = job.get("site_id")
-        trial_id = job.get("trial_id")
-        input_date = job.get("date")
-        scratchpad_filename = f"{run_id}.txt"
-
-        create_directory_structure(
-            run_id=run_id,
-        )
-        os.makedirs(AGENT_SCRATCHPAD_FOLDER, exist_ok=True)
-
-        graph_inputs["run_id"] = run_id
-        graph_inputs["trigger_list"][0].update(
-            {"site_id": site_id, "trial_id": trial_id, "date": input_date}
-        )
-        graph_config = {
-           "configurable": {"thread_id": run_id},  # Thread ID used to manage specific graph configurations
-           "recursion_limit": 100,  # Sets a limit on recursion depth to prevent stack overflow
-        }
-
-        self._process_graph(
-            graph_inputs,
-            config=graph_config,
-            scratchpad_filename=scratchpad_filename,
-        )
 
     def get_human_feedback(self, run_id, feedback_node):
         """
@@ -213,6 +186,33 @@ class RedisAppRunner:
             run_id=inputs["run_id"],
             output_filename=FINAL_OUTPUT_DOCX_FILENAME,
             page_title=FINAL_OUTPUT_PAGE_TITLE,
+        )
+
+    def run_agent(self, job):
+        run_id = str(job.get("job_id"))
+        site_id = job.get("site_id")
+        trial_id = job.get("trial_id")
+        input_date = job.get("date")
+        scratchpad_filename = f"{run_id}.txt"
+
+        create_directory_structure(
+            run_id=run_id,
+        )
+        os.makedirs(AGENT_SCRATCHPAD_FOLDER, exist_ok=True)
+
+        graph_inputs["run_id"] = run_id
+        graph_inputs["trigger_list"][0].update(
+            {"site_id": site_id, "trial_id": trial_id, "date": input_date}
+        )
+        graph_config = {
+           "configurable": {"thread_id": run_id},  # Thread ID used to manage specific graph configurations
+           "recursion_limit": 100,  # Sets a limit on recursion depth to prevent stack overflow
+        }
+
+        self._process_graph(
+            inputs = graph_inputs,
+            config=graph_config,
+            scratchpad_filename=scratchpad_filename,
         )
 
 
