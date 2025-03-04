@@ -15,7 +15,7 @@ graph_inputs = {
             "site_id": "P73-PL10007",  # Unique ID for the site being inspected
             "trial_id": "CNTO1275PUC3001",  # Trial ID for the clinical study
             "site_areas": [
-                # "SGR",
+                "SGR",
                 "PD",
                 "AE_SAE",
             ],  # List of inspection areas for the site
