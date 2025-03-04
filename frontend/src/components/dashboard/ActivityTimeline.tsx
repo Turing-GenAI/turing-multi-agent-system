@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface Activity {
+export interface Activity {
   id: string;
   title: string;
   description: string;

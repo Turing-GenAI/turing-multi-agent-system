@@ -6,6 +6,10 @@ import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { ActionItems } from '../components/dashboard/ActionItems';
 import { TimelineCard } from '../components/dashboard/TimelineCard';
 
+// Import ActionItem and Activity interfaces
+import type { ActionItem } from '../components/dashboard/ActionItems';
+import type { Activity } from '../components/dashboard/ActivityTimeline';
+
 // Mock data - Replace with actual data from your backend
 const mockStats = {
   totalDeviations: 156,
@@ -14,7 +18,7 @@ const mockStats = {
   completedActions: 45,
 };
 
-const mockActivities = [
+const mockActivities: Activity[] = [
   {
     id: '1',
     title: 'New Critical Finding Detected',
@@ -40,7 +44,8 @@ const mockActivities = [
   },
 ];
 
-const mockActions = [
+// Explicitly type mockActions as ActionItem[]
+const mockActions: ActionItem[] = [
   {
     id: '1',
     title: 'Review Temperature Logs',

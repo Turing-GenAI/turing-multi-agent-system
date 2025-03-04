@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 
-interface ActionItem {
+export interface ActionItem {
   id: string;
   title: string;
   description: string;
