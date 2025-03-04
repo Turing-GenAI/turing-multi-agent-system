@@ -23,6 +23,7 @@ from app.core.trial_supervisor_graph.create_trial_supervisor_graph import (
     trialSupervisorGraph,
 )
 import time
+from app.utils.tool_nodes import process_human_feedback_chain
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 setup_logger()
@@ -146,8 +147,10 @@ class RedisAppRunner:
 
         if i>=360:
             res = self.set(run_id, payload = {"status": "got_human_feedback", "feedback":"Agent continued as y, after waiting for 30 seconds"})
-
-        return findings_feedback
+        if findings_feedback.lower() == "y":
+            return findings_feedback, "y"
+        else:
+            return findings_feedback, process_human_feedback_chain.invoke({"input": findings_feedback}).content
 
     def _process_graph(self, inputs, config, scratchpad_filename):
         trial_supervisor_graph = trialSupervisorGraph()
@@ -190,17 +193,19 @@ class RedisAppRunner:
                         f.writelines("\n" + self.feedback_messages.get(last_node, "Feedback: "))
 
                     # get human feedback
-                    human_feedback = self.get_human_feedback(inputs["run_id"], last_node)
+                    human_feedback, agent_feedback = self.get_human_feedback(inputs["run_id"], last_node)
                 
                     with open(os.path.join(AGENT_SCRATCHPAD_FOLDER, scratchpad_filename), 'a+') as f:
                         f.writelines("\nUser input -> Human Feedback: " + human_feedback + "\n")
+                        f.writelines("\n" + "=" * 35 + " Agent Message " + agent_feedback + "=" * 35)
 
                     print(f"Human Feedback: {human_feedback}", "\n")
+                    print(f"Agent Feedback: {agent_feedback}", "\n")
 
                     # get current config for updating state
                     config_ = graph.get_state(config, subgraphs=True).tasks[0].state.config
                     graph.update_state(
-                        config_, {"human_feedback": human_feedback}
+                        config_, {"human_feedback": agent_feedback}
                     )
 
         combine_txt_files_to_docx(

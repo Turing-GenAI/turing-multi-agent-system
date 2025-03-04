@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from redis import Redis
 from app.setup_redis import connect_to_redis, initialize_redis_structure
+from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -245,14 +246,20 @@ class JobMessages(BaseModel):
     ai_messages: Optional[bool] = True
     ai_message_type: Optional[str] = 'all'
     findings: Optional[bool] = True
+    last_position: Optional[int] = 0
 
 
 @app.put("/get_ai_messages/{job_id}")
 def get_ai_messages(job_id: str, job_details: JobMessages):
+    new_messages = []
+    current_position = job_details.last_position
+    full_messages = "Agent is processing!"
+
+
     if job_details.ai_messages:
         local_path = os.path.join(agent_outputs_path, "agent_scratch_pads")
         ai_messages_path = None
-        ai_messages = "Agent is processing!"
+        
         
         if job_details.ai_message_type == 'sgr':
             ai_messages_path = os.path.join(local_path, 'sgr_' + job_id + ".txt")
@@ -266,8 +273,19 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
         if ai_messages_path is not None:
             if os.path.exists(ai_messages_path):
                 with open(ai_messages_path, "r") as f:
-                    ai_messages = f.read()
-                ai_messages = ai_messages.replace("[1m", "").replace("[0m", "")
+                    full_content = f.read()
+                    if full_content:
+                        full_messages = full_content.replace("[1m", "").replace("[0m", "")
+                
+
+                if current_position < os.path.getsize(ai_messages_path):
+                    with open(ai_messages_path, "r") as f:
+                        f.seek(current_position)
+                        new_content = f.read()
+                        if new_content:
+                            new_ai_messages = new_content.replace("[1m", "").replace("[0m", "")
+                            new_messages = [new_ai_messages]
+                        current_position = f.tell()
             
                 
     findings = {}

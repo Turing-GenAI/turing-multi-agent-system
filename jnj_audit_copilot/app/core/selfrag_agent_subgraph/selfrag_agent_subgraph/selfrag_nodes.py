@@ -48,7 +48,6 @@ class selfragNodes:
             self_rag_ai_message = AIMessage(
                 name=f"{bold_start} SelfRAG - self_rag_agent{bold_end}",
                 content="Invoking SelfRAG node for the sub-activity: \n\n" + sub_activity,
-                content="Invoking SelfRAG node for the sub-activity: \n\n" + sub_activity,
             )
             return {
                 "activity": activity,
