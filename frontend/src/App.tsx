@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './pages/Dashboard';
 import { AuditPage } from './pages/AuditPage';
-import { Data } from './pages/Data';
+import { Inputs } from './pages/Inputs';
 import AgentMock from './pages/AgentMock';
 
 function App() {  
@@ -14,7 +14,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/data" element={<Data />} />
+          <Route path="/inputs" element={<Inputs />} />
           <Route path="/audit" element={<AuditPage />} />
           <Route path="/agent" element={<AgentMock />} />
         </Routes>

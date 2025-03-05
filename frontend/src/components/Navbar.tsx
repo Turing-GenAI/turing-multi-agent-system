@@ -20,10 +20,10 @@ export const Navbar: React.FC = () => {
                 Dashboard
               </Link>
               <Link
-                to="/data"
+                to="/inputs"
                 className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
-                Data
+                Inputs
               </Link>
               <Link
                 to="/audit"
@@ -31,12 +31,14 @@ export const Navbar: React.FC = () => {
               >
                 Audit
               </Link>
+              {/* Temporarily hidden Agent Status tab
               <Link
                 to="/agent"
                 className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
                 Agent Status
               </Link>
+              */}
             </div>
           </div>
         </div>

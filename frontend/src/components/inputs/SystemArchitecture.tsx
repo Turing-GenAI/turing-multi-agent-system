@@ -804,7 +804,7 @@ const initialEdges: Edge[] = [
   },
 ];
 
-export const Data: React.FC = () => {
+export const SystemArchitecture: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const reactFlowInstance = useRef(null);
@@ -1008,4 +1008,4 @@ export const Data: React.FC = () => {
   );
 };
 
-export default Data;
+export default SystemArchitecture;
