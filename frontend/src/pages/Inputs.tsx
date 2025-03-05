@@ -11,6 +11,22 @@ export const Inputs: React.FC = () => {
   // State to track the selected tab
   const [selectedTab, setSelectedTab] = useState<TabType>('data_sources');
 
+  const getTabClasses = (tabName: TabType) => {
+    const isActive = selectedTab === tabName;
+    return `flex items-center px-3 py-2 w-full text-left rounded-md relative transition-all duration-300 ease-in-out ${
+      isActive 
+        ? 'bg-blue-50 text-blue-700 font-medium' 
+        : 'text-gray-700 hover:bg-gray-100'
+    }`;
+  };
+
+  const getIndicatorClasses = (tabName: TabType) => {
+    const isActive = selectedTab === tabName;
+    return `absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-md transform transition-all duration-300 ease-in-out ${
+      isActive ? 'scale-y-100' : 'scale-y-0'
+    }`;
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Main Content */}
@@ -33,34 +49,25 @@ export const Inputs: React.FC = () => {
               <nav className="space-y-1">
                 <button
                   onClick={() => setSelectedTab('data_sources')}
-                  className={`flex items-center px-3 py-2 w-full text-left rounded-md ${
-                    selectedTab === 'data_sources' 
-                      ? 'bg-blue-50 text-blue-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={getTabClasses('data_sources')}
                 >
+                  <div className={getIndicatorClasses('data_sources')}></div>
                   <Database className="w-5 h-5 mr-3" />
                   <span>Data Sources</span>
                 </button>
                 <button
                   onClick={() => setSelectedTab('user_inputs')}
-                  className={`flex items-center px-3 py-2 w-full text-left rounded-md ${
-                    selectedTab === 'user_inputs' 
-                      ? 'bg-blue-50 text-blue-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={getTabClasses('user_inputs')}
                 >
+                  <div className={getIndicatorClasses('user_inputs')}></div>
                   <Users className="w-5 h-5 mr-3" />
                   <span>User Inputs</span>
                 </button>
                 <button
                   onClick={() => setSelectedTab('system_architecture')}
-                  className={`flex items-center px-3 py-2 w-full text-left rounded-md ${
-                    selectedTab === 'system_architecture' 
-                      ? 'bg-blue-50 text-blue-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={getTabClasses('system_architecture')}
                 >
+                  <div className={getIndicatorClasses('system_architecture')}></div>
                   <Activity className="w-5 h-5 mr-3" />
                   <span>System Architecture</span>
                 </button>

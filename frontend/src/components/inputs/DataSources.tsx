@@ -28,7 +28,7 @@ const dataSources = [
       { name: 'Participants', count: 1, records: 2547 },
       { name: 'Findings', count: 1, records: 342 },
       { name: 'Compliance', count: 1, records: 128 },
-      { name: 'Audit_Reports', count: 1, records: 43 }
+      { name: 'Audit Reports', count: 1, records: 43 }
     ],
     totalTables: 19,
     contentSummary: 'Database contains structured information about 15 clinical trials including participant demographics, compliance metrics, and audit findings. Schema includes relationships between trials, sites, and regulatory requirements. Most active tables are Participants and Findings with frequent updates.',

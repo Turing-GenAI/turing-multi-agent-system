@@ -1,7 +1,26 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export const Navbar: React.FC = () => {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  const getLinkClasses = (path: string) => {
+    const isActive = currentPath === path;
+    return `relative px-3 py-2 transition-all duration-300 ease-in-out text-sm font-medium ${
+      isActive 
+        ? 'text-blue-600 font-semibold' 
+        : 'text-gray-500 hover:text-gray-700'
+    } flex items-center space-x-1 group`;
+  };
+
+  const getIndicatorClasses = (path: string) => {
+    const isActive = currentPath === path;
+    return `absolute bottom-0 left-0 w-full h-0.5 bg-blue-500 transform transition-all duration-300 ease-in-out ${
+      isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-75 group-hover:bg-gray-300'
+    }`;
+  };
+
   return (
     <nav className="bg-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4">
@@ -15,28 +34,32 @@ export const Navbar: React.FC = () => {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
                 to="/dashboard"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className={getLinkClasses('/dashboard')}
               >
-                Dashboard
+                <span>Dashboard</span>
+                <div className={getIndicatorClasses('/dashboard')}></div>
               </Link>
               <Link
                 to="/inputs"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className={getLinkClasses('/inputs')}
               >
-                Inputs
+                <span>Inputs</span>
+                <div className={getIndicatorClasses('/inputs')}></div>
               </Link>
               <Link
                 to="/audit"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className={getLinkClasses('/audit')}
               >
-                Audit
+                <span>Audit</span>
+                <div className={getIndicatorClasses('/audit')}></div>
               </Link>
               {/* Temporarily hidden Agent Status tab
               <Link
                 to="/agent"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className={getLinkClasses('/agent')}
               >
-                Agent Status
+                <span>Agent Status</span>
+                <div className={getIndicatorClasses('/agent')}></div>
               </Link>
               */}
             </div>
