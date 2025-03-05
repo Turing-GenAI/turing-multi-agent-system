@@ -21,6 +21,7 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-tabs": "^1.0.4",
     "@types/react-router-dom": "^5.3.3",
+    "@xyflow/react": "^12.4.4",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "framer-motion": "^10.18.0",

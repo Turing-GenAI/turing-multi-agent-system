@@ -1,5 +1,6 @@
-import React from 'react';
-import ReactFlow, {
+import React, { useCallback, useEffect, useRef } from 'react';
+import {
+  ReactFlow,
   MiniMap,
   Controls,
   Background,
@@ -8,66 +9,178 @@ import ReactFlow, {
   Node,
   Edge,
   NodeTypes,
-  ConnectionLineType,
+  addEdge,
+  Connection,
+  MarkerType,
   Position,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+  Handle,
+  Panel,
+  EdgeTypes,
+  getBezierPath,
+  EdgeLabelRenderer,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
-// Custom node component
+// Smaller “child” node component
 const CustomNode = ({ data }: { data: any }) => {
   const bgColor = data.bgColor || '#ffffff';
-  const borderColor = data.borderColor || '#e2e8f0';
   const width = data.width || 150;
-  const height = data.height || 'auto';
+  const isDataNode = data.label && (
+    data.label.includes('Cosmos') || 
+    data.label.includes('Vector Store') || 
+    data.label.includes('Application DB')
+  );
   
   return (
-    <div 
-      className="border rounded-md p-2 shadow-sm" 
-      style={{ 
+    <div
+      className="border rounded-md shadow-md"
+      style={{
         background: bgColor,
-        borderColor: borderColor,
         borderWidth: '1px',
-        width: width,
-        height: height,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
+        width,
         fontSize: '12px',
+        position: 'relative',
+        zIndex: isDataNode ? 999 : 5, // Much higher z-index for data nodes
+        pointerEvents: 'all', // Ensure node is clickable
       }}
     >
-      <div className="font-bold text-center">{data.label}</div>
+      {/* Top handle */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: '#555' }}
+        id="top"
+      />
+      
+      {/* Left handle */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: '#555' }}
+        id="left"
+      />
+      
+      <div className="font-bold text-center p-1 border-b border-gray-200">{data.label}</div>
       {data.description && (
-        <div className="text-xs mt-1 text-center whitespace-pre-line">{data.description}</div>
+        <div className="text-xs p-2 text-center whitespace-pre-line">
+          {data.description}
+        </div>
       )}
+      
+      {/* Right handle */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: '#555' }}
+        id="right"
+      />
+      
+      {/* Bottom handle */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: '#555' }}
+        id="bottom"
+      />
     </div>
   );
 };
 
-// Container node component (for the big yellow boxes)
+// Larger “container” node component (yellow placeholders)
 const ContainerNode = ({ data }: { data: any }) => {
   const bgColor = data.bgColor || '#ffffcc';
-  const width = data.width || 300;
+  const width = data.width || 350;
   const height = data.height || 200;
-  
+
   return (
-    <div 
-      className="border rounded-md p-2" 
-      style={{ 
+    <div
+      className="border rounded-md shadow-sm"
+      style={{
         background: bgColor,
-        borderColor: '#e2e8f0',
         borderWidth: '1px',
-        width: width,
-        height: height,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
+        width,
+        height,
         fontSize: '14px',
         position: 'relative',
+        zIndex: 0,
+        overflow: 'visible',
+        pointerEvents: 'none', // Make container non-interactive
       }}
     >
-      <div className="font-bold text-center absolute top-2">{data.label}</div>
+      {/* Optionally remove handles if you don't want to connect lines to the container itself */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: '#555', visibility: 'hidden' }}
+      />
+      <div className="font-bold text-center py-1 border-b border-gray-300">{data.label}</div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: '#555', visibility: 'hidden' }}
+      />
     </div>
+  );
+};
+
+// Custom edge (Bezier path with optional label)
+const CustomEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+  data,
+  label,
+}) => {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  return (
+    <>
+      <path
+        id={id}
+        style={{
+          ...style,
+          strokeWidth: 2,
+          stroke: '#333',
+          zIndex: 1000,
+        }}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd={markerEnd}
+      />
+      {label && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              fontSize: 10,
+              pointerEvents: 'all',
+              backgroundColor: 'white',
+              padding: '2px 4px',
+              borderRadius: 4,
+              border: '1px solid #333',
+              zIndex: 1001,
+            }}
+            className="nodrag nopan"
+          >
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
   );
 };
 
@@ -77,409 +190,818 @@ const nodeTypes: NodeTypes = {
   container: ContainerNode,
 };
 
-// Initial nodes and edges for the visualization based on the image
+// Define edge types
+const edgeTypes: EdgeTypes = {
+  custom: CustomEdge,
+};
+
+// Initial nodes (containers + child nodes)
 const initialNodes: Node[] = [
-  // Container nodes (big yellow boxes)
+  // ==========================================
+  // 1) User Interaction (Container + Children)
+  // ==========================================
   {
-    id: 'processing_contracts_container',
+    id: 'user_container',
     type: 'container',
-    data: { 
-      label: 'Processing & Contracts', 
+    data: {
+      label: 'User Interaction',
       bgColor: '#ffffcc',
-      width: 350,
-      height: 250,
-    },
-    position: { x: 430, y: 30 },
-    style: { zIndex: 0 },
-  },
-  {
-    id: 'user_interaction_container',
-    type: 'container',
-    data: { 
-      label: 'User Interaction', 
-      bgColor: '#ffffcc',
-      width: 250,
+      width: 210,
       height: 200,
     },
-    position: { x: 10, y: 250 },
-    style: { zIndex: 0 },
+    position: { x: 10, y: 280 },
+    draggable: false,
+    selectable: false,
   },
   {
-    id: 'document_storage_container',
-    type: 'container',
-    data: { 
-      label: 'Document Storage', 
-      bgColor: '#ffffcc',
-      width: 400,
-      height: 200,
+    id: 'user_reg',
+    type: 'custom',
+    parentId: 'user_container',
+    extent: 'parent',
+    position: { x: 10, y: 40 },
+    data: {
+      label: 'User Registration',
+      bgColor: '#e6f3ff',
+      width: 130,
     },
-    position: { x: 280, y: 380 },
-    style: { zIndex: 0 },
   },
   {
-    id: 'data_vector_store_container',
-    type: 'container',
-    data: { 
-      label: 'Data & Vector Store', 
-      bgColor: '#ffffcc',
-      width: 350,
-      height: 250,
+    id: 'web_ui',
+    type: 'custom',
+    parentId: 'user_container',
+    extent: 'parent',
+    position: { x: 10, y: 100 },
+    data: {
+      label: 'Front-End Web UI App',
+      description: 'React, Node App',
+      bgColor: '#e6f3ff',
+      width: 130,
     },
-    position: { x: 800, y: 190 },
-    style: { zIndex: 0 },
   },
   {
-    id: 'logging_monitoring_container',
-    type: 'container',
-    data: { 
-      label: 'Logging & Monitoring', 
-      bgColor: '#ffffcc',
-      width: 250,
-      height: 120,
+    id: 'azure_fe',
+    type: 'custom',
+    parentId: 'user_container',
+    extent: 'parent',
+    position: { x: 10, y: 160 },
+    data: {
+      label: 'Azure Front-End',
+      bgColor: '#e6f3ff',
+      width: 130,
     },
-    position: { x: 800, y: 120 },
-    style: { zIndex: 0 },
   },
+
+  // =============================================
+  // 2) Processing & Contracts (Container + Child)
+  // =============================================
+  {
+    id: 'processing_container',
+    type: 'container',
+    data: {
+      label: 'Processing & Compute',
+      bgColor: '#ffffcc',
+      width: 380,
+      height: 320,
+    },
+    position: { x: 430, y: 60 },
+    draggable: false,
+    selectable: false,
+  },
+  {
+    id: 'multi_agent',
+    type: 'custom',
+    parentId: 'processing_container',
+    extent: 'parent',
+    position: { x: 80, y: 60 },
+    data: {
+      label: 'Multi-Agent LLM API',
+      description: 'Planner/Orchestrator\nRAG Sys\nRecord/UI Agent App\nService / Container / Kubernetes / API',
+      bgColor: '#e6e6fa',
+      width: 220,
+    },
+  },
+  {
+    id: 'ingestion',
+    type: 'custom',
+    parentId: 'processing_container',
+    extent: 'parent',
+    position: { x: 80, y: 200 },
+    data: {
+      label: 'Ingestion & Scheduling',
+      description: 'Azure Function / Logic App',
+      bgColor: '#e6e6fa',
+      width: 220,
+    },
+  },
+
+  // ===========================
+  // 3) Notification (Container)
+  // ===========================
   {
     id: 'notification_container',
     type: 'container',
-    data: { 
-      label: 'Notification', 
+    data: {
+      label: 'Notifications',
       bgColor: '#ffffcc',
-      width: 250,
-      height: 120,
+      width: 220,
+      height: 150, // Increased height from 100 to 150
     },
-    position: { x: 800, y: 20 },
-    style: { zIndex: 0 },
+    position: { x: 860, y: 50 },
+    draggable: false,
+    selectable: false,
   },
-  
-  // Inner nodes (purple/lavender boxes)
   {
-    id: 'multi_agent_llm',
+    id: 'notification',
     type: 'custom',
-    data: { 
-      label: 'Multi-Agent LLM API', 
-      description: 'Planner/Orchestrator\nRAG Sys\nRecord/UI Agent App\nService / Controller\nExtractor / LMM',
+    parentId: 'notification_container',
+    extent: 'parent',
+    position: { x: 20, y: 40 },
+    data: {
+      label: 'Notification Service',
+      description: 'Logic Apps / SendGrid / Teams',
       bgColor: '#e6e6fa',
       width: 180,
     },
-    position: { x: 620, y: 170 },
-    style: { zIndex: 1 },
   },
+
+  // ==================================
+  // 4) Logging & Monitoring (Container)
+  // ==================================
   {
-    id: 'ingestion_scheduling',
-    type: 'custom',
-    data: { 
-      label: 'Ingestion & Scheduling', 
-      description: 'Azure Function / Logic App',
-      bgColor: '#e6e6fa',
-      width: 180,
+    id: 'logging_container',
+    type: 'container',
+    data: {
+      label: 'Logging & Monitoring',
+      bgColor: '#ffffcc',
+      width: 220,
+      height: 150, // Increased height from 100 to 150 for consistency
     },
-    position: { x: 450, y: 300 },
-    style: { zIndex: 1 },
-  },
-  {
-    id: 'notification_service',
-    type: 'custom',
-    data: { 
-      label: 'Notification Service', 
-      description: 'Logic Apps / Email/SMS / Teams',
-      bgColor: '#e6e6fa',
-      width: 180,
-    },
-    position: { x: 835, y: 70 },
-    style: { zIndex: 1 },
+    position: { x: 860, y: 220 }, // Adjusted position to account for taller notification container
+    draggable: false,
+    selectable: false,
   },
   {
     id: 'event_monitor',
     type: 'custom',
-    data: { 
-      label: 'Event Monitor / App Insights', 
+    parentId: 'logging_container',
+    extent: 'parent',
+    position: { x: 20, y: 40 },
+    data: {
+      label: 'Event Monitor',
+      description: 'Azure Monitor / App Insights',
       bgColor: '#e6e6fa',
       width: 180,
     },
-    position: { x: 835, y: 150 },
-    style: { zIndex: 1 },
   },
+
+  // ===================================
+  // 5) Data & Vector Store (Container)
+  // ===================================
   {
-    id: 'azure_blob_storage',
-    type: 'custom',
-    data: { 
-      label: 'Azure Blob Storage', 
-      bgColor: '#e6e6fa',
-      width: 180,
+    id: 'data_container',
+    type: 'container',
+    data: {
+      label: 'Data & Vector Store',
+      bgColor: '#ffffcc',
+      width: 600, // Increased width further to accommodate horizontal layout
+      height: 200, // Reduced height since nodes are now horizontal
     },
-    position: { x: 320, y: 425 },
-    style: { zIndex: 1 },
+    position: { x: 860, y: 400 }, // Moved further down to avoid touching the logging container
+    draggable: false,
+    selectable: false,
+    style: { overflow: 'visible' }, // Ensure children can overflow if needed
   },
-  {
-    id: 'cosmos_db',
-    type: 'custom',
-    data: { 
-      label: 'Cosmos DB / SharePoint / Enterprise DB', 
-      bgColor: '#e6e6fa',
-      width: 180,
-    },
-    position: { x: 860, y: 370 },
-    style: { zIndex: 1 },
-  },
+  // Vector Store node - positioned horizontally
   {
     id: 'vector_store',
     type: 'custom',
-    data: { 
-      label: 'Vector Store', 
-      description: 'e.g. Azure Cognitive Search or MongoDB',
+    position: { x: 870, y: 450 }, // Adjusted vertical position
+    draggable: true, // Make it draggable
+    data: {
+      label: 'Vector Store',
+      description: 'e.g. Azure Cognitive Search or Mongo DB',
+      bgColor: '#e6e6fa',
+      width: 180,
+      zIndex: 999, // High z-index to ensure visibility
+    },
+    zIndex: 999,
+    style: { zIndex: 999 },
+  },
+  // Application DB node - positioned horizontally
+  {
+    id: 'app_db',
+    type: 'custom',
+    position: { x: 1070, y: 450 }, // Adjusted vertical position
+    draggable: true, // Make it draggable
+    data: {
+      label: 'Application DB',
+      description: 'Azure SQL or MongoDB or Postgres DB',
+      bgColor: '#e6e6fa',
+      width: 180,
+      zIndex: 998, // High z-index to ensure visibility
+    },
+    zIndex: 998,
+    style: { zIndex: 998 },
+  },
+  // Cosmos DB node - positioned horizontally
+  {
+    id: 'cosmos_db',
+    type: 'custom',
+    position: { x: 1270, y: 450 }, // Adjusted vertical position
+    draggable: true, // Make it draggable
+    data: {
+      label: 'Cosmos DB / PostgreSQL / Federated DB',
+      bgColor: '#e6e6fa',
+      width: 180,
+      zIndex: 999, // Extremely high z-index to ensure visibility
+    },
+    zIndex: 999, // Node-level z-index
+    style: { zIndex: 999 }, // Additional style z-index
+  },
+
+  // ==================================
+  // 6) Document Storage (Container)
+  // ==================================
+  {
+    id: 'document_container',
+    type: 'container',
+    data: {
+      label: 'Document Storage',
+      bgColor: '#ffffcc',
+      width: 420,
+      height: 180,
+    },
+    position: { x: 280, y: 400 },
+    draggable: false,
+    selectable: false,
+  },
+  {
+    id: 'blob_storage',
+    type: 'custom',
+    parentId: 'document_container',
+    extent: 'parent',
+    position: { x: 120, y: 70 },
+    data: {
+      label: 'Azure Blob Storage',
       bgColor: '#e6e6fa',
       width: 180,
     },
-    position: { x: 860, y: 240 },
-    style: { zIndex: 1 },
   },
-  {
-    id: 'application_db',
-    type: 'custom',
-    data: { 
-      label: 'Application DB', 
-      description: 'Azure SQL or Mongo DB or Redis',
-      bgColor: '#e6e6fa',
-      width: 180,
-    },
-    position: { x: 860, y: 310 },
-    style: { zIndex: 1 },
-  },
-  
-  // Light blue boxes
-  {
-    id: 'azure_front_end',
-    type: 'custom',
-    data: { 
-      label: 'Azure Front-End', 
-      bgColor: '#e6f3ff',
-      width: 120,
-    },
-    position: { x: 30, y: 260 },
-    style: { zIndex: 1 },
-  },
-  {
-    id: 'user_registration',
-    type: 'custom',
-    data: { 
-      label: 'User Registration/User', 
-      bgColor: '#e6f3ff',
-      width: 120,
-    },
-    position: { x: 30, y: 350 },
-    style: { zIndex: 1 },
-  },
-  {
-    id: 'front_end_web_ui',
-    type: 'custom',
-    data: { 
-      label: 'Front_End_Web_UI_App\nReact.js / React_Web_App', 
-      bgColor: '#e6f3ff',
-      width: 150,
-    },
-    position: { x: 120, y: 350 },
-    style: { zIndex: 1 },
-  },
+
+  // ==================================
+  // 7) Data & Vector Store (Container)
+  // ==================================
 ];
 
-// Define edges with custom styling
+// Edges between the smaller nodes (containers are just placeholders)
 const initialEdges: Edge[] = [
-  // Connections from Processing & Contracts
-  { 
-    id: 'e-pc-ma', 
-    source: 'multi_agent_llm', 
-    target: 'notification_service', 
-    animated: false, 
-    label: 'Sends Alerts',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  // Connections from Multi-Agent to other components
+  {
+    id: 'e1',
+    source: 'web_ui',
+    sourceHandle: 'bottom',
+    target: 'multi_agent',
+    targetHandle: 'top',
+    type: 'smoothstep',
+    animated: true,
+    label: 'User Requests',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-ma-em', 
-    source: 'multi_agent_llm', 
-    target: 'event_monitor', 
-    animated: false, 
-    label: 'Logs',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e2',
+    source: 'multi_agent',
+    sourceHandle: 'right',
+    target: 'notification',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Sends Notifications',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-ma-vs', 
-    source: 'multi_agent_llm', 
-    target: 'vector_store', 
-    animated: false, 
-    label: 'Business Vector Data',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e3',
+    source: 'multi_agent',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'vector_store',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Semantic Search',
+    style: { stroke: '#333', strokeWidth: 2, zIndex: 500 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-ma-ad', 
-    source: 'multi_agent_llm', 
-    target: 'application_db', 
-    animated: false, 
-    label: 'Writes/Reads',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e4',
+    source: 'vector_store',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'app_db',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Data Flow',
+    style: { stroke: '#333', strokeWidth: 2, zIndex: 500 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-ma-cd', 
-    source: 'multi_agent_llm', 
-    target: 'cosmos_db', 
-    animated: false, 
-    label: 'Writes/Reads',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e5',
+    source: 'app_db',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'cosmos_db',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Stores Final Results',
+    style: { stroke: '#333', strokeWidth: 2, zIndex: 500 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  
-  // Connections from Ingestion & Scheduling
-  { 
-    id: 'e-is-ma', 
-    source: 'ingestion_scheduling', 
-    target: 'multi_agent_llm', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  // Ingestion connections
+  {
+    id: 'e6',
+    source: 'multi_agent',
+    sourceHandle: 'right',
+    target: 'event_monitor',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Logs Events',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-is-ad', 
-    source: 'ingestion_scheduling', 
-    target: 'application_db', 
-    animated: false, 
-    label: 'Metadata',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e7',
+    source: 'multi_agent',
+    sourceHandle: 'right',
+    target: 'blob_storage',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Stores Documents',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-is-cd', 
-    source: 'ingestion_scheduling', 
-    target: 'cosmos_db', 
-    animated: false, 
-    label: 'UI metadata',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
-  },
-  
-  // User Interaction connections
-  { 
-    id: 'e-ui-afe', 
-    source: 'user_interaction_container', 
-    target: 'azure_front_end', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
-  },
-  { 
-    id: 'e-ui-ur', 
-    source: 'user_interaction_container', 
-    target: 'user_registration', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
-  },
-  { 
-    id: 'e-ui-fe', 
-    source: 'user_interaction_container', 
-    target: 'front_end_web_ui', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
-  },
-  { 
-    id: 'e-ui-is', 
-    source: 'user_interaction_container', 
-    target: 'ingestion_scheduling', 
-    animated: false, 
+  // User interface connections
+  {
+    id: 'e8',
+    source: 'ingestion',
+    sourceHandle: 'top',
+    target: 'multi_agent',
+    targetHandle: 'bottom',
+    type: 'smoothstep',
+    animated: true,
     label: 'Scheduler/Triggers',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  
-  // Document Storage connections
-  { 
-    id: 'e-ds-abs', 
-    source: 'document_storage_container', 
-    target: 'azure_blob_storage', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e9',
+    source: 'user_reg',
+    sourceHandle: 'right',
+    target: 'multi_agent',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Auth',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-ds-is', 
-    source: 'document_storage_container', 
-    target: 'ingestion_scheduling', 
-    animated: false, 
-    label: 'Document Storage',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e10',
+    source: 'azure_fe',
+    sourceHandle: 'right',
+    target: 'multi_agent',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'API Calls',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  
-  // Azure Blob Storage connections
-  { 
-    id: 'e-abs-is', 
-    source: 'azure_blob_storage', 
-    target: 'ingestion_scheduling', 
-    animated: false, 
-    label: 'Extract/Trigger on File',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  // Blob storage connections
+  {
+    id: 'e11',
+    source: 'blob_storage',
+    sourceHandle: 'right',
+    target: 'multi_agent',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Document Retrieval',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-abs-ma', 
-    source: 'azure_blob_storage', 
-    target: 'multi_agent_llm', 
-    animated: false, 
-    label: 'Upload Documents',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  // Vector store connections
+  {
+    id: 'e12',
+    source: 'vector_store',
+    sourceHandle: 'right',
+    target: 'app_db',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Data Integration',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-abs-cd', 
-    source: 'azure_blob_storage', 
-    target: 'cosmos_db', 
-    animated: false, 
-    label: 'Store Final docs, results',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  // Additional connections from reference image
+  {
+    id: 'e13',
+    source: 'multi_agent',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'vector_store',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Retrieves Vector Data',
+    style: { stroke: '#333', strokeWidth: 2, strokeDasharray: '5,5' },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  
-  // Additional connections
-  { 
-    id: 'e-vs-ad', 
-    source: 'vector_store', 
-    target: 'application_db', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e14',
+    source: 'multi_agent',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'app_db',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Metadata',
+    style: { stroke: '#333', strokeWidth: 2, strokeDasharray: '5,5' },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-pc-container-ma', 
-    source: 'processing_contracts_container', 
-    target: 'multi_agent_llm', 
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e15',
+    source: 'multi_agent',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'cosmos_db',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Writes Results',
+    style: { stroke: '#333', strokeWidth: 2, strokeDasharray: '5,5', zIndex: 500 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
-  { 
-    id: 'e-pc-container-ns', 
-    source: 'processing_contracts_container', 
-    target: 'notification_service', 
-    animated: false, 
-    label: 'Sends Alerts',
-    style: { stroke: '#000000', strokeWidth: 1.5 },
+  {
+    id: 'e16',
+    source: 'blob_storage',
+    sourceHandle: 'right', // Use right handle of source
+    target: 'cosmos_db',
+    targetHandle: 'left', // Use left handle of target
+    type: 'smoothstep',
+    animated: true,
+    label: 'Store Path/Blob, Metadata',
+    style: { stroke: '#333', strokeWidth: 2, zIndex: 500 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
+  },
+  // Add new connections for Ingestion and Scheduling based on the reference image
+  {
+    id: 'e17',
+    source: 'web_ui',
+    sourceHandle: 'bottom',
+    target: 'ingestion',
+    targetHandle: 'top',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Scheduled/Triggers',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
+  },
+  {
+    id: 'e18',
+    source: 'ingestion',
+    sourceHandle: 'right',
+    target: 'multi_agent',
+    targetHandle: 'bottom',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Scheduler/Triggers',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
+  },
+  {
+    id: 'e19',
+    source: 'ingestion',
+    sourceHandle: 'right',
+    target: 'blob_storage',
+    targetHandle: 'left',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Uploads',
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
+  },
+  {
+    id: 'e20',
+    source: 'blob_storage',
+    sourceHandle: 'top',
+    target: 'ingestion',
+    targetHandle: 'bottom',
+    type: 'smoothstep',
+    animated: true,
+    label: 'Extract & Process',
+    style: { stroke: '#333', strokeWidth: 2, strokeDasharray: '5,5' },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
   },
 ];
 
 export const Data: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const reactFlowInstance = useRef(null);
+
+  const onConnect = useCallback(
+    (params: Connection) =>
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            type: 'bezier',
+            animated: true,
+            style: { stroke: '#333', strokeWidth: 2 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 15,
+              height: 15,
+              color: '#333',
+            },
+            zIndex: 1000,
+          },
+          eds
+        )
+      ),
+    [setEdges]
+  );
+
+  const defaultEdgeOptions = {
+    type: 'bezier',
+    animated: true,
+    style: { stroke: '#333', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+      color: '#333',
+    },
+    zIndex: 1000,
+  };
+
+  // Ensure nodes are properly positioned on initial render and data nodes are always on top
+  React.useEffect(() => {
+    // Small delay to ensure the flow is rendered before positioning
+    const timer = setTimeout(() => {
+      setNodes((nds) => 
+        nds.map(node => {
+          // Special handling for data nodes
+          if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                zIndex: 999,
+              },
+              zIndex: 999,
+              style: { 
+                ...node.style,
+                zIndex: 999 
+              },
+              selectable: true,
+              draggable: true, // Make data nodes draggable
+            };
+          }
+          
+          return {
+            ...node,
+            // Ensure all nodes have proper z-index
+            data: {
+              ...node.data,
+              zIndex: node.type === 'container' ? 0 : 10,
+            },
+            // Ensure nodes are selectable and draggable as needed
+            selectable: node.type !== 'container',
+            draggable: node.type !== 'container',
+          };
+        })
+      );
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [setNodes]);
+
+  // Update the fitView options to better handle the new layout
+  React.useEffect(() => {
+    // Fit view after a short delay to ensure all elements are rendered
+    const timer = setTimeout(() => {
+      if (reactFlowInstance.current) {
+        reactFlowInstance.current.fitView({
+          padding: 0.2,
+          includeHiddenNodes: true,
+          minZoom: 0.6,
+          maxZoom: 1.0
+        });
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, [reactFlowInstance]);
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">System Architecture Visualization</h1>
-      <div className="border rounded-lg shadow-lg" style={{ height: '80vh' }}>
+      <div className="border rounded-lg shadow-lg" style={{ height: '85vh' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={defaultEdgeOptions}
+          connectionLineComponent={({ fromX, fromY, toX, toY }) => (
+            <g>
+              <path
+                d={`M${fromX},${fromY} L${toX},${toY}`}
+                stroke="#333"
+                strokeWidth={2}
+                fill="none"
+                strokeDasharray="5,5"
+                style={{ zIndex: 1000 }}
+              />
+              <circle cx={toX} cy={toY} fill="#333" r={3} />
+            </g>
+          )}
+          elevateEdgesOnSelect={true}
           fitView
-          attributionPosition="bottom-right"
-          defaultEdgeOptions={{
-            style: { stroke: '#000000', strokeWidth: 1.5 },
-          }}
-          connectionLineType={ConnectionLineType.SmoothStep}
-          minZoom={0.2}
+          minZoom={0.5}
           maxZoom={1.5}
-          defaultZoom={0.5}
-          fitViewOptions={{ padding: 0.2 }}
+          defaultZoom={0.7} // Slightly smaller default zoom to see more
+          fitViewOptions={{ 
+            padding: 0.2,
+            includeHiddenNodes: true
+          }}
+          onInit={instance => reactFlowInstance.current = instance}
+          proOptions={{ hideAttribution: true }}
+          nodesDraggable={false} // Default for most nodes
+          nodesConnectable={false} // Prevent new connections by default
+          elementsSelectable={true} // Allow selection for better interaction
+          zoomOnScroll={true}
+          panOnScroll={true}
+          preventScrolling={false}
+          onNodeClick={(event, node) => {
+            // When a node is clicked, ensure it's brought to the front
+            if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
+              setNodes((nds) =>
+                nds.map((n) => {
+                  if (n.id === node.id) {
+                    return {
+                      ...n,
+                      zIndex: 999,
+                      style: { ...n.style, zIndex: 999 },
+                      data: { ...n.data, zIndex: 999 }
+                    };
+                  }
+                  return n;
+                })
+              );
+            }
+          }}
+          onNodeDragStop={(event, node) => {
+            // When a node is dragged, ensure edges follow it properly
+            if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
+              // Update the node's position in the state
+              setNodes((nds) =>
+                nds.map((n) => {
+                  if (n.id === node.id) {
+                    return {
+                      ...n,
+                      position: node.position,
+                      zIndex: 999, // Ensure high z-index is maintained
+                      style: { ...n.style, zIndex: 999 }
+                    };
+                  }
+                  return n;
+                })
+              );
+            }
+          }}
         >
-          <Controls />
-          <MiniMap />
+          <Controls showInteractive={false} />
+          <MiniMap 
+            nodeStrokeColor={(n) => {
+              return '#fff';
+            }}
+            nodeColor={(n) => {
+              return n.data.bgColor;
+            }}
+            nodeBorderRadius={2}
+          />
           <Background color="#f8f8f8" gap={16} />
+          <Panel position="top-right">
+            <div className="bg-white p-2 rounded shadow">
+              <h3 className="font-bold text-sm">System Architecture</h3>
+              <p className="text-xs">Hover over nodes to see details</p>
+            </div>
+          </Panel>
         </ReactFlow>
       </div>
     </div>
