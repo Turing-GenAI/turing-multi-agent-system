@@ -2,7 +2,11 @@ from langchain.schema import HumanMessage
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+import json
+import os
+import datetime
 
+from ....common.config import AGENT_SCRATCHPAD_FOLDER
 from ....common.constants import bold_end, bold_start
 from ....common.descriptions import site_area_context
 from ....prompt_hub.selfrag_prompts import selfrag_prompts
@@ -41,6 +45,10 @@ class selfragNodes:
             q_a_pairs = ""
 
         activity = state["activity"]
+        site_area_activity_list = state["site_area_activity_list"]
+        site_area_activity_list_index = state["site_area_activity_list_index"]
+        site_area = state["site_area"]
+        parent_index = state["parent_index"]
 
         if child_index <= len(sub_activities) - 1:
             sub_activity = sub_activities[child_index]
@@ -59,6 +67,8 @@ class selfragNodes:
                 "relevancy_check_counter": relevancy_check_counter,
                 "used_site_data_flag": False,
                 "tool_call_count": 0,
+                "site_area_activity_list_index": site_area_activity_list_index,
+                "parent_index": parent_index,
             }
         else:
             sub_activity = ""
@@ -80,6 +90,8 @@ class selfragNodes:
                 "used_site_data_flag": False,
                 "trigger_flag_list": trigger_flag_list,
                 "tool_call_count": 0,
+                "site_area_activity_list_index": site_area_activity_list_index,
+                "parent_index": parent_index,
             }
 
     def retrieval_agent(self, state: SelfRAGState):
@@ -116,15 +128,63 @@ class selfragNodes:
         output = retrieval_tool_executor.invoke(agent_action)
         tool_call_count = state.get("tool_call_count") + 1
         context = output.get("context", [""])[0]
-        context_dict = output.get("context_dict", {})
+        retrieved_context_dict = output.get("retrieved_context_dict", {})
         file_summary = output.get("file_summary", "")
         used_site_data_flag = output.get("used_site_data_flag", False)
         tool_message = output.get("selfrag_messages", False)
+
+        # Prepare the data to be written to the JSON file
+        # site_area_index = state["site_area_activity_list_index"]
+        site_area_index = str(state["site_area_activity_list_index"]) + "_" +  state["site_area"]
+        # activity_index = state["parent_index"]
+        activity_index = str(state["parent_index"]) + "_" + state["activity"] 
+        # sub_activity_index = state["child_index"]
+        sub_activity_index = str(state["child_index"]) + "_" + state["sub_activity"]
+        relevancy_check_counter = state["relevancy_check_counter"]
+        # context_dict_key = "site_data_context_dict" if used_site_data_flag else "guidelines_context_dict"
+        context_dict_key = "context_dict_key"
+
+        # Load existing data from the JSON file
+        run_id = state["run_id"]
+        filename =  run_id + "_retrieved_context_dict.json"
+        json_file_path = f"{AGENT_SCRATCHPAD_FOLDER}/{filename}"
+        if os.path.exists(json_file_path):
+            with open(json_file_path, "r") as file:
+                existing_data = json.load(file)
+        else:
+            existing_data = {}
+
+        # Update the existing data with the new context dictionary
+        if site_area_index not in existing_data:
+            existing_data[site_area_index] = {}
+        if activity_index not in existing_data[site_area_index]:
+            existing_data[site_area_index][activity_index] = {}
+        if sub_activity_index not in existing_data[site_area_index][activity_index]:
+            existing_data[site_area_index][activity_index][sub_activity_index] = {}
+        if relevancy_check_counter not in existing_data[site_area_index][activity_index][sub_activity_index]:
+            existing_data[site_area_index][activity_index][sub_activity_index][relevancy_check_counter] = {}
+
+        # existing_data[site_area_index][activity_index][sub_activity_index][relevancy_check_counter] = {
+        #     "context": context,
+        #     "metadata": {
+        #         context_dict_key: retrieved_context_dict,
+        #         "file_summary": file_summary,
+        #         "used_site_data_flag": used_site_data_flag,
+        #         "tool_call_count": tool_call_count
+        #     }
+        # }
+        existing_data[site_area_index][activity_index][sub_activity_index][relevancy_check_counter] = {
+                context_dict_key: retrieved_context_dict
+        }
+
+        # Write the updated data back to the JSON file
+        with open(json_file_path, "w") as file:
+            json.dump(existing_data, file, indent=4)
         return {
             "intermediate_steps": [(agent_action, tool_message)],
             "selfrag_messages": tool_message,
             "context": context,
-            "retrieved_context_dict": [context_dict] if context_dict else [],
+            "retrieved_context_dict": [retrieved_context_dict] if retrieved_context_dict else [],
             "file_summary": file_summary,
             "used_site_data_flag": used_site_data_flag,
             "tool_call_count": tool_call_count,
