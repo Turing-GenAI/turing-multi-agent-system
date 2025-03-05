@@ -1,4 +1,5 @@
 import uuid
+import os
 
 from langchain.agents import create_openai_functions_agent
 from langchain_core.messages import ToolMessage
@@ -54,6 +55,18 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
             index_col=0,
         )
         add_ai_msg = "\nExecuted Tool: site_data_retriever_tool. Retrieved site data"
+        
+        metadata_list = [doc.metadata for doc in retrieved_docs]
+
+        # Build the output text
+        # output = "The retrieved pieces of information have been obtained from the following source(s):\n"
+
+        # for index, metadata in enumerate(metadata_list, start=1):
+        #     filename = os.path.basename(metadata['source'])
+        #     output += f"{index}. {filename}\n"
+
+        # add_ai_msg += output + "\n"
+
         if summary_df is None:
             add_ai_msg = (
                 f"{bold_start}WARNING!!{bold_end}\nSummary data is missing possibly due to "
@@ -66,7 +79,7 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
 
         return {
             "context": [retrieved_docs[0].page_content],
-            "context_dict": site_data_context_dict,
+            "retrieved_context_dict": site_data_context_dict,
             "used_site_data_flag": True,
             "file_summary": file_summary,
             "selfrag_messages": ToolMessage(
@@ -101,12 +114,13 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
     if guidelines_vectorstore:
         guidelines_relevant_docs = guidelines_vectorstore.similarity_search(sub_activity, k=3)
         all_metadata = " ,".join([str(doc.metadata) for doc in guidelines_relevant_docs])
+        
         guidelines_context_dict = {}
         i = 0
         for doc in guidelines_relevant_docs:
             guidelines_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
             i += 1
-
+        
         context = ""
         for i, doc in enumerate(guidelines_relevant_docs):
             i1 = i + 1
@@ -114,6 +128,19 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
             context += doc.page_content + "\n"
         logger.debug(f"guidelines_relevant_docs: {all_metadata}")
         add_ai_msg = "Executed Tool: guidelines_retriever_tool. Retrieved guidelines documents"
+
+        # metadata_list = [doc.metadata for doc in guidelines_relevant_docs]
+
+        # # Build the output text
+        # output = "The retrieved pieces of information have been obtained from the following source(s):\n"
+
+        # for index, metadata in enumerate(metadata_list, start=1):
+        #     filename = os.path.basename(metadata['source'])
+        #     page = metadata['page']
+        #     output += f"{index}. {filename}, Page {page}\n"
+
+        # add_ai_msg += output + "\n"
+    
     else:
         guidelines_relevant_docs = None
         add_ai_msg = f"{bold_start}WARNING!!{bold_end}\nNo guidelines retriever found. "
@@ -123,7 +150,7 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
 
     return {
         "context": [context],
-        "context_dict": guidelines_context_dict,
+        "retrieved_context_dict": guidelines_context_dict,
         "used_site_data_flag": False,
         "selfrag_messages": ToolMessage(
             name=f"{bold_start}SelfRAG - guidelines_retriever tool{bold_end}",

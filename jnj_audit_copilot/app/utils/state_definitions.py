@@ -140,11 +140,15 @@ class SelfRAGState(TypedDict):
     trigger_list_index: Annotated[Optional[int], merge_identical_trigger_list_index]
     trigger: Annotated[Dict[str, Union[str, List[str]]], operator.or_]
     trigger_flag_list: Annotated[Dict[str, bool], trigger_flag_list_reducer]
-    site_area: str
     final_sub_activities: SubActivityResponse
     sub_activities_answers: Annotated[List[Dict[str, str]], operator.add] = []
     inspection_messages: Annotated[List[BaseMessage], add_messages]
 
+    site_area_activity_list: dict[str, list[str]]
+    site_area_activity_list_index: int
+    site_area: str
+
+    parent_index: int
     child_index: int
     sub_activity: str
     activity: str
@@ -163,6 +167,7 @@ class SelfRAGState(TypedDict):
     agent_outcome: Union[AgentAction, AgentFinish, None]
     intermediate_steps: Annotated[list[tuple[AgentAction, str]], operator.add]
     tool_call_count: int
+    retrieved_context_dict: Annotated[List[Dict[str, Dict[str, str]]], operator.add] = []
 
 
 class SGRSubGraphState(TypedDict):
