@@ -147,21 +147,34 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
               
               // Format the display key with full form instead of abbreviations
               let formattedDisplayKey = displayKey;
+              let sectionColor = 'blue'; // Default color
+              
               if (displayKey === 'PD') {
-                formattedDisplayKey = 'Protocol Deviation';
+                formattedDisplayKey = 'Protocol Deviations';
+                sectionColor = 'blue';
               } else if (displayKey === 'AE_SAE') {
-                formattedDisplayKey = 'Adverse Event / Serious Adverse Event';
+                formattedDisplayKey = 'Adverse Events / Serious Adverse Events';
+                sectionColor = 'orange';
               }
+              
+              // Define color classes based on section type
+              const headerBgClass = sectionColor === 'blue' ? 'bg-blue-50 hover:bg-blue-100' : 'bg-orange-50 hover:bg-orange-100';
+              const textColorClass = sectionColor === 'blue' ? 'text-blue-700' : 'text-orange-700';
+              const iconColorClass = sectionColor === 'blue' ? 'text-blue-600' : 'text-orange-600';
+              const badgeBgClass = sectionColor === 'blue' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
               
               return (
                 <div key={key} className="border rounded-lg overflow-visible shadow-sm mb-4">
                   <div 
-                    className="flex items-center justify-between p-3 bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                    className={`flex items-center justify-between p-3 ${headerBgClass} cursor-pointer transition-colors`}
                     onClick={() => toggleSection(key)}
                   >
                     <div className="flex items-center space-x-2">
-                      {isExpanded ? <ChevronDown className="w-4 h-4 text-blue-600" /> : <ChevronRight className="w-4 h-4 text-blue-600" />}
-                      <h4 className="font-medium text-blue-700">{formattedDisplayKey}</h4>
+                      {isExpanded ? 
+                        <ChevronDown className={`w-4 h-4 ${iconColorClass}`} /> : 
+                        <ChevronRight className={`w-4 h-4 ${iconColorClass}`} />
+                      }
+                      <h4 className={`font-medium ${textColorClass}`}>{formattedDisplayKey}</h4>
                       <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full">
                         {contentItems.length} {contentItems.length === 1 ? 'item' : 'items'}
                       </span>
@@ -174,7 +187,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                         <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
                           {/* Item Number */}
                           <div className="mb-2">
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-medium text-sm mr-2">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${badgeBgClass} font-medium text-sm mr-2`}>
                               {index + 1}
                             </span>
                             <span className="text-sm text-gray-500">Item {index + 1} of {contentItems.length}</span>

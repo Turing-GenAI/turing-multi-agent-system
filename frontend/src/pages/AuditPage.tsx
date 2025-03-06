@@ -5,6 +5,9 @@ import { FindingsTable } from '../components/FindingsTable';
 import { FindingsSummary } from '../components/findings/FindingsSummary';
 import { RetrievedContextViewer } from '../components/RetrievedContextViewer';
 import { RetrievedContextModal } from '../components/RetrievedContextModal';
+import { PrivacyPolicyModal } from '../components/modals/PrivacyPolicyModal';
+import { TermsOfServiceModal } from '../components/modals/TermsOfServiceModal';
+import { ContactSupportModal } from '../components/modals/ContactSupportModal';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
 import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database } from 'lucide-react';
@@ -70,6 +73,9 @@ export const AuditPage: React.FC = () => {
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
 
   const [isRetrievedContextModalOpen, setIsRetrievedContextModalOpen] = useState(false);
+  const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
+  const [isTermsOfServiceModalOpen, setIsTermsOfServiceModalOpen] = useState(false);
+  const [isContactSupportModalOpen, setIsContactSupportModalOpen] = useState(false);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -1134,9 +1140,36 @@ export const AuditPage: React.FC = () => {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <div> 2025 Clinical Trial Audit Assistant</div>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-gray-900">Privacy Policy</a>
-              <a href="#" className="hover:text-gray-900">Terms of Service</a>
-              <a href="#" className="hover:text-gray-900">Contact Support</a>
+              <a 
+                href="#" 
+                className="hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsPrivacyPolicyModalOpen(true);
+                }}
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="#" 
+                className="hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsTermsOfServiceModalOpen(true);
+                }}
+              >
+                Terms of Service
+              </a>
+              <a 
+                href="#" 
+                className="hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsContactSupportModalOpen(true);
+                }}
+              >
+                Contact Support
+              </a>
             </div>
           </div>
         </footer>
@@ -1147,6 +1180,24 @@ export const AuditPage: React.FC = () => {
         data={retrievedContext}
         isOpen={isRetrievedContextModalOpen}
         onClose={() => setIsRetrievedContextModalOpen(false)}
+      />
+      
+      {/* Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyPolicyModalOpen}
+        onClose={() => setIsPrivacyPolicyModalOpen(false)}
+      />
+      
+      {/* Terms of Service Modal */}
+      <TermsOfServiceModal
+        isOpen={isTermsOfServiceModalOpen}
+        onClose={() => setIsTermsOfServiceModalOpen(false)}
+      />
+      
+      {/* Contact Support Modal */}
+      <ContactSupportModal
+        isOpen={isContactSupportModalOpen}
+        onClose={() => setIsContactSupportModalOpen(false)}
       />
     </div>
   );
