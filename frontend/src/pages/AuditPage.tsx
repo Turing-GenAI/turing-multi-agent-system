@@ -3,11 +3,13 @@ import { AgentWindow } from '../components/AgentWindow';
 import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
 import { FindingsSummary } from '../components/findings/FindingsSummary';
+import { RetrievedContextViewer } from '../components/RetrievedContextViewer';
+import { RetrievedContextModal } from '../components/RetrievedContextModal';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
-import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
+import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
-import { AIMessagesResponse, TreeNode } from '../api';
+import { AIMessagesResponse, TreeNode, RetrievedContextResponse } from '../api';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -58,13 +60,16 @@ export const AuditPage: React.FC = () => {
   });
   const [selectedFindingTab, setSelectedFindingTab] = useState('pd');
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
-  const [findings, setFindings] = useState<unknown>();
-
+  const [findings, setFindings] = useState<AIMessagesResponse | null>(null);
+  const [retrievedContext, setRetrievedContext] = useState<RetrievedContextResponse | null>(null);
+  const [showRetrievedContext, setShowRetrievedContext] = useState(false);
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
   const previousAIMessagesRef = useRef<string>('');
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
+
+  const [isRetrievedContextModalOpen, setIsRetrievedContextModalOpen] = useState(false);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -757,6 +762,8 @@ export const AuditPage: React.FC = () => {
           if (findingsResponse.data && findingsResponse.data.findings) {
             setFindings(findingsResponse.data);
           }
+          // Fetch retrieved context data when job is completed
+          await fetchRetrievedContext(jobId);
           addAgentMessage("**Compliance checking is completed successfully! Please review the findings generated.**")
           if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
             console.log("Final summary of All Agents activities : ", allActivitiesRef.current);
@@ -1014,6 +1021,17 @@ export const AuditPage: React.FC = () => {
     }
   };
 
+  const fetchRetrievedContext = async (jobId: string) => {
+    try {
+      const response = await auditService.getRetrievedContext(jobId);
+      if (response.data) {
+        setRetrievedContext(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching retrieved context:", error);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Left Sidebar */}
@@ -1089,9 +1107,12 @@ export const AuditPage: React.FC = () => {
                 isThinking={isProcessing && !awaitingForFeedbackRef.current}
               />
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="flex flex-col flex-1">
-                <div className="flex flex-col space-y-4 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800">Insights Panel</h2>
+                </div>
+                <div className="flex-1 overflow-hidden">
                   <FindingsTable 
                     findings={findings}
                     selectedTreeNode={selectedTreeNode}
@@ -1099,6 +1120,8 @@ export const AuditPage: React.FC = () => {
                     setSelectedFindingTab={setSelectedFindingTab}
                     expandedRows={expandedRows}
                     setExpandedRows={setExpandedRows}
+                    onRetrievedContextClick={() => retrievedContext && setIsRetrievedContextModalOpen(true)}
+                    hasRetrievedContext={!!retrievedContext}
                   />
                 </div>
               </div>
@@ -1118,6 +1141,13 @@ export const AuditPage: React.FC = () => {
           </div>
         </footer>
       </div>
+      
+      {/* Retrieved Context Modal */}
+      <RetrievedContextModal
+        data={retrievedContext}
+        isOpen={isRetrievedContextModalOpen}
+        onClose={() => setIsRetrievedContextModalOpen(false)}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, AlertTriangle, CircleDot } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CircleDot, Database, FileWarning } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -75,9 +75,15 @@ interface FindingsSummaryProps {
   findings?: {
     findings?: FindingsData;
   };
+  onRetrievedContextClick?: () => void;
+  hasRetrievedContext?: boolean;
 }
 
-export const FindingsSummary: React.FC<FindingsSummaryProps> = ({findings = {}}) => {
+export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
+  findings = {}, 
+  onRetrievedContextClick,
+  hasRetrievedContext = false
+}) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [selectedContent, setSelectedContent] = useState<{conclusion?: string; table?: any[]; type?: 'pd' | 'ae'}>({});
@@ -197,22 +203,32 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({findings = {}})
       <div className="flex flex-col space-y-4">
         <div className="flex items-center space-x-6 text-sm">
           <div 
-            className="flex items-center cursor-pointer hover:opacity-80"
-            onClick={() => handleFindingsClick('pd')}
+            className={`flex items-center ${pdFindings > 0 ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
+            onClick={pdFindings > 0 ? () => handleFindingsClick('pd') : undefined}
           >
-            <CircleDot className="w-4 h-4 mr-2 text-blue-500" />
+            <FileWarning className="w-4 h-4 mr-2 text-blue-500" />
             <span className="text-gray-600">Protocol Deviation Alerts:</span>
             <span className="ml-1.5 font-semibold">{pdFindings}</span>
           </div>
 
           <div 
-            className="flex items-center cursor-pointer hover:opacity-80"
-            onClick={() => handleFindingsClick('ae')}
+            className={`flex items-center ${aeFindings > 0 ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
+            onClick={aeFindings > 0 ? () => handleFindingsClick('ae') : undefined}
           >
             <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
             <span className="text-gray-600">Adverse Event Alerts:</span>
             <span className="ml-1.5 font-semibold">{aeFindings}</span>
           </div>
+          
+          {onRetrievedContextClick && (
+            <div 
+              className={`flex items-center ${hasRetrievedContext ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
+              onClick={hasRetrievedContext ? onRetrievedContextClick : undefined}
+            >
+              <Database className="w-4 h-4 mr-2 text-purple-500" />
+              <span className="text-gray-600">Retrieved Context</span>
+            </div>
+          )}
         </div>
       </div>
 

@@ -9,7 +9,8 @@ import {
   JobFeedbackResponse,
   JobCancellationResponse,
   JobStatistics,
-  AgentProgressResponse
+  AgentProgressResponse,
+  RetrievedContextResponse
 } from '../types';
 import { activities } from '../../data/activities';
 import { get_progress_tree_response1, get_progress_tree_response2, get_progress_tree_response3, get_progress_tree_response4, get_progress_tree_response5, get_progress_tree_response6, get_progress_tree_response7, get_progress_tree_response8} from '../../data/get_ai_responses';
@@ -145,6 +146,18 @@ const realAuditService = {
     jobId: string
   ): Promise<ApiResponse<AgentProgressResponse>> => {
     return apiClient.get<AgentProgressResponse>(`/api/jobs/${jobId}/progress`);
+  },
+
+  /**
+   * Get retrieved context data for a specific job
+   * @param jobId - The ID of the job to fetch retrieved context for
+   * @returns Promise with retrieved context data
+   */
+  getRetrievedContext: async (
+    jobId: string
+  ): Promise<ApiResponse<RetrievedContextResponse>> => {
+    const endpoint = `/get_retrieved_context/${encodeURIComponent(jobId)}`;
+    return apiClient.get<RetrievedContextResponse>(endpoint);
   }
 };
 
@@ -329,6 +342,26 @@ const mockAuditService = {
       data: {
         activities: JSON.parse(JSON.stringify(activities)) // Deep clone the activities
       }
+    };
+  },
+
+  /**
+   * Get retrieved context data for a specific job (mock implementation)
+   * @param jobId - The ID of the job to fetch retrieved context for
+   * @returns Promise with mock retrieved context data
+   */
+  getRetrievedContext: async (
+    jobId: string
+  ): Promise<ApiResponse<RetrievedContextResponse>> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Import mock data
+    const mockData = await import('./mock.json').then(module => module.default);
+    
+    return {
+      data: mockData,
+      status: 200
     };
   }
 };
