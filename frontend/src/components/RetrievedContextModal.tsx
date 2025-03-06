@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RetrievedContextResponse } from '../api';
-import { ChevronDown, ChevronRight, ExternalLink, Copy, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Copy, Check, X, RefreshCw } from 'lucide-react';
 
 interface RetrievedContextModalProps {
   data: RetrievedContextResponse | null;
@@ -15,6 +15,9 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
 }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const previousDataRef = useRef<RetrievedContextResponse | null>(null);
+  const [updateCount, setUpdateCount] = useState(0);
 
   useEffect(() => {
     // Add styles for HTML tables
@@ -55,13 +58,27 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
     };
   }, [onClose]);
 
-  // Reset expanded sections when modal opens
+  // Check for data updates and set last update time
+  useEffect(() => {
+    if (data && (!previousDataRef.current || JSON.stringify(data) !== JSON.stringify(previousDataRef.current))) {
+      setLastUpdateTime(new Date());
+      setUpdateCount(prevCount => prevCount + 1);
+      previousDataRef.current = data;
+    }
+  }, [data]);
+
+  // Reset expanded sections and update count when modal opens
   useEffect(() => {
     if (isOpen) {
       // Keep all sections closed by default
       setExpandedSections({});
+      
+      // Reset update count if this is a new session
+      if (!previousDataRef.current) {
+        setUpdateCount(0);
+      }
     }
-  }, [isOpen, data]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -106,15 +123,15 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
 
   if (!data) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Retrieved Context Data</h2>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-800">Retrieved Context</h2>
             <button 
               onClick={onClose}
-              className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
             >
-              <X className="w-5 h-5" />
+              <X size={20} />
             </button>
           </div>
           <div className="text-gray-500 italic p-4 flex-1">
@@ -126,15 +143,28 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-5xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-semibold">Retrieved Context Data</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+          <div className="flex items-center">
+            <h2 className="text-xl font-semibold text-gray-800">Retrieved Context</h2>
+            {lastUpdateTime && (
+              <div className="ml-4 text-sm text-gray-500 flex items-center">
+                <span className="mr-1">
+                  <RefreshCw size={14} />
+                </span>
+                Last updated: {lastUpdateTime.toLocaleTimeString()} 
+                <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs">
+                  {updateCount} update{updateCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+          </div>
           <button 
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
           >
-            <X className="w-5 h-5" />
+            <X size={20} />
           </button>
         </div>
         

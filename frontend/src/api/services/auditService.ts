@@ -353,16 +353,8 @@ const mockAuditService = {
   getRetrievedContext: async (
     jobId: string
   ): Promise<ApiResponse<RetrievedContextResponse>> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Import mock data
-    const mockData = await import('./mock.json').then(module => module.default);
-    
-    return {
-      data: mockData,
-      status: 200
-    };
+    const endpoint = `/get_retrieved_context/${encodeURIComponent(jobId)}`;
+    return apiClient.get<RetrievedContextResponse>(endpoint);
   }
 };
 

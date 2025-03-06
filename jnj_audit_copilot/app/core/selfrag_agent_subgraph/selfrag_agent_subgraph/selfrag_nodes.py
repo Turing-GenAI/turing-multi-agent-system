@@ -180,6 +180,18 @@ class selfragNodes:
         # Write the updated data back to the JSON file
         with open(json_file_path, "w") as file:
             json.dump(existing_data, file, indent=4)
+            
+        # Add information about the retrieved context to the tool message
+        context_info = f"\n\nRetrieved context for sub-activity: {state['sub_activity']}"
+        if used_site_data_flag:
+            context_info += "\nSource: Site Data"
+        else:
+            context_info += "\nSource: Guidelines"
+            
+        # If the tool_message is a ToolMessage object, update its content
+        if hasattr(tool_message, 'content'):
+            tool_message.content += context_info
+        
         return {
             "intermediate_steps": [(agent_action, tool_message)],
             "selfrag_messages": tool_message,

@@ -87,7 +87,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [selectedContent, setSelectedContent] = useState<{conclusion?: string; table?: any[]; type?: 'pd' | 'ae'}>({});
-
+  
   const findingsData = findings?.findings || {} as FindingsData;
 
   // Count findings

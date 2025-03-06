@@ -68,6 +68,8 @@ export const AuditPage: React.FC = () => {
   const [showRetrievedContext, setShowRetrievedContext] = useState(false);
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
   const previousAIMessagesRef = useRef<string>('');
+  const retrievedContextIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRetrievedContextRef = useRef<RetrievedContextResponse | null>(null);
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
@@ -1010,6 +1012,10 @@ export const AuditPage: React.FC = () => {
       ae: [],
       sgr: []
     });
+    // Reset the retrieved context state when starting a new job
+    setRetrievedContext(null);
+    setShowRetrievedContext(false);
+    lastRetrievedContextRef.current = null;
 
     try {
       await scheduleAnalysisJob();
@@ -1031,12 +1037,58 @@ export const AuditPage: React.FC = () => {
     try {
       const response = await auditService.getRetrievedContext(jobId);
       if (response.data) {
-        setRetrievedContext(response.data);
+        // Check if we have new context data
+        const newData = response.data;
+        const currentData = lastRetrievedContextRef.current;
+        
+        // Update state if we have new data or this is the first fetch
+        if (!currentData || JSON.stringify(newData) !== JSON.stringify(currentData)) {
+          setRetrievedContext(newData);
+          lastRetrievedContextRef.current = newData;
+          
+          // If we have new context data and it has content, show it
+          if (Object.keys(newData).length > 0) {
+            setShowRetrievedContext(true);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching retrieved context:", error);
     }
   };
+
+  // Start polling for context data as soon as job is created
+  useEffect(() => {
+    if (jobId) {
+      // Start polling for retrieved context updates immediately
+      retrievedContextIntervalRef.current = setInterval(async () => {
+        await fetchRetrievedContext(jobId);
+      }, 2000); // Check every 2 seconds for more responsive updates
+      
+      return () => {
+        if (retrievedContextIntervalRef.current) {
+          clearInterval(retrievedContextIntervalRef.current);
+          retrievedContextIntervalRef.current = null;
+        }
+      };
+    }
+  }, [jobId]);
+
+  // Clean up polling when component unmounts or job completes
+  useEffect(() => {
+    if (jobStatus === 'completed' || jobStatus === 'failed') {
+      // Clear interval when job is done
+      if (retrievedContextIntervalRef.current) {
+        clearInterval(retrievedContextIntervalRef.current);
+        retrievedContextIntervalRef.current = null;
+      }
+      
+      // Fetch one final time to ensure we have the complete data
+      if (jobId) {
+        fetchRetrievedContext(jobId);
+      }
+    }
+  }, [jobStatus]);
 
   return (
     <div className="flex h-screen bg-gray-50">
