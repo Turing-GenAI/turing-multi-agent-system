@@ -182,9 +182,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         <div className="p-4 space-y-6">
           {(!messages || messages.length === 0) && showGreeting && (
             <div className="flex items-start space-x-2">
-              <Avatar className="h-8 w-8 bg-blue-100 border border-blue-300 shadow-sm">
-                <AvatarFallback className="text-blue-700">
-                  <User className="h-4 w-4" />
+              <Avatar className="h-8 w-8 bg-emerald-100 border border-emerald-200 shadow-sm">
+                <AvatarFallback className="text-emerald-700">
+                  <Bot className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">

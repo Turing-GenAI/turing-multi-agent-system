@@ -260,19 +260,33 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
       </div>
 
       {dialogOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className={`rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideIn ${
-            selectedContent.type === 'pd' ? 'bg-yellow-50' : 'bg-orange-50'
-          }`}>
-            <div className={`flex justify-between items-center p-4 border-b ${
-              selectedContent.type === 'pd' ? 'border-yellow-100 bg-yellow-100' : 'border-orange-100 bg-orange-100'
-            }`}>
-              <h2 className={`text-xl font-semibold ${
-                selectedContent.type === 'pd' ? 'text-yellow-700' : 'text-orange-700'
-              }`}>{dialogTitle}</h2>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={() => setDialogOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideIn overflow-hidden"
+            onClick={(e) => e.stopPropagation()} // Prevent clicks inside the modal from closing it
+          >
+            <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+              <div className="flex items-center">
+                {selectedContent.type === 'pd' && (
+                  <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
+                    <AlertTriangle size={16} className="text-yellow-500" />
+                  </div>
+                )}
+                {selectedContent.type === 'ae' && (
+                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-3">
+                    <AlertCircle size={16} className="text-orange-500" />
+                  </div>
+                )}
+                <h2 className={`text-xl font-semibold ${
+                  selectedContent.type === 'pd' ? 'text-yellow-600' : 'text-orange-600'
+                }`}>{dialogTitle}</h2>
+              </div>
               <button 
                 onClick={() => setDialogOpen(false)}
-                className={`p-2 rounded-full hover:bg-white focus:outline-none transition-colors ${
+                className={`p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors ${
                   selectedContent.type === 'pd' ? 'text-yellow-500 hover:text-yellow-700' : 'text-orange-500 hover:text-orange-700'
                 }`}
               >
@@ -280,7 +294,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               </button>
             </div>
             
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-6">
                 {selectedContent.conclusion && (
                   <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
@@ -307,9 +321,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               </div>
             </div>
             
-            <div className={`p-4 border-t ${
-              selectedContent.type === 'pd' ? 'border-yellow-100 bg-yellow-100' : 'border-orange-100 bg-orange-100'
-            } flex justify-end`}>
+            <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
               <button
                 onClick={() => setDialogOpen(false)}
                 className={`px-4 py-2 rounded-md text-white shadow-sm ${

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RetrievedContextResponse } from '../api';
-import { ChevronDown, ChevronRight, ExternalLink, Copy, Check, X, RefreshCw, FileText, AlertTriangle, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Copy, Check, X, RefreshCw, FileText, AlertTriangle, AlertCircle, Database } from 'lucide-react';
 
 interface RetrievedContextModalProps {
   data: RetrievedContextResponse | null;
@@ -290,16 +290,25 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
 
   if (!data) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-blue-50 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideIn overflow-hidden">
-          {/* Header with subtle blue styling */}
-          <div className="bg-blue-100 border-b border-blue-100 p-5 flex justify-between items-center">
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideIn overflow-hidden"
+          onClick={(e) => e.stopPropagation()} // Prevent clicks inside the modal from closing it
+        >
+          {/* Header with white styling and blue text */}
+          <div className="bg-white border-b border-gray-200 p-5 flex justify-between items-center">
             <div className="flex items-center">
-              <h2 className="text-xl font-bold text-blue-700">Retrieved Context</h2>
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                <Database size={16} className="text-blue-500" />
+              </div>
+              <h2 className="text-xl font-bold text-blue-600">Retrieved Context</h2>
             </div>
             <button 
               onClick={onClose}
-              className="text-blue-500 hover:text-blue-700 focus:outline-none bg-white hover:bg-blue-50 p-2 rounded-full transition-colors shadow-sm"
+              className="text-blue-500 hover:text-blue-700 focus:outline-none bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition-colors shadow-sm"
             >
               <X size={20} />
             </button>
@@ -313,14 +322,23 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div className="bg-blue-50 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideIn overflow-hidden">
-        {/* Header with subtle blue styling */}
-        <div className="bg-blue-100 border-b border-blue-100 p-5 flex justify-between items-center">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideIn overflow-hidden"
+        onClick={(e) => e.stopPropagation()} // Prevent clicks inside the modal from closing it
+      >
+        {/* Header with white styling and blue text */}
+        <div className="bg-white border-b border-gray-200 p-5 flex justify-between items-center">
           <div className="flex items-center">
-            <h2 className="text-xl font-bold text-blue-700">Retrieved Context</h2>
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+              <Database size={16} className="text-blue-500" />
+            </div>
+            <h2 className="text-xl font-bold text-blue-600">Retrieved Context</h2>
             {lastUpdateTime && (
-              <div className="ml-4 text-sm text-gray-600 flex items-center bg-white px-3 py-1 rounded-full shadow-sm">
+              <div className="ml-4 text-sm text-gray-600 flex items-center bg-gray-50 px-3 py-1 rounded-full shadow-sm">
                 <span className="mr-1">
                   <RefreshCw size={14} className="text-blue-500" />
                 </span>
@@ -333,7 +351,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="text-blue-500 hover:text-blue-700 focus:outline-none bg-white hover:bg-blue-50 p-2 rounded-full transition-colors shadow-sm"
+            className="text-blue-500 hover:text-blue-700 focus:outline-none bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition-colors shadow-sm"
           >
             <X size={20} />
           </button>
@@ -536,15 +554,15 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
           </div>
         </div>
         
-        {/* Footer with refresh button */}
-        <div className="p-4 border-t border-blue-100 bg-blue-100 flex justify-between items-center">
+        {/* Footer with white background */}
+        <div className="p-4 border-t border-gray-200 bg-white flex justify-between items-center">
           <div className="text-sm text-gray-600">
             {data && `${Object.keys(data).length} document section${Object.keys(data).length !== 1 ? 's' : ''} available`}
           </div>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center space-x-1 px-3 py-1.5 bg-white text-blue-500 rounded-md border border-blue-100 hover:bg-blue-50 transition-colors shadow-sm"
+            className="flex items-center space-x-1 px-3 py-1.5 bg-blue-50 text-blue-500 rounded-md border border-blue-100 hover:bg-blue-100 transition-colors shadow-sm"
           >
             <RefreshCw size={14} className={`${isRefreshing ? 'animate-spin' : ''}`} />
             <span>{isRefreshing ? 'Fetching...' : 'Refresh Data'}</span>
