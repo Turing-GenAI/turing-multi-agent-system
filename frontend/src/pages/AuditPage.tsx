@@ -780,7 +780,6 @@ export const AuditPage: React.FC = () => {
             setFindings(findingsResponse.data);
             
             // Make sure to process the final progress tree
-            // await processProgressTreeResponse(findingsResponse.data, jobId);
             // Commenting this out to prevent duplicate progress tree messages
             // await processProgressTreeResponse(findingsResponse.data, jobId);
           }

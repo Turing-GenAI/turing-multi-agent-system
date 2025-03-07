@@ -40,6 +40,47 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
     return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
   };
 
+  // Temporary function to map local URLs to Box URLs
+  // This will be removed once working URLs come from the backend
+  const mapSourceUrl = (url: string, metadata?: any): string => {
+    // For debugging
+    console.log('Source URL mapping:', { url, metadata });
+    
+    let mappedUrl = url;
+    
+    // Map for known URLs
+    if (url.includes('protocol_deviation.xlsx')) {
+      mappedUrl = 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+    } else if (url.includes('AE_SAE/data/filtered_RaveReport_example') && url.includes('Adverse Events.xlsx')) {
+      mappedUrl = 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+    } else if (url.includes('Inspection Readiness Guidance V4.0.pdf')) {
+      // For PDF documents in Box, use the base URL
+      mappedUrl = 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
+    }
+    
+    return mappedUrl;
+  };
+
+  // Function to clean up text content from the backend
+  const cleanTextContent = (text: string): string => {
+    if (!text) return '';
+    
+    // Only fix common encoding issues without changing formatting
+    return text
+      .replace(/�/g, 'ti') // Fix common encoding issues like "Inspec�on" -> "Inspection"
+      .replace(/�/g, 'i'); // Another common encoding issue
+  };
+
+  // Function to handle source link click
+  const handleSourceLinkClick = (url: string, metadata?: any) => {
+    const mappedUrl = mapSourceUrl(url, metadata);
+    console.log('Handling source link click:', { url, mappedUrl, metadata });
+    
+    // Open the URL in a new window
+    window.open(mappedUrl, '_blank');
+    return false; // Prevent default link behavior
+  };
+
   // Function to filter metadata fields for spreadsheet-type documents
   const shouldShowMetadataField = (key: string, metadata: any): boolean => {
     // List of fields to hide for spreadsheet-type documents
@@ -413,10 +454,15 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                     <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
                                       {metaKey === 'source' ? (
                                         <a 
-                                          href={metaValue as string} 
+                                          href={mapSourceUrl(metaValue as string, item.metadata)} 
                                           target="_blank" 
                                           rel="noopener noreferrer"
                                           className="text-blue-600 hover:underline flex items-center"
+                                          onClick={(e) => {
+                                            if (!handleSourceLinkClick(metaValue as string, item.metadata)) {
+                                              e.preventDefault();
+                                            }
+                                          }}
                                         >
                                           {String(metaValue).substring(0, 50)}
                                           {String(metaValue).length > 50 ? '...' : ''}
@@ -471,7 +517,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                               <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
                                 <div className="font-medium text-gray-700 mb-2">Raw Content:</div>
                                 <div className="whitespace-pre-line text-gray-800">
-                                  {item.content.split('\n').map((paragraph, i) => (
+                                  {cleanTextContent(item.content).split('\n').map((paragraph, i) => (
                                     <p key={i} className={i > 0 ? 'mt-2' : ''}>
                                       {paragraph}
                                     </p>
