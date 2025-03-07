@@ -1,19 +1,19 @@
 # JnJAuditCopilot
 
 # Description
-JnJAuditCopilot POC
+JnJAuditCopilot is the core application of the Turing Multi-Agent System that processes scheduled jobs using AI algorithms to generate messages and alerts for various roles (PD, AE, SGR).
 
-# pre-requisites
-- python >= 3.10
-- poetry
-- code repo
+# Pre-requisites
+- Python >= 3.10
+- Poetry
+- Code repository
 
-# setup environment
+# Setup Environment
 - `cd jnj_audit_copilot`
 - `poetry install`
-- create .env file in the repo root directory path. Refer to sample_env.txt to create a copy of .env with the same parameters
-- (if required) edit `jnj_audit_copilot/app/common/config.py` file to change the path to your inputs and outputs folders. These the agent will use in the code
-- (if required) edit ``jnj_audit_copilot/activities.json` to add or remove PD and AE/SAE questions
+- Create .env file in the repo root directory path. Refer to sample_env.txt to create a copy of .env with the same parameters
+- (if required) Edit `jnj_audit_copilot/app/common/config.py` file to change the path to your inputs and outputs folders. These the agent will use in the code
+- (if required) Edit `jnj_audit_copilot/activities.json` to add or remove PD and AE/SAE questions
 - In the .env file ensure we have below keys from Azure:
     * AZURE_OPENAI_API_KEY
     * AZURE_OPENAI_API_ENDPOINT
@@ -23,30 +23,30 @@ JnJAuditCopilot POC
     * AZURE_OPENAI_EMBEDDING_API_DEPLOYMENT_NAME
     * AZURE_OPENAI_EMBEDDING_API_MODEL_NAME
     
-# To run agent locally on terminal
+# To Run Agent Locally on Terminal
 - `bash run_agent.sh`
 
-# To run agent with streamlit UI and scheduler integrated
-- go to folder - `cd jnj_audit_copilot`
-- change `run_app.py` to `run_app_redis.py` inside `run_agent.sh` file. 
-- and execute `bash run_agent.sh` on terminal as a cron job
+# To Run Agent with Scheduler Integration
+- Go to folder - `cd jnj_audit_copilot`
+- Change `run_app.py` to `run_app_redis.py` inside `run_agent.sh` file 
+- Execute `bash run_agent.sh` on terminal as a cron job
 
 Note:
-- to run this, make sure your scheduler fastapi app and streamlit app is running. Check the readme under the schduler app to set it up
-- Go to streamlit UI and create jobs for agent pick. Check screenshots.
-- when your agent starts, it will be creating folder like `intermediate_outputs/, outputs/ chromadb/`
-    - outputs/ - will have all the results of the agent
-    - intermediate_outputs/ - will contains all the intermediate outputs which agents need to execute
-    - chromadb/ - this will be the vectorstore the agent will be using
-- documents/ - this folder is where all the necessary raw input documents like guidelines pdf, sample data AVA, rave report, etc will be sitting
+- To run this, make sure your scheduler FastAPI app and frontend are running. Check the readme under the scheduler_app folder to set it up
+- Use the frontend interface to create and manage jobs for the agent
+- When your agent starts, it will create folders like:
+    - `outputs/` - Will have all the results of the agent
+    - `intermediate_outputs/` - Will contain all the intermediate outputs which agents need to execute
+    - `chromadb/` - This will be the vector store the agent will be using
+- `documents/` - This folder is where all the necessary raw input documents like guidelines PDF, sample data AVA, RAVE report, etc. will be stored
 
 Always make sure to change the config.py as convenient to store outputs
 
-## To setup environment:
+## To Setup Environment:
 - `poetry install`
 
 # Additional:
-### before committing the code to repo, make sure you check these
+### Before committing the code to repo, make sure you check these
 - To check code formatting and linting - `make check`
-- To do code Formatting - `make format`
-- To do code Linting - `make lint`
+- To do code formatting - `make format`
+- To do code linting - `make lint`
