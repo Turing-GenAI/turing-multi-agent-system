@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from redis import Redis
 from app.setup_redis import connect_to_redis, initialize_redis_structure
+from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -83,8 +84,8 @@ async def schedule_job(job_input: JobInput):
 
     # Check for existing jobs with specified statuses
     job_ids = redis_client.zrange("job_queue", 0, -1)
-    blocked_statuses = ["processing", "queued", "take_human_feedback", "got_human_feedback"]
-    
+    # blocked_statuses = ["processing", "queued", "take_human_feedback", "got_human_feedback"]
+    blocked_statuses = []
     for job_id in job_ids:
         job_hash_key = f"job_status:{job_id}"
         job_data = redis_client.hgetall(job_hash_key)
@@ -245,14 +246,20 @@ class JobMessages(BaseModel):
     ai_messages: Optional[bool] = True
     ai_message_type: Optional[str] = 'all'
     findings: Optional[bool] = True
+    last_position: Optional[int] = 0
 
 
 @app.put("/get_ai_messages/{job_id}")
 def get_ai_messages(job_id: str, job_details: JobMessages):
+    new_messages = []
+    current_position = job_details.last_position
+    full_messages = "Agent is processing!"
+
+
     if job_details.ai_messages:
         local_path = os.path.join(agent_outputs_path, "agent_scratch_pads")
         ai_messages_path = None
-        ai_messages = "Agent is processing!"
+        
         
         if job_details.ai_message_type == 'sgr':
             ai_messages_path = os.path.join(local_path, 'sgr_' + job_id + ".txt")
@@ -266,8 +273,19 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
         if ai_messages_path is not None:
             if os.path.exists(ai_messages_path):
                 with open(ai_messages_path, "r") as f:
-                    ai_messages = f.read()
-                ai_messages = ai_messages.replace("[1m", "").replace("[0m", "")
+                    full_content = f.read()
+                    if full_content:
+                        full_messages = full_content.replace("[1m", "").replace("[0m", "")
+                
+
+                if current_position < os.path.getsize(ai_messages_path):
+                    with open(ai_messages_path, "r") as f:
+                        f.seek(current_position)
+                        new_content = f.read()
+                        if new_content:
+                            new_ai_messages = new_content.replace("[1m", "").replace("[0m", "")
+                            new_messages = [new_ai_messages]
+                        current_position = f.tell()
             
                 
     findings = {}
@@ -295,7 +313,22 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
                     findings[j.replace(".json", "")] = json_data
 
-    res = {"ai_messages": ai_messages, "findings": findings}
+    try:
+        # Parse and process the latest AI message
+        message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
+        processed_messages = filter_parsed_messages_by_name(message_parser)
+        
+        # Add content and summarize
+        compressed_data = add_content(processed_messages) if processed_messages else []
+        summarized_data = summarize_content(compressed_data) if compressed_data else []
+        
+        # Filter down to essential keys
+        filtered_data = filter_json_keys(summarized_data) if summarized_data else []
+    except Exception as e:
+        logger.error(f"Error processing AI messages: {str(e)}")
+        filtered_data = []
+
+    res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}
     return res
 
 
@@ -410,3 +443,26 @@ async def add_feedback_to_finding(job_id: str,  feedback: FeedbackInput, filenam
     # except Exception as e:
     #     logger.error(f"Error processing feedback: {str(e)}")
     #     raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/get_retrieved_context/{job_id}")
+async def get_retrieved_context(job_id: str):
+    """
+    Endpoint to retrieve the contents of the retrieved context JSON file based on job_id.
+    """
+    # Construct the file path based on the job_id
+    local_path = os.path.join(agent_outputs_path, "agent_scratch_pads")
+    filename = f"{job_id}_retrieved_context_dict.json"
+    json_file_path = os.path.join(local_path, filename)
+
+    # Check if the file exists
+    if not os.path.exists(json_file_path):
+        raise HTTPException(status_code=404, detail="JSON file not found")
+
+    # Read the contents of the JSON file
+    try:
+        with open(json_file_path, "r") as file:
+            retrieved_context = json.load(file)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading JSON file: {str(e)}")
+
+    return retrieved_context

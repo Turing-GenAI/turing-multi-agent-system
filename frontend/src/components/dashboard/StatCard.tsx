@@ -5,13 +5,22 @@ interface StatCardProps {
   title: string;
   value: number;
   icon: LucideIcon;
+  bgColor?: string;
+  iconColor?: string;
   trend?: {
     value: number;
     isPositive: boolean;
   };
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend }) => {
+export const StatCard: React.FC<StatCardProps> = ({ 
+  title, 
+  value, 
+  icon: Icon, 
+  bgColor = 'bg-blue-50',
+  iconColor = 'text-blue-500',
+  trend 
+}) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between">
@@ -31,8 +40,8 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, tr
             </div>
           )}
         </div>
-        <div className="p-3 bg-blue-50 rounded-full">
-          <Icon className="w-6 h-6 text-blue-500" />
+        <div className={`p-3 ${bgColor} rounded-full`}>
+          <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
       </div>
     </div>

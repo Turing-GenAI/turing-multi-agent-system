@@ -36,7 +36,7 @@ message_types = [
 
 
 def _print_event(
-    event: dict, _printed: set, max_length=10000, scratchpad_filename=None
+    event: dict, _printed: set, max_length=15000, scratchpad_filename=None
 ):
     """
     Function to print state messages

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { User } from 'lucide-react';
+import { User, Bot, Cpu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Message } from '../../types';
 import { MessageContent } from './MessageContent';
@@ -70,11 +70,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <div className="flex-shrink-0">
         <Avatar 
           className={`h-8 w-8 transition-transform duration-200 group-hover:scale-110 ${
-            message.isUser ? 'bg-blue-500 shadow-sm' : 'bg-gray-100 border border-gray-200'
+            message.isUser ? 'bg-blue-100 border border-blue-300 shadow-sm' : message.agentPrefix ? 'bg-purple-100 border border-purple-200' : 'bg-emerald-100 border border-emerald-200'
           }`}
         >
-          <AvatarFallback className={message.isUser ? 'text-blue-700' : 'text-gray-700'}>
-            <User className="h-4 w-4" />
+          <AvatarFallback className={
+            message.isUser ? 'text-blue-700' : 
+            message.agentPrefix ? 'text-purple-700' : 'text-emerald-700'
+          }>
+            {message.isUser ? (
+              <User className="h-4 w-4" />
+            ) : message.agentPrefix ? (
+              <Cpu className="h-4 w-4" />
+            ) : (
+              <Bot className="h-4 w-4" />
+            )}
           </AvatarFallback>
         </Avatar>
       </div>

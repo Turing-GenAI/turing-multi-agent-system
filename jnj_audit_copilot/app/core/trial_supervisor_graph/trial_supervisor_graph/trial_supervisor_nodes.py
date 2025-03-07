@@ -57,8 +57,10 @@ class trialSupervisorNodes:
                     content=(
                         "Detected the following trigger events - \n"
                         f"{warn_user_for_missing_site_areas_msg}\n"
-                        f"Site ID: {trigger_site_id} \n"
-                        f"Trial ID: {trigger_trial_id} \n" + addtl_message
+                        # f"Site ID: {trigger_site_id} \n"
+                        # f"Trial ID: {trigger_trial_id} \n" + addtl_message
+                        f"Input X1: {trigger_site_id} \n"
+                        f"Input X2: {trigger_trial_id} \n" + addtl_message
                     ),
                 ),
             }
@@ -90,12 +92,16 @@ class trialSupervisorNodes:
                         site_id=state["trigger"]["site_id"],
                         trial_id=state["trigger"]["trial_id"],
                     )
-                    site_area_activity_list[trigger_site_area].append(unique_activity_id + activity)
+                    site_area_activity_list[trigger_site_area].append(
+                        unique_activity_id + activity)
                     activity_count += 1
 
         inspection_agent_node_ai_message = (
             "Invoking Inspection Master Agent \n "
-            "   -> Detected site review areas for audit inspection: " + str(", ".join(list(site_area_activity_list.keys())))
+            # "   -> Detected site review areas for audit inspection: " +
+            # str(", ".join(list(site_area_activity_list.keys())))
+            "   -> Detected domain areas for report generation: " + 
+            str(", ".join(list(site_area_activity_list.keys())))
         )
         return {
             "site_area_activity_list": site_area_activity_list,
@@ -128,10 +134,13 @@ class trialSupervisorNodes:
         trial_id = state["trigger"]["trial_id"]
         run_id = state["run_id"]
 
-        os.makedirs(os.path.join(RISK_SCORES_OUTPUT_FOLDER, run_id), exist_ok=True)
+        os.makedirs(os.path.join(
+            RISK_SCORES_OUTPUT_FOLDER, run_id), exist_ok=True)
 
-        ai_message_CSS = calculate_css_risk_score(SITE_ID, trial_id, os.path.join(RISK_SCORES_OUTPUT_FOLDER, run_id))
-        ai_message_ML = fetch_ml_risk_score(SITE_ID, trial_id, os.path.join(RISK_SCORES_OUTPUT_FOLDER, run_id))
+        ai_message_CSS = calculate_css_risk_score(
+            SITE_ID, trial_id, os.path.join(RISK_SCORES_OUTPUT_FOLDER, run_id))
+        ai_message_ML = fetch_ml_risk_score(
+            SITE_ID, trial_id, os.path.join(RISK_SCORES_OUTPUT_FOLDER, run_id))
         calculate_ir_risk_score(SITE_ID, run_id, trial_id)
 
         ai_message = f"{ai_message_CSS}\n\n{ai_message_ML}\n\nSent Alerts"

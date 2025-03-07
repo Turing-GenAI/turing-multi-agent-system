@@ -6,6 +6,7 @@ import { ToolUI } from '../ToolUI';
 import { getAgentDisplayName } from '../../data/agentNames';
 import { ToolMessage } from './types';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 
 const TypewriterText = ({ text }: { text: string }) => {
   return (
@@ -142,8 +143,14 @@ export const MessageContent: React.FC<MessageContentProps> = ({
       )}
       <div className="space-y-2">
         <p className={`text-sm leading-relaxed ${message.isUser ? 'text-gray-900' : 'text-gray-700'}`}>
-          <TypewriterText text={content} />
-          {isTyping && <span className="animate-pulse ml-0.5">▋</span>}
+          {isTyping ? (
+            <>
+              <TypewriterText text={content} />
+              <span className="animate-pulse ml-0.5">▋</span>
+            </>
+          ) : (
+            <ReactMarkdown>{content}</ReactMarkdown>
+          )}
         </p>
       </div>
       {message.isUser && (

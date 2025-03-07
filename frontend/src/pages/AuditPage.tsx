@@ -3,11 +3,16 @@ import { AgentWindow } from '../components/AgentWindow';
 import { SearchForm } from '../components/SearchForm';
 import { FindingsTable } from '../components/FindingsTable';
 import { FindingsSummary } from '../components/findings/FindingsSummary';
+import { RetrievedContextViewer } from '../components/RetrievedContextViewer';
+import { RetrievedContextModal } from '../components/RetrievedContextModal';
+import { PrivacyPolicyModal } from '../components/modals/PrivacyPolicyModal';
+import { TermsOfServiceModal } from '../components/modals/TermsOfServiceModal';
+import { ContactSupportModal } from '../components/modals/ContactSupportModal';
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
-import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu } from 'lucide-react';
+import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
-import { AIMessagesResponse, TreeNode } from '../api';
+import { AIMessagesResponse, TreeNode, RetrievedContextResponse } from '../api';
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -41,6 +46,9 @@ export const AuditPage: React.FC = () => {
   const [selectedAgentTab, setSelectedAgentTab] = useState<AgentType>('trial_master');
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [isPDLoading, setIsPDLoading] = useState(false);
+  const [isAELoading, setIsAELoading] = useState(false);
+  const [isContextLoading, setIsContextLoading] = useState(false);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
   const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
@@ -58,13 +66,21 @@ export const AuditPage: React.FC = () => {
   });
   const [selectedFindingTab, setSelectedFindingTab] = useState('pd');
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
-  const [findings, setFindings] = useState<unknown>();
-
+  const [findings, setFindings] = useState<AIMessagesResponse | null>(null);
+  const [retrievedContext, setRetrievedContext] = useState<RetrievedContextResponse | null>(null);
+  const [showRetrievedContext, setShowRetrievedContext] = useState(false);
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
   const previousAIMessagesRef = useRef<string>('');
+  const retrievedContextIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRetrievedContextRef = useRef<RetrievedContextResponse | null>(null);
 
   const [progressTree, setProgressTree] = useState<TreeNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] = useState<TreeNode | null>(null);
+
+  const [isRetrievedContextModalOpen, setIsRetrievedContextModalOpen] = useState(false);
+  const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
+  const [isTermsOfServiceModalOpen, setIsTermsOfServiceModalOpen] = useState(false);
+  const [isContactSupportModalOpen, setIsContactSupportModalOpen] = useState(false);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -600,12 +616,15 @@ export const AuditPage: React.FC = () => {
         
         console.log("splitNodes : ", "Adding first tree with length : ", firstTree.length)
         
+        // Use unique timestamp for this set of operations
+        const timestamp = Date.now();
+        
         // Add the first tree progress
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            messageId: `progress-tree-first-${Date.now()}`,  // Unique identifier with timestamp
+            messageId: `progress-tree-first-${timestamp}`,  // Unique identifier with timestamp
             value: firstTree,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -621,17 +640,18 @@ export const AuditPage: React.FC = () => {
           }
         );
         
-        // Then add the content message if it exists
+        // Only add content message if it exists in the backend data
         if(lastChild && secondLastParentNode.name === "inspection - site_area_agent" && lastChild.content) {
-          console.log("splitNodes : ", "second last child found with content : ", lastChild.content)
-          addAgentMessage(lastChild.content, "text", { messageId: `agent-message-${Date.now()}` })
+          console.log("splitNodes : ", "second last child found with content : ", lastChild.content);
+          addAgentMessage(lastChild.content, "text", { messageId: `agent-message-${timestamp}` });
         }
+        
         console.log("splitNodes : ", "Adding second tree with length : ", secondTree.length)
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            // messageId: `progress-tree-${secondTree[secondTree.length - 1].id}`,  // Use jobId to make unique identifier
+            messageId: `progress-tree-second-${timestamp}`,  // Use timestamp to make unique identifier
             value: secondTree,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -648,7 +668,6 @@ export const AuditPage: React.FC = () => {
         );
         
       }
-      
       else if (updatedActivities.length > 0) {
         // If we have regular activities, add them as a progress tree
         console.log("Progress tree response:", updatedActivities);
@@ -656,7 +675,7 @@ export const AuditPage: React.FC = () => {
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
-            messageId: `progress-tree-${updatedActivities[updatedActivities.length - 1].id}`,  // Use jobId to make unique identifier
+            messageId: `progress-tree-${Date.now()}`,  // Use timestamp to make unique identifier
             value: updatedActivities,
             onChange: (updatedTree: TreeNode) => {
               setProgressTree(updatedTree);
@@ -701,7 +720,6 @@ export const AuditPage: React.FC = () => {
 
       setJobStatus(jobData.status);
       
-
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
       if ((jobData.status !== "completed" && jobData.status !== "error")) {
         withFindings = true;
@@ -745,43 +763,76 @@ export const AuditPage: React.FC = () => {
         setIsProcessing(false);
       }
       console.log("BackendIntegration", "fetchAIMessages: before job (jobData.status === completed) ", jobData.status)
-      // If job is completed and withFindings is true, fetch findings
-      if (jobData.status === "completed") {
-        setJobStatus(jobData.status)
+      
+      // If job is completed, fetch final findings and context
+      if (jobData.status === "completed" && jobData.status !== lastJobStatusRef.current) {
+        console.log("BackendIntegration", "fetchAIMessages: job completed, fetching findings and context");
+        setIsProcessing(false);
+        setJobStatus(jobData.status);
         lastJobStatusRef.current = jobData.status;
+        
         try {
+          setIsPDLoading(true);
+          setIsAELoading(true);
+          
           const findingsResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
           if (findingsResponse.data && findingsResponse.data.findings) {
             setFindings(findingsResponse.data);
+            
+            // Make sure to process the final progress tree
+            // Commenting this out to prevent duplicate progress tree messages
+            // await processProgressTreeResponse(findingsResponse.data, jobId);
           }
-          addAgentMessage("Compliance checking is completed successfully. Please review the finding generated.")
+          
+          // Add a small delay to ensure the animation is visible
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Turn off loading states after findings are loaded
+          setIsPDLoading(false);
+          setIsAELoading(false);
+          
+          // Fetch retrieved context data when job is completed
+          await fetchRetrievedContext(jobId);
+          
+          addAgentMessage("**Compliance checking is completed successfully! Please review the findings generated.**");
+          
           if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
             console.log("Final summary of All Agents activities : ", allActivitiesRef.current);
             await delay(2000);
-            addAgentMessage(
-              "",  // Empty message since we're just showing the tree
-              "progresstree",
-              {
-                // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
-                value: allActivitiesRef.current,
-                onChange: (updatedTree: TreeNode) => {
-                  setProgressTree(updatedTree);
-                },
-                progressTreeProps: {
-                  showBreadcrumbs: true,
-                  showMiniMap: true,
-                  showKeyboardNav: true,
-                  showQuickActions: true,
-                  initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
-                  animationDuration: 200
+            
+            // Create a properly formatted message for the progress tree
+            const progressTreeMessage = {
+              type: 'tool_ui',
+              tool: {
+                type: 'progresstree',
+                message: '',
+                options: {
+                  value: allActivitiesRef.current,
+                  progressTreeProps: {
+                    showBreadcrumbs: true,
+                    showMiniMap: true,
+                    showKeyboardNav: true,
+                    showQuickActions: true,
+                    initialExpandedNodes: ['0', '0.0'],// Expand first two levels by default
+                    animationDuration: 200
+                  }
                 }
               }
+            };
+            
+            // Add the message with the correct format
+            addAgentMessage(
+              JSON.stringify(progressTreeMessage),
+              undefined,
+              { messageId: `final-progress-tree-${Date.now()}` }
             );
           }
           
         } catch (error) {
           console.error("Error fetching findings:", error);
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
+          setIsPDLoading(false);
+          setIsAELoading(false);
         }
       }
       lastJobStatusRef.current = jobData.status;
@@ -973,7 +1024,7 @@ export const AuditPage: React.FC = () => {
       setJobId(job_id);
       // setJobStatus('queued');
       
-      addAgentMessage(`Compliance Review Process Initiated - Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Compliance Review Process Initiated - Job ID: **${job_id}**`, undefined, { agentPrefix: '', nodeName: '' });
       setIsProcessing(true);
       
       return job_id;
@@ -994,6 +1045,10 @@ export const AuditPage: React.FC = () => {
       ae: [],
       sgr: []
     });
+    // Reset the retrieved context state when starting a new job
+    setRetrievedContext(null);
+    setShowRetrievedContext(false);
+    lastRetrievedContextRef.current = null;
 
     try {
       await scheduleAnalysisJob();
@@ -1010,6 +1065,73 @@ export const AuditPage: React.FC = () => {
       setSelectedTreeNode(value);
     }
   };
+
+  const fetchRetrievedContext = async (jobId: string) => {
+    try {
+      // Only set loading at the beginning, not for every fetch
+      const response = await auditService.getRetrievedContext(jobId);
+      if (response.data) {
+        // Check if we have new context data
+        const newData = response.data;
+        const currentData = lastRetrievedContextRef.current;
+        
+        // Update state if we have new data or this is the first fetch
+        if (!currentData || JSON.stringify(newData) !== JSON.stringify(currentData)) {
+          // Only show loading when we have actual new data
+          setIsContextLoading(true);
+          
+          setRetrievedContext(newData);
+          lastRetrievedContextRef.current = newData;
+          
+          // If we have new context data and it has content, show it
+          if (Object.keys(newData).length > 0) {
+            setShowRetrievedContext(true);
+          }
+          
+          // Turn off loading after a short delay to show the indicator
+          setTimeout(() => {
+            setIsContextLoading(false);
+          }, 1500); // Show loading for 1.5 seconds
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching retrieved context:", error);
+      setIsContextLoading(false);
+    }
+  };
+
+  // Start polling for context data as soon as job is created
+  useEffect(() => {
+    if (jobId) {
+      // Start polling for retrieved context updates immediately
+      retrievedContextIntervalRef.current = setInterval(async () => {
+        await fetchRetrievedContext(jobId);
+      }, 2000); // Check every 2 seconds for more responsive updates
+      
+      return () => {
+        if (retrievedContextIntervalRef.current) {
+          clearInterval(retrievedContextIntervalRef.current);
+          retrievedContextIntervalRef.current = null;
+        }
+      };
+    }
+  }, [jobId]);
+
+  // Clean up polling when component unmounts or job completes
+  useEffect(() => {
+    if (jobStatus === 'completed' || jobStatus === 'failed') {
+      // Clear interval when job is done
+      if (retrievedContextIntervalRef.current) {
+        clearInterval(retrievedContextIntervalRef.current);
+        retrievedContextIntervalRef.current = null;
+      }
+      
+      // Fetch one final time to ensure we have the complete data
+      if (jobId) {
+        fetchRetrievedContext(jobId);
+      }
+    }
+  }, [jobStatus]);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -1086,9 +1208,12 @@ export const AuditPage: React.FC = () => {
                 isThinking={isProcessing && !awaitingForFeedbackRef.current}
               />
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="flex flex-col flex-1">
-                <div className="flex flex-col space-y-4 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800">Insights Panel</h2>
+                </div>
+                <div className="flex-1 overflow-hidden">
                   <FindingsTable 
                     findings={findings}
                     selectedTreeNode={selectedTreeNode}
@@ -1096,6 +1221,40 @@ export const AuditPage: React.FC = () => {
                     setSelectedFindingTab={setSelectedFindingTab}
                     expandedRows={expandedRows}
                     setExpandedRows={setExpandedRows}
+                    onRetrievedContextClick={() => retrievedContext && setIsRetrievedContextModalOpen(true)}
+                    hasRetrievedContext={!!retrievedContext}
+                    isPDLoading={isPDLoading}
+                    isAELoading={isAELoading}
+                    isContextLoading={isContextLoading}
+                    retrievedContextCount={
+                      retrievedContext ? 
+                      // Count all documents in the retrieved context
+                      Object.values(retrievedContext).reduce((total, section: any) => {
+                        // Count documents in PD section
+                        if (section && typeof section === 'object') {
+                          // For each activity section, count all documents with page_content and metadata
+                          const countDocuments = (obj: any): number => {
+                            if (!obj || typeof obj !== 'object') return 0;
+                            
+                            // If this is a document with page_content and metadata
+                            if (obj.page_content && obj.metadata) {
+                              return 1;
+                            }
+                            
+                            // If this is an array, sum the counts for each item
+                            if (Array.isArray(obj)) {
+                              return obj.reduce((sum, item) => sum + countDocuments(item), 0);
+                            }
+                            
+                            // Otherwise, sum the counts for all properties
+                            return Object.values(obj).reduce((sum, value) => sum + countDocuments(value), 0);
+                          };
+                          
+                          return total + countDocuments(section);
+                        }
+                        return total;
+                      }, 0) : 0
+                    }
                   />
                 </div>
               </div>
@@ -1108,13 +1267,81 @@ export const AuditPage: React.FC = () => {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <div> 2025 Clinical Trial Audit Assistant</div>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-gray-900">Privacy Policy</a>
-              <a href="#" className="hover:text-gray-900">Terms of Service</a>
-              <a href="#" className="hover:text-gray-900">Contact Support</a>
+              <a 
+                href="#" 
+                className="hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsPrivacyPolicyModalOpen(true);
+                }}
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="#" 
+                className="hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsTermsOfServiceModalOpen(true);
+                }}
+              >
+                Terms of Service
+              </a>
+              <a 
+                href="#" 
+                className="hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsContactSupportModalOpen(true);
+                }}
+              >
+                Contact Support
+              </a>
             </div>
           </div>
         </footer>
       </div>
+      
+      {/* Retrieved Context Modal */}
+      <RetrievedContextModal
+        isOpen={isRetrievedContextModalOpen}
+        onClose={() => setIsRetrievedContextModalOpen(false)}
+        data={retrievedContext}
+        onRefresh={async () => {
+          if (jobId) {
+            // Set loading state for the context
+            setIsContextLoading(true);
+            try {
+              await fetchRetrievedContext(jobId);
+              // Add a small delay to ensure the animation is visible
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+              console.error("Error refreshing context:", error);
+            } finally {
+              // Ensure loading state is turned off
+              setIsContextLoading(false);
+            }
+          }
+        }}
+      />
+      
+      {/* Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyPolicyModalOpen}
+        onClose={() => setIsPrivacyPolicyModalOpen(false)}
+      />
+      
+      {/* Terms of Service Modal */}
+      <TermsOfServiceModal
+        isOpen={isTermsOfServiceModalOpen}
+        onClose={() => setIsTermsOfServiceModalOpen(false)}
+      />
+      
+      {/* Contact Support Modal */}
+      <ContactSupportModal
+        isOpen={isContactSupportModalOpen}
+        onClose={() => setIsContactSupportModalOpen(false)}
+      />
     </div>
   );
 };

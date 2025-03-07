@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    image: auditcopilot.azurecr.io/web:v3_turing_demo
+    image: auditcopilot.azurecr.io/web:v2_turing_demo
     ports:
       - "8000:8000"
     depends_on:
