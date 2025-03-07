@@ -22,6 +22,56 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   const [updateCount, setUpdateCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Function to clean up subactivity values by extracting activity ID and removing hash values
+  const cleanSubactivityValue = (value: string): string => {
+    if (!value) return '';
+    
+    // Extract activity ID if present
+    const activityIdMatch = value.match(/<activity_id#([^>]+)>/);
+    const activityId = activityIdMatch ? activityIdMatch[1] : '';
+    
+    // Remove the activity ID tag, hash marks, and trim
+    const cleanedText = value
+      .replace(/<activity_id#[^>]+>/, '')
+      .replace(/###/, '')
+      .trim();
+    
+    // Return formatted string with activity ID if available
+    return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
+  };
+
+  // Function to filter metadata fields for spreadsheet-type documents
+  const shouldShowMetadataField = (key: string, metadata: any): boolean => {
+    // List of fields to hide for spreadsheet-type documents
+    const fieldsToHide = [
+      'file_directory',
+      'page_name',
+      'page_number',
+      'languages',
+      'filetype',
+      'category',
+      'element_id',
+      'last_modified'
+    ];
+    
+    // Check if this is a spreadsheet-type document
+    const isSpreadsheetDoc = metadata.filename && 
+      (metadata.filename.endsWith('.xlsx') || 
+       metadata.filename.endsWith('.xls') || 
+       metadata.filename.endsWith('.csv') ||
+       (metadata.filetype && 
+        (metadata.filetype.includes('excel') || 
+         metadata.filetype.includes('spreadsheet') || 
+         metadata.filetype.includes('csv'))));
+    
+    // If it's a spreadsheet document and the field is in the hide list, don't show it
+    if (isSpreadsheetDoc && fieldsToHide.includes(key)) {
+      return false;
+    }
+    
+    return true;
+  };
+
   // Custom CSS for styling HTML tables
   const tableStyles = `
     .html-table-container table {
@@ -327,35 +377,23 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                 </tr>
                               </thead>
                               <tbody>
-                                {/* Display activity if available */}
-                                {item.activity && (
-                                  <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                    <td className="px-4 py-3 align-top font-bold text-gray-700 border border-gray-200 whitespace-nowrap">
-                                      Activity
-                                    </td>
-                                    <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                      {item.activity}
-                                    </td>
-                                  </tr>
-                                )}
-                                
-                                {/* Display sub-activity if available */}
+                                {/* Display subActivity as Activity */}
                                 {item.subActivity && (
                                   <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                     <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                      Sub-activity
+                                      Activity
                                     </td>
                                     <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                      {item.subActivity}
+                                      {cleanSubactivityValue(item.subActivity)}
                                     </td>
                                   </tr>
                                 )}
                                 
-                                {/* Display question if available */}
+                                {/* Display question as Sub-activity */}
                                 {item.question && (
                                   <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                     <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                      Question
+                                      Sub-activity
                                     </td>
                                     <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
                                       {item.question}
@@ -366,6 +404,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                 {/* Display other metadata fields */}
                                 {Object.entries(item.metadata)
                                   .filter(([metaKey]) => metaKey !== 'text_as_html') // Exclude text_as_html from metadata table
+                                  .filter(([metaKey]) => shouldShowMetadataField(metaKey, item.metadata)) // Apply our custom filter
                                   .map(([metaKey, metaValue]) => (
                                   <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                     <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
