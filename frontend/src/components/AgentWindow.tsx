@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { User } from 'lucide-react';
+import { User, Bot } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ToolUI } from './ToolUI';
 import { MessageInput } from './agent/MessageInput';
@@ -182,8 +182,8 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         <div className="p-4 space-y-6">
           {(!messages || messages.length === 0) && showGreeting && (
             <div className="flex items-start space-x-2">
-              <Avatar className="h-8 w-8 bg-gray-100">
-                <AvatarFallback className="text-gray-700">
+              <Avatar className="h-8 w-8 bg-blue-100 border border-blue-300 shadow-sm">
+                <AvatarFallback className="text-blue-700">
                   <User className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
@@ -219,9 +219,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           ))}
           {isThinking && (
             <div className="flex items-start space-x-2">
-              <Avatar className="h-8 w-8 bg-gray-100">
-                <AvatarFallback className="text-gray-700">
-                  AI
+              <Avatar className="h-8 w-8 bg-emerald-100 border border-emerald-200">
+                <AvatarFallback className="text-emerald-700">
+                  <Bot className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">

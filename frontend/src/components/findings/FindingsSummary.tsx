@@ -71,12 +71,20 @@ interface FindingsSummaryProps {
   };
   onRetrievedContextClick?: () => void;
   hasRetrievedContext?: boolean;
+  retrievedContextCount?: number;
+  isPDLoading?: boolean;
+  isAELoading?: boolean;
+  isContextLoading?: boolean;
 }
 
 export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
   findings = {}, 
   onRetrievedContextClick,
-  hasRetrievedContext = false
+  hasRetrievedContext = false,
+  retrievedContextCount = 0,
+  isPDLoading = false,
+  isAELoading = false,
+  isContextLoading = false
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -201,11 +209,15 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
             onClick={pdFindings > 0 ? () => handleFindingsClick('pd') : undefined}
           >
             <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center mr-2">
-              <AlertTriangle size={16} className="text-yellow-500" />
+              {isPDLoading ? (
+                <div className="animate-spin h-4 w-4 border-2 border-yellow-500 rounded-full border-t-transparent"></div>
+              ) : (
+                <AlertTriangle size={16} className="text-yellow-500" />
+              )}
             </div>
             <div>
               <div className="font-medium text-gray-700">Protocol Deviations</div>
-              <div className="text-gray-500">{pdFindings} findings</div>
+              <div className="text-gray-500">{isPDLoading ? 'Fetching...' : `${pdFindings} ${pdFindings === 1 ? 'finding' : 'findings'}`}</div>
             </div>
           </div>
           
@@ -214,11 +226,15 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
             onClick={aeFindings > 0 ? () => handleFindingsClick('ae') : undefined}
           >
             <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-2">
-              <AlertCircle size={16} className="text-orange-500" />
+              {isAELoading ? (
+                <div className="animate-spin h-4 w-4 border-2 border-orange-500 rounded-full border-t-transparent"></div>
+              ) : (
+                <AlertCircle size={16} className="text-orange-500" />
+              )}
             </div>
             <div>
               <div className="font-medium text-gray-700">Adverse Events</div>
-              <div className="text-gray-500">{aeFindings} findings</div>
+              <div className="text-gray-500">{isAELoading ? 'Fetching...' : `${aeFindings} ${aeFindings === 1 ? 'finding' : 'findings'}`}</div>
             </div>
           </div>
           
@@ -227,8 +243,17 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               className={`flex items-center ${hasRetrievedContext ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
               onClick={hasRetrievedContext ? onRetrievedContextClick : undefined}
             >
-              <Database className="w-4 h-4 mr-2 text-blue-500" />
-              <span className="text-gray-600">Retrieved Context</span>
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                {isContextLoading ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                ) : (
+                  <Database size={16} className="text-blue-500" />
+                )}
+              </div>
+              <div>
+                <div className="font-medium text-gray-700">Retrieved Context</div>
+                <div className="text-gray-500">{isContextLoading ? 'Fetching...' : `${retrievedContextCount} ${retrievedContextCount === 1 ? 'document' : 'documents'}`}</div>
+              </div>
             </div>
           )}
         </div>

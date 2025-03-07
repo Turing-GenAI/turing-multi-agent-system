@@ -46,6 +46,9 @@ export const AuditPage: React.FC = () => {
   const [selectedAgentTab, setSelectedAgentTab] = useState<AgentType>('trial_master');
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [isPDLoading, setIsPDLoading] = useState(false);
+  const [isAELoading, setIsAELoading] = useState(false);
+  const [isContextLoading, setIsContextLoading] = useState(false);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
   const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
@@ -717,7 +720,6 @@ export const AuditPage: React.FC = () => {
 
       setJobStatus(jobData.status);
       
-
       // Check if status is not completed/error OR if it's first fetch OR if status has changed from last check
       if ((jobData.status !== "completed" && jobData.status !== "error")) {
         withFindings = true;
@@ -761,45 +763,77 @@ export const AuditPage: React.FC = () => {
         setIsProcessing(false);
       }
       console.log("BackendIntegration", "fetchAIMessages: before job (jobData.status === completed) ", jobData.status)
-      // If job is completed and withFindings is true, fetch findings
-      if (jobData.status === "completed") {
-        setJobStatus(jobData.status)
+      
+      // If job is completed, fetch final findings and context
+      if (jobData.status === "completed" && jobData.status !== lastJobStatusRef.current) {
+        console.log("BackendIntegration", "fetchAIMessages: job completed, fetching findings and context");
+        setIsProcessing(false);
+        setJobStatus(jobData.status);
         lastJobStatusRef.current = jobData.status;
+        
         try {
+          setIsPDLoading(true);
+          setIsAELoading(true);
+          
           const findingsResponse = await auditService.getAIMessages(jobId, true, lastAIMessagePositionRef.current);
           if (findingsResponse.data && findingsResponse.data.findings) {
             setFindings(findingsResponse.data);
+            
+            // Make sure to process the final progress tree
+            // await processProgressTreeResponse(findingsResponse.data, jobId);
+            // Commenting this out to prevent duplicate progress tree messages
+            // await processProgressTreeResponse(findingsResponse.data, jobId);
           }
+          
+          // Add a small delay to ensure the animation is visible
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Turn off loading states after findings are loaded
+          setIsPDLoading(false);
+          setIsAELoading(false);
+          
           // Fetch retrieved context data when job is completed
           await fetchRetrievedContext(jobId);
-          addAgentMessage("**Compliance checking is completed successfully! Please review the findings generated.**")
+          
+          addAgentMessage("**Compliance checking is completed successfully! Please review the findings generated.**");
+          
           if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
             console.log("Final summary of All Agents activities : ", allActivitiesRef.current);
             await delay(2000);
-            addAgentMessage(
-              "",  // Empty message since we're just showing the tree
-              "progresstree",
-              {
-                // messageId: `progress-tree-${jobId}`,  // Use jobId to make unique identifier
-                value: allActivitiesRef.current,
-                onChange: (updatedTree: TreeNode) => {
-                  setProgressTree(updatedTree);
-                },
-                progressTreeProps: {
-                  showBreadcrumbs: true,
-                  showMiniMap: true,
-                  showKeyboardNav: true,
-                  showQuickActions: true,
-                  initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
-                  animationDuration: 200
+            
+            // Create a properly formatted message for the progress tree
+            const progressTreeMessage = {
+              type: 'tool_ui',
+              tool: {
+                type: 'progresstree',
+                message: '',
+                options: {
+                  value: allActivitiesRef.current,
+                  progressTreeProps: {
+                    showBreadcrumbs: true,
+                    showMiniMap: true,
+                    showKeyboardNav: true,
+                    showQuickActions: true,
+                    initialExpandedNodes: ['0', '0.0'],// Expand first two levels by default
+                    animationDuration: 200
+                  }
                 }
               }
+            };
+            
+            // Add the message with the correct format
+            addAgentMessage(
+              JSON.stringify(progressTreeMessage),
+              undefined,
+              { messageId: `final-progress-tree-${Date.now()}` }
             );
           }
           
         } catch (error) {
           console.error("Error fetching findings:", error);
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });
+          setIsPDLoading(false);
+          setIsAELoading(false);
         }
       }
       lastJobStatusRef.current = jobData.status;
@@ -991,7 +1025,7 @@ export const AuditPage: React.FC = () => {
       setJobId(job_id);
       // setJobStatus('queued');
       
-      addAgentMessage(`Compliance Review Process Initiated - Job ID: ${job_id}`, undefined, { agentPrefix: '', nodeName: '' });
+      addAgentMessage(`Compliance Review Process Initiated - Job ID: **${job_id}**`, undefined, { agentPrefix: '', nodeName: '' });
       setIsProcessing(true);
       
       return job_id;
@@ -1035,6 +1069,7 @@ export const AuditPage: React.FC = () => {
 
   const fetchRetrievedContext = async (jobId: string) => {
     try {
+      // Only set loading at the beginning, not for every fetch
       const response = await auditService.getRetrievedContext(jobId);
       if (response.data) {
         // Check if we have new context data
@@ -1043,6 +1078,9 @@ export const AuditPage: React.FC = () => {
         
         // Update state if we have new data or this is the first fetch
         if (!currentData || JSON.stringify(newData) !== JSON.stringify(currentData)) {
+          // Only show loading when we have actual new data
+          setIsContextLoading(true);
+          
           setRetrievedContext(newData);
           lastRetrievedContextRef.current = newData;
           
@@ -1050,10 +1088,16 @@ export const AuditPage: React.FC = () => {
           if (Object.keys(newData).length > 0) {
             setShowRetrievedContext(true);
           }
+          
+          // Turn off loading after a short delay to show the indicator
+          setTimeout(() => {
+            setIsContextLoading(false);
+          }, 1500); // Show loading for 1.5 seconds
         }
       }
     } catch (error) {
       console.error("Error fetching retrieved context:", error);
+      setIsContextLoading(false);
     }
   };
 
@@ -1180,6 +1224,38 @@ export const AuditPage: React.FC = () => {
                     setExpandedRows={setExpandedRows}
                     onRetrievedContextClick={() => retrievedContext && setIsRetrievedContextModalOpen(true)}
                     hasRetrievedContext={!!retrievedContext}
+                    isPDLoading={isPDLoading}
+                    isAELoading={isAELoading}
+                    isContextLoading={isContextLoading}
+                    retrievedContextCount={
+                      retrievedContext ? 
+                      // Count all documents in the retrieved context
+                      Object.values(retrievedContext).reduce((total, section: any) => {
+                        // Count documents in PD section
+                        if (section && typeof section === 'object') {
+                          // For each activity section, count all documents with page_content and metadata
+                          const countDocuments = (obj: any): number => {
+                            if (!obj || typeof obj !== 'object') return 0;
+                            
+                            // If this is a document with page_content and metadata
+                            if (obj.page_content && obj.metadata) {
+                              return 1;
+                            }
+                            
+                            // If this is an array, sum the counts for each item
+                            if (Array.isArray(obj)) {
+                              return obj.reduce((sum, item) => sum + countDocuments(item), 0);
+                            }
+                            
+                            // Otherwise, sum the counts for all properties
+                            return Object.values(obj).reduce((sum, value) => sum + countDocuments(value), 0);
+                          };
+                          
+                          return total + countDocuments(section);
+                        }
+                        return total;
+                      }, 0) : 0
+                    }
                   />
                 </div>
               </div>
@@ -1229,9 +1305,25 @@ export const AuditPage: React.FC = () => {
       
       {/* Retrieved Context Modal */}
       <RetrievedContextModal
-        data={retrievedContext}
         isOpen={isRetrievedContextModalOpen}
         onClose={() => setIsRetrievedContextModalOpen(false)}
+        data={retrievedContext}
+        onRefresh={async () => {
+          if (jobId) {
+            // Set loading state for the context
+            setIsContextLoading(true);
+            try {
+              await fetchRetrievedContext(jobId);
+              // Add a small delay to ensure the animation is visible
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+              console.error("Error refreshing context:", error);
+            } finally {
+              // Ensure loading state is turned off
+              setIsContextLoading(false);
+            }
+          }
+        }}
       />
       
       {/* Privacy Policy Modal */}

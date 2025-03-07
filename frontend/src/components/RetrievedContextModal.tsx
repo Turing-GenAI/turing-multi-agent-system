@@ -6,12 +6,14 @@ interface RetrievedContextModalProps {
   data: RetrievedContextResponse | null;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
 export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({ 
   data, 
   isOpen, 
-  onClose 
+  onClose,
+  onRefresh
 }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -106,11 +108,17 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
     });
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      await onRefresh();
+    } catch (error) {
+      console.error("Error refreshing context data:", error);
+    } finally {
       setIsRefreshing(false);
-    }, 2000);
+    }
   };
 
   // Helper function to extract content, metadata, and HTML tables from nested structure
@@ -454,7 +462,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
             className="flex items-center space-x-1 px-3 py-1.5 bg-white text-blue-500 rounded-md border border-blue-100 hover:bg-blue-50 transition-colors shadow-sm"
           >
             <RefreshCw size={14} className={`${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+            <span>{isRefreshing ? 'Fetching...' : 'Refresh Data'}</span>
           </button>
         </div>
       </div>

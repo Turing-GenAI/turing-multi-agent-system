@@ -25,6 +25,10 @@ interface FindingsTableProps {
   selectedTreeNode: TreeNode | null;
   onRetrievedContextClick?: () => void;
   hasRetrievedContext?: boolean;
+  retrievedContextCount?: number;
+  isPDLoading?: boolean;
+  isAELoading?: boolean;
+  isContextLoading?: boolean;
 }
 
 export const FindingsTable: React.FC<FindingsTableProps> = ({
@@ -36,6 +40,10 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
   selectedTreeNode,
   onRetrievedContextClick,
   hasRetrievedContext = false,
+  retrievedContextCount = 0,
+  isPDLoading = false,
+  isAELoading = false,
+  isContextLoading = false,
 }) => {
   const toggleRow = (id: string) => {
     setExpandedRows(
@@ -64,6 +72,10 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
               findings={findings} 
               onRetrievedContextClick={onRetrievedContextClick}
               hasRetrievedContext={hasRetrievedContext}
+              retrievedContextCount={retrievedContextCount}
+              isPDLoading={isPDLoading}
+              isAELoading={isAELoading}
+              isContextLoading={isContextLoading}
             />
           </div>
           {selectedTreeNode && (
