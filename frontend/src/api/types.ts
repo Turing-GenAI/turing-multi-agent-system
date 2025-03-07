@@ -77,3 +77,35 @@ export interface TreeNode {
 export interface AgentProgressResponse {
   activities: TreeNode[];
 }
+
+/**
+ * Interface for the retrieved context data from the get_retrieved_context endpoint
+ */
+export interface RetrievedContextResponse {
+  [key: string]: {
+    [key: string]: {
+      [key: string]: {
+        [key: string]: {
+          context_dict_key: {
+            [key: string]: {
+              metadata: {
+                source: string;
+                file_directory?: string;
+                filename?: string;
+                last_modified?: string;
+                page_name?: string;
+                page_number?: number;
+                text_as_html?: string;
+                page?: number;
+                languages?: string[];
+                filetype?: string;
+                category?: string;
+              };
+              page_content: string;
+            }
+          }
+        }
+      }
+    }
+  }
+}

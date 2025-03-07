@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, AlertCircle, Clock, FileCheck, FileWarning, BarChart2 } from 'lucide-react';
 import { StatCard } from '../components/dashboard/StatCard';
 import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { ActionItems } from '../components/dashboard/ActionItems';
@@ -85,26 +85,34 @@ export const Dashboard: React.FC = () => {
         <StatCard
           title="Total Deviations"
           value={mockStats.totalDeviations}
-          icon={AlertTriangle}
+          icon={BarChart2}
           trend={{ value: 12, isPositive: false }}
+          bgColor="bg-blue-50"
+          iconColor="text-blue-600"
         />
         <StatCard
-          title="Open Actions"
+          title="Open Alerts"
           value={mockStats.openActions}
-          icon={Clock}
+          icon={AlertCircle}
           trend={{ value: 5, isPositive: true }}
+          bgColor="bg-yellow-50"
+          iconColor="text-yellow-600"
         />
         <StatCard
           title="Critical Findings"
           value={mockStats.criticalFindings}
           icon={AlertCircle}
           trend={{ value: 2, isPositive: false }}
+          bgColor="bg-red-50"
+          iconColor="text-red-600"
         />
         <StatCard
-          title="Completed Actions"
+          title="Completed Alerts"
           value={mockStats.completedActions}
-          icon={CheckCircle}
+          icon={CheckCircle2}
           trend={{ value: 8, isPositive: true }}
+          bgColor="bg-purple-50"
+          iconColor="text-purple-600"
         />
       </div>
 

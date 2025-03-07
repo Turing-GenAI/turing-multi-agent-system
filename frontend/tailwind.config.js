@@ -50,6 +50,36 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        slideIn: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        slideDown: {
+          '0%': { maxHeight: '0', opacity: '0' },
+          '100%': { maxHeight: '1000px', opacity: '1' }
+        },
+        pulse: {
+          '0%, 100%': { 
+            opacity: '1',
+            boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.7)'
+          },
+          '50%': { 
+            opacity: '0.8',
+            boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.3)'
+          }
+        }
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.3s ease-in-out',
+        slideIn: 'slideIn 0.3s ease-out',
+        slideDown: 'slideDown 0.3s ease-out',
+        pulse: 'pulse 1.5s ease-in-out infinite'
+      }
     },
   },
   plugins: [],

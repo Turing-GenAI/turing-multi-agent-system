@@ -443,3 +443,26 @@ async def add_feedback_to_finding(job_id: str,  feedback: FeedbackInput, filenam
     # except Exception as e:
     #     logger.error(f"Error processing feedback: {str(e)}")
     #     raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/get_retrieved_context/{job_id}")
+async def get_retrieved_context(job_id: str):
+    """
+    Endpoint to retrieve the contents of the retrieved context JSON file based on job_id.
+    """
+    # Construct the file path based on the job_id
+    local_path = os.path.join(agent_outputs_path, "agent_scratch_pads")
+    filename = f"{job_id}_retrieved_context_dict.json"
+    json_file_path = os.path.join(local_path, filename)
+
+    # Check if the file exists
+    if not os.path.exists(json_file_path):
+        raise HTTPException(status_code=404, detail="JSON file not found")
+
+    # Read the contents of the JSON file
+    try:
+        with open(json_file_path, "r") as file:
+            retrieved_context = json.load(file)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading JSON file: {str(e)}")
+
+    return retrieved_context

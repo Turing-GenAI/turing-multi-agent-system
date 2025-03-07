@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { User } from 'lucide-react';
+import { User, Bot } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ToolUI } from './ToolUI';
 import { MessageInput } from './agent/MessageInput';
@@ -109,7 +109,11 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           setCurrentStep('trial');
           const trialCount = trials?.length || 0;
           const trialText = trialCount === 1 ? 'trial' : 'trials';
-          addAgentMessage(`I've identified ${trialCount} active ${trialText} in the system. Which one would you like to analyze?`, 'trial');
+          addAgentMessage(
+            `I've identified ${trialCount} active ${trialText} in the system. Which one would you like to analyze?`, 
+            'trial',
+            { messageId: 'trial-selection-message' }
+          );
         } else if (currentStep === 'confirm' && !isAnalysisStarted) {
           setIsAnalysisStarted(true);
           handleRunClick();
@@ -124,13 +128,18 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           siteCount === 1
             ? `I've located 1 clinical site associated with this trial. Would you like to review it?`
             : `I've located ${siteCount} clinical sites associated with this trial. Which site would you like to review?`,
-          'site'
+          'site',
+          { messageId: 'site-selection-message' }
         );
         break;
       case 'site':
         setSelectedSite(value);
         setCurrentStep('date');
-        addAgentMessage(`Please specify the audit review period for the compliance preparedness assessment:`, 'date');
+        addAgentMessage(
+          `Please specify the audit review period for the compliance preparedness assessment:`, 
+          'date',
+          { messageId: 'date-selection-message' }
+        );
         break;
       case 'date':
         setDateRange(value);
@@ -173,9 +182,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         <div className="p-4 space-y-6">
           {(!messages || messages.length === 0) && showGreeting && (
             <div className="flex items-start space-x-2">
-              <Avatar className="h-8 w-8 bg-gray-100">
-                <AvatarFallback className="text-gray-700">
-                  <User className="h-4 w-4" />
+              <Avatar className="h-8 w-8 bg-emerald-100 border border-emerald-200 shadow-sm">
+                <AvatarFallback className="text-emerald-700">
+                  <Bot className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">
@@ -210,9 +219,9 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           ))}
           {isThinking && (
             <div className="flex items-start space-x-2">
-              <Avatar className="h-8 w-8 bg-gray-100">
-                <AvatarFallback className="text-gray-700">
-                  AI
+              <Avatar className="h-8 w-8 bg-emerald-100 border border-emerald-200">
+                <AvatarFallback className="text-emerald-700">
+                  <Bot className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-gray-900">
