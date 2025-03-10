@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 
 interface Alert {
   trialId: string;
-  status: 'In Progress' | 'Completed' | 'On Hold';
+  status: 'In Progress' | 'Completed';
   region: string;
   country: string;
   pdAlerts: number;
@@ -18,6 +18,13 @@ interface AlertsCardProps {
 }
 
 export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
+  // Sort alerts so "In Progress" trials appear at the top
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    if (a.status === 'In Progress' && b.status !== 'In Progress') return -1;
+    if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
+    return 0;
+  });
+
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="bg-white rounded-lg shadow-xl w-[1200px] max-h-[80vh] overflow-hidden flex flex-col animate-slideIn">
@@ -46,14 +53,12 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {alerts.map((alert) => (
+              {sortedAlerts.map((alert) => (
                 <tr key={alert.trialId} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{alert.trialId}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      alert.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                      alert.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                      'bg-yellow-100 text-yellow-800'
+                      alert.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                     }`}>
                       {alert.status}
                     </span>

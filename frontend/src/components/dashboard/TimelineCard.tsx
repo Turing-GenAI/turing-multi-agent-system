@@ -181,7 +181,7 @@ export const TimelineCard: React.FC = () => {
       'Asia Pacific': ['Japan', 'China', 'Australia', 'South Korea'],
       'Latin America': ['Brazil', 'Mexico', 'Argentina']
     };
-    const statuses: ('In Progress' | 'Completed' | 'On Hold')[] = ['In Progress', 'Completed', 'On Hold'];
+    const statuses: ('In Progress' | 'Completed')[] = ['In Progress', 'Completed'];
 
     const newAlerts = Array.from({ length: 50 }, (_, i) => {
       const region = regions[Math.floor(Math.random() * regions.length)];
@@ -287,7 +287,7 @@ export const TimelineCard: React.FC = () => {
 
       {showAlertsModal && (
         <AlertsCard 
-          alerts={alerts} 
+          alerts={alerts.filter(alert => alert.status === 'In Progress' || alert.status === 'Completed')} 
           onClose={() => setShowAlertsModal(false)} 
         />
       )}
