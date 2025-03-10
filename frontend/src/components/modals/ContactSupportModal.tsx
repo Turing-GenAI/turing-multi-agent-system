@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { X } from 'lucide-react';
 
 interface ContactSupportModalProps {
@@ -13,6 +13,7 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -37,6 +38,13 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
     }
   }, [isOpen]);
 
+  // Handle click outside to close modal
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
   const handleSubmit = () => {
     // Here you would typically send the form data to your backend
     console.log('Support request submitted:', { name, email, message });
@@ -49,8 +57,14 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      onClick={handleOverlayClick}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white rounded-lg shadow-xl max-w-md w-full"
+      >
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Contact Support</h2>
