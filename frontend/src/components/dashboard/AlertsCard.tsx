@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { PDAlertsDialog } from './PDAlertsDialog';
+import { AEAlertsDialog } from './AEAlertsDialog';
 
 interface Alert {
   trialId: string;
@@ -18,12 +20,31 @@ interface AlertsCardProps {
 }
 
 export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
+  const [selectedTrialForPD, setSelectedTrialForPD] = useState<string | null>(null);
+  const [selectedTrialForAE, setSelectedTrialForAE] = useState<string | null>(null);
+  
   // Sort alerts so "In Progress" trials appear at the top
   const sortedAlerts = [...alerts].sort((a, b) => {
     if (a.status === 'In Progress' && b.status !== 'In Progress') return -1;
     if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
     return 0;
   });
+
+  const handlePDAlertClick = (trialId: string) => {
+    setSelectedTrialForPD(trialId);
+  };
+
+  const closePDDialog = () => {
+    setSelectedTrialForPD(null);
+  };
+
+  const handleAEAlertClick = (trialId: string) => {
+    setSelectedTrialForAE(trialId);
+  };
+
+  const closeAEDialog = () => {
+    setSelectedTrialForAE(null);
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
@@ -65,8 +86,30 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.region}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.country}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.pdAlerts}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.aeAlerts}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {alert.status === 'Completed' && alert.pdAlerts > 0 ? (
+                      <button 
+                        onClick={() => handlePDAlertClick(alert.trialId)}
+                        className="text-yellow-600 font-medium hover:text-yellow-800 hover:underline focus:outline-none"
+                      >
+                        {alert.pdAlerts}
+                      </button>
+                    ) : (
+                      alert.pdAlerts
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {alert.status === 'Completed' && alert.aeAlerts > 0 ? (
+                      <button 
+                        onClick={() => handleAEAlertClick(alert.trialId)}
+                        className="text-orange-600 font-medium hover:text-orange-800 hover:underline focus:outline-none"
+                      >
+                        {alert.aeAlerts}
+                      </button>
+                    ) : (
+                      alert.aeAlerts
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.cssAlerts}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.sgrAlerts}</td>
                 </tr>
@@ -75,6 +118,20 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
           </table>
         </div>
       </div>
+      
+      {selectedTrialForPD && (
+        <PDAlertsDialog
+          trialId={selectedTrialForPD}
+          onClose={closePDDialog}
+        />
+      )}
+
+      {selectedTrialForAE && (
+        <AEAlertsDialog
+          trialId={selectedTrialForAE}
+          onClose={closeAEDialog}
+        />
+      )}
     </div>
   );
 };
