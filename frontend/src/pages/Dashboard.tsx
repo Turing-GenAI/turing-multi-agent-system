@@ -68,53 +68,61 @@ const mockActions = [
 ];
 
 export const Dashboard: React.FC = () => {
+  // Set to false to temporarily hide the overview section
+  const showOverview = false;
+  
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
-        <Link 
-          to="/audit" 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-        >
-          Audit Trial
-        </Link>
-      </div>
+      {/* Overview section - temporarily hidden via conditional rendering */}
+      {showOverview && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+            {/* <Link 
+              to="/audit" 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+            >
+              Audit Trial
+            </Link> */}
+          </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          title="Total Deviations"
-          value={mockStats.totalDeviations}
-          icon={BarChart2}
-          trend={{ value: 12, isPositive: false }}
-          bgColor="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          title="Open Alerts"
-          value={mockStats.openActions}
-          icon={AlertCircle}
-          trend={{ value: 5, isPositive: true }}
-          bgColor="bg-yellow-50"
-          iconColor="text-yellow-600"
-        />
-        <StatCard
-          title="Critical Findings"
-          value={mockStats.criticalFindings}
-          icon={AlertCircle}
-          trend={{ value: 2, isPositive: false }}
-          bgColor="bg-red-50"
-          iconColor="text-red-600"
-        />
-        <StatCard
-          title="Completed Alerts"
-          value={mockStats.completedActions}
-          icon={CheckCircle2}
-          trend={{ value: 8, isPositive: true }}
-          bgColor="bg-purple-50"
-          iconColor="text-purple-600"
-        />
-      </div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <StatCard
+              title="Total Deviations"
+              value={mockStats.totalDeviations}
+              icon={BarChart2}
+              trend={{ value: 12, isPositive: false }}
+              bgColor="bg-blue-50"
+              iconColor="text-blue-600"
+            />
+            <StatCard
+              title="Open Alerts"
+              value={mockStats.openActions}
+              icon={AlertCircle}
+              trend={{ value: 5, isPositive: true }}
+              bgColor="bg-yellow-50"
+              iconColor="text-yellow-600"
+            />
+            <StatCard
+              title="Critical Findings"
+              value={mockStats.criticalFindings}
+              icon={AlertCircle}
+              trend={{ value: 2, isPositive: false }}
+              bgColor="bg-red-50"
+              iconColor="text-red-600"
+            />
+            <StatCard
+              title="Completed Alerts"
+              value={mockStats.completedActions}
+              icon={CheckCircle2}
+              trend={{ value: 8, isPositive: true }}
+              bgColor="bg-purple-50"
+              iconColor="text-purple-600"
+            />
+          </div>
+        </>
+      )}
 
       {/* Clinical Trials Timeline */}
       <div className="mb-6">

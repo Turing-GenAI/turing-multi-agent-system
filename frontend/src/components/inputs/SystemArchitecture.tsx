@@ -905,9 +905,12 @@ export const SystemArchitecture: React.FC = () => {
   }, [reactFlowInstance]);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">System Architecture Visualization</h1>
-      <div className="border rounded-lg shadow-lg" style={{ height: '85vh' }}>
+    <div className="p-6 bg-gray-50">
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">System Architecture Visualization</h1>
+        <p className="text-gray-600 mt-2">Interactive diagram showing the components and data flow of the Turing Multi-Agent System</p>
+      </div>
+      <div className="border rounded-lg shadow-lg bg-white" style={{ height: '80vh' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -997,9 +1000,26 @@ export const SystemArchitecture: React.FC = () => {
           />
           <Background color="#f8f8f8" gap={16} />
           <Panel position="top-right">
-            <div className="bg-white p-2 rounded shadow">
-              <h3 className="font-bold text-sm">System Architecture</h3>
-              <p className="text-xs">Hover over nodes to see details</p>
+            <div className="bg-white p-3 rounded shadow-md border border-gray-200">
+              <h3 className="font-bold text-sm text-gray-800 mb-2">Legend</h3>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded mr-2"></div>
+                  <span className="text-xs text-gray-700">User Interface</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-green-100 border border-green-300 rounded mr-2"></div>
+                  <span className="text-xs text-gray-700">Agent System</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded mr-2"></div>
+                  <span className="text-xs text-gray-700">Data Storage</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded mr-2"></div>
+                  <span className="text-xs text-gray-700">External Systems</span>
+                </div>
+              </div>
             </div>
           </Panel>
         </ReactFlow>

@@ -68,9 +68,9 @@ const UserInputs: React.FC = () => {
   };
 
   return (
-    <div className="bg-white flex flex-col h-full">
+    <div className="bg-gray-50 flex flex-col h-full">
       {/* Horizontal Tab Navigation */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 bg-white shadow-sm">
         <div className="flex items-center px-4">
           <nav className="flex flex-1 space-x-1 overflow-x-auto py-3" aria-label="Tabs">
             <button
@@ -90,7 +90,7 @@ const UserInputs: React.FC = () => {
               onClick={() => setActiveSection('validation')}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeSection === 'validation'
-                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                  ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
@@ -103,7 +103,7 @@ const UserInputs: React.FC = () => {
               onClick={() => setActiveSection('parameters')}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeSection === 'parameters'
-                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                  ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
@@ -117,7 +117,7 @@ const UserInputs: React.FC = () => {
               onClick={() => setActiveSection('history')}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeSection === 'history'
-                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                  ? 'bg-yellow-50 text-yellow-700 border-b-2 border-yellow-500'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
@@ -178,17 +178,10 @@ const UserInputs: React.FC = () => {
             </div>
             <div className="p-4">
               <ConfigureActivityList 
-                onSave={handleSaveActivities} 
+                savedActivities={savedActivities}
+                onSave={handleSaveActivities}
                 onChange={handleActivitiesChanged}
               />
-            </div>
-            <div className="flex justify-end p-4 border-t">
-              <button 
-                onClick={closeActivityModal}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors mr-2"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

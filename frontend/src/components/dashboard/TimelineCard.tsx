@@ -9,34 +9,31 @@ interface TimelinePoint {
   trialsAudited: number;
   openAlerts: number;
   completedAlerts: number;
+  isLive?: boolean;
 }
 
 export const TimelineCard: React.FC = () => {
-  const [q3TrialsAudited, setQ3TrialsAudited] = useState(1);
-  const [q3OpenAlerts, setQ3OpenAlerts] = useState(1);
+  const [q4TrialsAudited, setQ4TrialsAudited] = useState(30891);
+  const [q4OpenAlerts, setQ4OpenAlerts] = useState(162);
   const [showTrialsModal, setShowTrialsModal] = useState(false);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [trials, setTrials] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
 
   useEffect(() => {
-    // Start trials audited counter
-    const trialsInterval = setInterval(() => {
-      setQ3TrialsAudited(prev => prev < 30891 ? prev + 100 : prev);
-    }, 100);
-
-    // Start open alerts counter with a 6-second delay
-    const openAlertsTimeout = setTimeout(() => {
-      const alertsInterval = setInterval(() => {
-        setQ3OpenAlerts(prev => prev < 162 ? prev + 1 : prev);
-      }, 100);
-
-      return () => clearInterval(alertsInterval);
-    }, 6000);
+    // Update trials audited and open alerts every 5 seconds for Q1 2025
+    const updateInterval = setInterval(() => {
+      // Random increment between 1-3 for trials audited
+      const trialsIncrement = Math.floor(Math.random() * 3) + 1;
+      setQ4TrialsAudited(prev => prev + trialsIncrement);
+      
+      // Random increment between 1-10 for open alerts
+      const alertsIncrement = Math.floor(Math.random() * 10) + 1;
+      setQ4OpenAlerts(prev => prev + alertsIncrement);
+    }, 5000);
 
     return () => {
-      clearInterval(trialsInterval);
-      clearTimeout(openAlertsTimeout);
+      clearInterval(updateInterval);
     };
   }, []);
 
@@ -66,30 +63,38 @@ export const TimelineCard: React.FC = () => {
 
   const timelineData: TimelinePoint[] = [
     {
-      quarter: 'Q1 2024',
+      quarter: 'Q2 2024',
       ongoingTrials: 30542,
       trialsAudited: 30542,
       openAlerts: 14,
       completedAlerts: 120342
     },
     {
-      quarter: 'Q2 2024',
+      quarter: 'Q3 2024',
       ongoingTrials: 30123,
       trialsAudited: 30123,
       openAlerts: 162,
       completedAlerts: 100322
     },
     {
-      quarter: 'Q3 2024',
+      quarter: 'Q4 2024',
       ongoingTrials: 30891,
-      trialsAudited: q3TrialsAudited,
-      openAlerts: q3OpenAlerts,
-      completedAlerts: 0
+      trialsAudited: 30891,
+      openAlerts: 162,
+      completedAlerts: 80123
+    },
+    {
+      quarter: 'Q1 2025 (Till Date)',
+      ongoingTrials: 31000,
+      trialsAudited: q4TrialsAudited,
+      openAlerts: q4OpenAlerts,
+      completedAlerts: 20000,
+      isLive: true
     }
   ];
 
   const handleTrialsClick = () => {
-    const currentTrialsAudited = q3TrialsAudited;
+    const currentTrialsAudited = q4TrialsAudited;
     
     // Generate trials with decreasing numbers
     const liveTrials = Array.from({ length: 25 }, (_, i) => ({
@@ -143,7 +148,7 @@ export const TimelineCard: React.FC = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-lg font-semibold mb-4">Clinical Trials Timeline</h2>
+      {/* <h2 className="text-lg font-semibold mb-4">Clinical Trials Timeline</h2> */}
       
       <div className="relative px-8">
         {/* Timeline line */}
@@ -170,9 +175,15 @@ export const TimelineCard: React.FC = () => {
                   </div>
 
                   <div 
-                    className="bg-green-50 p-4 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
+                    className={`bg-green-50 p-4 rounded-lg cursor-pointer hover:bg-green-100 transition-colors ${point.isLive ? 'relative overflow-hidden' : ''}`}
                     onClick={handleTrialsClick}
                   >
+                    {point.isLive && (
+                      <div className="absolute top-0 right-0 w-3 h-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <FileCheck className="text-green-600 w-5 h-5" />
                       <span className="text-sm font-medium text-green-600">Trials Audited</span>
@@ -181,9 +192,15 @@ export const TimelineCard: React.FC = () => {
                   </div>
 
                   <div 
-                    className="bg-yellow-50 p-4 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors"
+                    className={`bg-yellow-50 p-4 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors ${point.isLive ? 'relative overflow-hidden' : ''}`}
                     onClick={handleAlertsClick}
                   >
+                    {point.isLive && (
+                      <div className="absolute top-0 right-0 w-3 h-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <AlertCircle className="text-yellow-600 w-5 h-5" />
                       <span className="text-sm font-medium text-yellow-600">Open Alerts</span>

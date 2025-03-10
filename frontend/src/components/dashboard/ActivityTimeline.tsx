@@ -16,7 +16,7 @@ interface ActivityTimelineProps {
 export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ activities }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-lg font-semibold mb-4">Recent Activities</h2>
+      <h2 className="text-lg font-semibold mb-4">Recent Alerts</h2>
       <div className="space-y-6">
         {activities.map((activity) => (
           <div key={activity.id} className="relative pl-8">

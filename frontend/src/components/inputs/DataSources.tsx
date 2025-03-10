@@ -1,13 +1,40 @@
 import React from 'react';
 import { Box, Server, FileText, FileSpreadsheet, File, Plus } from 'lucide-react';
 
+interface FileStatType {
+  type: string;
+  count: number;
+  icon: React.ReactNode;
+}
+
+interface TableStatType {
+  name: string;
+  count: number;
+  records: number;
+}
+
+interface DataSourceType {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  summary: string;
+  fileStats?: FileStatType[];
+  tableStats?: TableStatType[];
+  totalFiles?: number;
+  totalTables?: number;
+  contentSummary: string;
+  lastSync: string;
+}
+
 // Mock data for data sources with detailed information
-const dataSources = [
+const dataSources: DataSourceType[] = [
   {
     id: 'box',
     name: 'Box',
     icon: <Box className="w-16 h-16 text-blue-600" />,
-    summary: 'Connected to Box cloud storage containing clinical trial documents and audit reports.',
+    color: 'blue',
+    summary: 'Connected to Box cloud storage containing clinical trial guidelines documents.',
     fileStats: [
       { type: 'PDF', count: 87, icon: <FileText className="w-4 h-4 text-red-500" /> },
       { type: 'Excel', count: 32, icon: <FileSpreadsheet className="w-4 h-4 text-green-600" /> },
@@ -22,6 +49,7 @@ const dataSources = [
     id: 'cosmos',
     name: 'Cosmos DB',
     icon: <Server className="w-16 h-16 text-purple-600" />,
+    color: 'purple',
     summary: 'Connected to Azure Cosmos DB storing structured data for clinical trials.',
     tableStats: [
       { name: 'Trials', count: 15, records: 15 },
@@ -38,22 +66,22 @@ const dataSources = [
 
 const DataSources: React.FC = () => {
   return (
-    <div className="bg-white p-6">
-      <h2 className="text-xl font-semibold mb-4">Data Sources</h2>
+    <div className="bg-gray-50 p-6">
+      {/* <h2 className="text-xl font-semibold mb-4">Data Sources</h2>
       <p className="text-gray-600 mb-6">
         Connected data sources that provide information for analysis and processing.
       </p>
-      
+       */}
       {/* Data Sources Grid - Changed to 1 column on small/medium screens, 2 on large */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Data Source Tiles */}
         {dataSources.map((source) => (
           <div 
             key={source.id}
-            className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center mb-5">
-              <div className="bg-blue-50 p-3 rounded-lg">
+              <div className={`bg-${source.color}-50 p-4 rounded-lg`}>
                 {source.icon}
               </div>
               <div className="ml-4">
@@ -64,10 +92,10 @@ const DataSources: React.FC = () => {
             
             {/* File/Table Statistics */}
             <div className="mb-5">
-              {source.id === 'box' && (
+              {source.id === 'box' && source.fileStats && source.totalFiles && (
                 <>
                   <h4 className="font-medium text-gray-700 mb-3">File Statistics</h4>
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <div className={`bg-${source.color}-50 p-4 rounded-lg mb-4`}>
                     <div className="flex justify-between mb-2">
                       <span className="text-gray-600">Total Files:</span>
                       <span className="font-semibold">{source.totalFiles}</span>
@@ -85,10 +113,10 @@ const DataSources: React.FC = () => {
                 </>
               )}
               
-              {source.id === 'cosmos' && (
+              {source.id === 'cosmos' && source.tableStats && source.totalTables && (
                 <>
                   <h4 className="font-medium text-gray-700 mb-3">Database Statistics</h4>
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <div className={`bg-${source.color}-50 p-4 rounded-lg mb-4`}>
                     <div className="flex justify-between mb-2">
                       <span className="text-gray-600">Total Tables:</span>
                       <span className="font-semibold">{source.totalTables}</span>
@@ -119,7 +147,7 @@ const DataSources: React.FC = () => {
             {/* Content Summary */}
             <div className="mb-5">
               <h4 className="font-medium text-gray-700 mb-2">Content Summary</h4>
-              <p className="text-gray-600 text-sm bg-gray-50 p-4 rounded-lg">
+              <p className={`text-gray-600 text-sm bg-${source.color}-50 p-4 rounded-lg`}>
                 {source.contentSummary}
               </p>
             </div>
@@ -127,14 +155,14 @@ const DataSources: React.FC = () => {
             {/* Last Synced */}
             <div className="flex justify-between items-center text-xs text-gray-500 border-t pt-4">
               <span>Last synced: {new Date(source.lastSync).toLocaleString()}</span>
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Connected</span>
+              <span className={`bg-${source.color}-100 text-${source.color}-800 px-2 py-1 rounded-full text-xs`}>Connected</span>
             </div>
           </div>
         ))}
         
         {/* Add New Data Source Tile */}
-        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer h-96">
-          <div className="bg-blue-100 rounded-full p-5 mb-4">
+        <div className="bg-white border border-dashed border-gray-300 rounded-lg shadow-md p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer h-96">
+          <div className="bg-blue-50 rounded-full p-5 mb-4">
             <Plus className="w-12 h-12 text-blue-600" />
           </div>
           <h3 className="text-xl font-medium text-gray-800 mb-3">Add Data Source</h3>
