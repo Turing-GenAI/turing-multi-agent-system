@@ -42,12 +42,6 @@ const AgentPrompts: React.FC = () => {
   ]);
 
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
-  const [newPrompt, setNewPrompt] = useState<Omit<Prompt, 'id'>>({
-    name: '',
-    description: '',
-    template: ''
-  });
-  const [isAdding, setIsAdding] = useState(false);
 
   const handleEditPrompt = (prompt: Prompt) => {
     setEditingPrompt(prompt);
@@ -66,94 +60,11 @@ const AgentPrompts: React.FC = () => {
     setPrompts(prompts.filter(p => p.id !== id));
   };
 
-  const handleAddPrompt = () => {
-    const newId = `prompt${Date.now()}`;
-    setPrompts([...prompts, { ...newPrompt, id: newId }]);
-    setNewPrompt({
-      name: '',
-      description: '',
-      template: ''
-    });
-    setIsAdding(false);
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-6">
         {/* <h2 className="text-xl font-semibold">Agent Prompts</h2> */}
-        <button
-          onClick={() => setIsAdding(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-          Add New Prompt
-        </button>
       </div>
-
-      {/* Add New Prompt Form */}
-      {isAdding && (
-        <div className="mb-8 bg-blue-50 p-4 rounded-lg shadow-md border border-blue-100">
-          <h3 className="text-lg font-medium mb-4">Add New Agent Prompt</h3>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="new-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Agent Name
-              </label>
-              <input
-                id="new-name"
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={newPrompt.name}
-                onChange={(e) => setNewPrompt({ ...newPrompt, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="new-description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <input
-                id="new-description"
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={newPrompt.description}
-                onChange={(e) => setNewPrompt({ ...newPrompt, description: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="new-template" className="block text-sm font-medium text-gray-700 mb-1">
-                Prompt
-              </label>
-              <textarea
-                id="new-template"
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={newPrompt.template}
-                onChange={(e) => setNewPrompt({ ...newPrompt, template: e.target.value })}
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Use curly braces to denote variables, e.g., {'{variable_name}'}
-              </p>
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setIsAdding(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddPrompt}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                disabled={!newPrompt.name || !newPrompt.template}
-              >
-                Save Prompt
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit Prompt Form */}
       {editingPrompt && (
@@ -222,7 +133,7 @@ const AgentPrompts: React.FC = () => {
       <div className="space-y-4">
         {prompts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No agent prompts defined yet. Click "Add New Prompt" to create one.
+            No agent prompts defined yet.
           </div>
         ) : (
           prompts.map((prompt) => (
