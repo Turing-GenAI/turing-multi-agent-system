@@ -29,8 +29,9 @@ class inspectionSubgraph:
         builder.add_node("planner_agent", self.inspection_nodes.sub_activity_generator_node)
         builder.add_node("critique_agent", self.inspection_nodes.validate_sub_activity_node)
         builder.add_node("feedback_agent", self.inspection_nodes.work_on_feedback_node)
-        builder.add_node("planner_user_validation", self.inspection_nodes.interrupt_for_planner_feedback)
+        # builder.add_node("planner_user_validation", self.inspection_nodes.interrupt_for_planner_feedback)
         # builder.add_node("add_human_in_the_loop", self.inspection_nodes.add_human_in_the_loop_node)
+        builder.add_node("planner_user_validation", self.inspection_nodes.interrupt_for_planner_feedback_node)
         builder.add_node("selfrag_subgraph", self.child_graph)
         builder.add_node("generate_findings_agent", self.inspection_nodes.generate_findings)
         builder.add_node(
@@ -74,14 +75,15 @@ class inspectionSubgraph:
 
         # builder.add_edge("planner_user_validation", "add_human_in_the_loop")
 
-        builder.add_conditional_edges(
-            "planner_user_validation",
-            self.inspection_conditional_functions.should_continue_from_human_feedback_findings,
-            {
-                "selfrag_subgraph": "selfrag_subgraph",
-                "feedback_agent": "feedback_agent",
-            },
-        )
+        # builder.add_conditional_edges(
+        #     "planner_user_validation",
+        #     self.inspection_conditional_functions.should_continue_from_human_feedback_findings,
+        #     {
+        #         "selfrag_subgraph": "selfrag_subgraph",
+        #         "feedback_agent": "feedback_agent",
+        #     },
+        # )
+        builder.add_edge("planner_user_validation", "selfrag_subgraph")
 
         builder.add_edge("selfrag_subgraph", "generate_findings_agent")
         builder.add_edge("generate_findings_agent", "user_agent_validator")
@@ -95,7 +97,7 @@ class inspectionSubgraph:
         )
         builder.add_edge("discrepancy_data_generator", "site_area_router")
         inspection_subgraph = builder.compile(
-            interrupt_before=["planner_user_validation"],
+            # interrupt_before=["planner_user_validation"],
             interrupt_after=["generate_findings_agent"],
         )
 

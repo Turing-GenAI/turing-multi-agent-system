@@ -3,7 +3,7 @@ from app.utils.helpers import (
     create_directory_structure,
 )
 from app.utils.log_setup import setup_logger, get_logger
-from app.utils.tool_nodes import process_human_feedback_chain
+from app.utils.tool_nodes import process_human_feedback_chain, process_human_feedback_for_sub_activities_chain, process_human_feedback_for_sub_activities_chain_2
 from app.common.constants import (
     bold_start,
     bold_end,
@@ -22,6 +22,7 @@ from app.core.trial_supervisor_graph.create_trial_supervisor_graph import (
 from datetime import datetime
 from app.utils.helpers import clean_graph_inputs
 import os
+from langgraph.types import Command, interrupt
 
 setup_logger()
 logger = get_logger()
@@ -76,13 +77,44 @@ def stream_all_events(events, _printed: set, scratchpad_filename=None):
         )
 
 feedback_messages = {
+    "feedback_agent": """
+    Do you approve of the generated sub-activities?\n{sub_activities_list}\nType 'y' to continue; otherwise,.\n
+    Please specify the sub-activities you would like.\n\nUser input ->""",
+    
     "generate_findings_agent": """
     Do you approve of the above generated findings? Type 'y' to continue; otherwise, explain.\n
-    Please specify any rephrasing or formatting adjustments you would like.\n\nUser input ->""",
-    "feedback_agent": """
-    Do you approve of the above sub-activities? Type 'y' to continue; otherwise, explain.\n
-    Please specify the adjustments you would like.\n\nUser input ->""",
+    Please specify any rephrasing or formatting adjustments you would like.\n\nUser input ->"""   
 }
+
+def get_human_feedback_for_sub_activities(feedback_node, sub_activities):
+    """
+    Collects human feedback for a given feedback node and processes it.
+
+    This function displays the feedback node information and prompts the user
+    for feedback using pre-defined messages. If the user approves by typing 'y',
+    it returns 'y'. Otherwise, it processes the feedback using a feedback chain
+    to generate a refined response.
+
+    Args:
+        feedback_node (str): The identifier for the feedback node.
+
+    Returns:
+        str: 'y' if approved by the user, otherwise a processed feedback response.
+    """
+    human_feedback = input(feedback_messages.get(feedback_node, "{sub_activities_list}; Feedback: ").format(sub_activities_list="\n".join(sub_activities)))
+    response_dict = {}
+    if human_feedback.lower() == "y":
+        response_dict.update({"human_feedback": human_feedback, "response_val": "y"})
+        # return human_feedback, "y"
+    else:
+        response = process_human_feedback_for_sub_activities_chain.invoke({"input": human_feedback, "sub_activities_list": "\n".join(sub_activities)}).content
+        if response == "y":
+            response_dict.update({"human_feedback": human_feedback, "response_val": "y"})
+        else:
+            sub_activities_updated = process_human_feedback_for_sub_activities_chain_2.invoke({"input": response})
+            response_dict.update({"human_feedback": human_feedback, "response_val": sub_activities_updated, "final_sub_activities": sub_activities_updated})
+    
+    return response_dict
 
 def get_human_feedback(feedback_node):
     """
@@ -103,7 +135,7 @@ def get_human_feedback(feedback_node):
     if human_feedback.lower() == "y":
         return human_feedback, "y"
     else:
-        return human_feedback, process_human_feedback_chain.invoke({"input": human_feedback}).content
+        return human_feedback, process_human_feedback_for_sub_activities_chain.invoke({"input": human_feedback}).content
 
 def run_graph(inputs, config, scratchpad_filename=None):
     """
@@ -127,11 +159,11 @@ def run_graph(inputs, config, scratchpad_filename=None):
         if first_run:
             # Run the graph
             events = graph.stream(
-                inputs, config=config, stream_mode="values", subgraphs=True
+                inputs, config=config, stream_mode="values", subgraphs=True,
             )
             first_run = False
         else:
-            events = graph.stream(None, config=config, stream_mode="values", subgraphs=True)
+            events = graph.stream(input=None, config=config, stream_mode="values", subgraphs=True)
 
         stream_all_events(events, _printed, scratchpad_filename=scratchpad_filename)
 
@@ -145,23 +177,62 @@ def run_graph(inputs, config, scratchpad_filename=None):
 
             # get current state
             state = graph.get_state(config, subgraphs=True).tasks[0].state.values
+            # logger.debug(f"Current state: {state}")
 
             # get the purpose and last node
             purpose = state["purpose"]
             last_node = state["last_node"]
 
+            if purpose == "get_user_feedback_for_sub_activities":
+                # get human feedback
+                sub_activities = state["final_sub_activities"].sub_activities
+                # print(f"Sub-Activities: {bold_start}{sub_activities}{bold_end}", "\n")
+                response_dict = get_human_feedback_for_sub_activities(last_node, sub_activities=sub_activities)
+                human_feedback = response_dict.get("human_feedback", "NA")
+                response_val = response_dict.get("response_val", "NA")
+                final_sub_activities = response_dict.get("final_sub_activities", state["final_sub_activities"])
+                logger.debug(f"Human Feedback: {human_feedback}")
+                logger.debug(f"Response: {response_val}")
+                logger.debug(f"final_sub_activities: {final_sub_activities}")
+                # print(f"Human Feedback: {bold_start}{human_feedback}{bold_end}", "\n")
+
+                # get current config for updating state
+                config_ = graph.get_state(config, subgraphs=True).tasks[0].state.config
+                graph.update_state(
+                    config_, {"final_sub_activities": final_sub_activities}
+                )
+                
+                graph.stream(
+                Command(resume = {"final_sub_activities": final_sub_activities}), 
+                config=config_
+                )
+                
+            # if purpose == "get_user_feedback_for_sub_activities":
+                # graph.update_state(
+                #         config_, {"final_sub_activities": final_sub_activities}
+                #     )
+            
             # if purpose is to get user feedback, then collect user feedback
             if purpose == "get_user_feedback":
                 # get human feedback
                 human_feedback, agent_feedback = get_human_feedback(last_node)
                 print(f"Human Feedback: {bold_start}{human_feedback}{bold_end}", "\n")
 
-                # get current config for updating state
+                #get current config for updating state
                 config_ = graph.get_state(config, subgraphs=True).tasks[0].state.config
                 graph.update_state(
                     config_, {"human_feedback": agent_feedback}
                 )
             # for other purposes, add the code below
+            # config_ = graph.get_state(config, subgraphs=True).tasks[0].state.config
+            # Create an instance of SubActivityResponse with three string inputs
+            # sub_activity_instance = SubActivityResponse(sub_activities=["How many protocol deviations happened?", 
+            #                                                             "What is the official timeline to resolve or close a protocol deviation?", 
+            #                                                             "Were the protocol deviations resolved or closed within the official timeline?"])
+            # graph.invoke(
+            #     Command(resume={"edited_text": sub_activity_instance}), 
+            #     config=config_
+            # )
         
     combine_txt_files_to_docx(folder_path = FINDINGS_OUTPUT_FOLDER, run_id=run_id,
                               output_filename = FINAL_OUTPUT_DOCX_FILENAME,
