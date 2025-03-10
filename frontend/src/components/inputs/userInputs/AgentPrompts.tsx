@@ -78,7 +78,7 @@ const AgentPrompts: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-6">
         {/* <h2 className="text-xl font-semibold">Agent Prompts</h2> */}
         <button
@@ -94,7 +94,7 @@ const AgentPrompts: React.FC = () => {
 
       {/* Add New Prompt Form */}
       {isAdding && (
-        <div className="mb-8 bg-blue-50 p-4 rounded-lg">
+        <div className="mb-8 bg-blue-50 p-4 rounded-lg shadow-md border border-blue-100">
           <h3 className="text-lg font-medium mb-4">Add New Agent Prompt</h3>
           <div className="space-y-4">
             <div>

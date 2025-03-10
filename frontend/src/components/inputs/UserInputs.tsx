@@ -1,33 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import ConfigureActivityList from './userInputs/ConfigureActivityList';
 import AgentPrompts from './userInputs/AgentPrompts';
 import InputHistory from './userInputs/InputHistory';
+import ConfigureActivities from './userInputs/ConfigureActivities';
 
-// Import the Activity interface from ConfigureActivityList
+// Import the Activity interface from ConfigureActivities
 interface Schedule {
-  frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
-  dayOfWeek?: number; // 0-6 (Sunday to Saturday)
+  frequency: 'monthly' | 'quarterly' | 'biannually' | 'custom';
   dayOfMonth?: number; // 1-31
+  months?: number[]; // Array of months (1-12)
   time: string; // HH:MM format
-  repeatEvery: number; // Repeat every X days/weeks/months
 }
 
 interface Activity {
   id: string;
-  siteId: string;
-  area: string;
-  question: string;
+  inspectionAreaId: string;
+  description: string;
   schedule: Schedule;
   enabled: boolean;
 }
 
-type InputSection = 'prompts' | 'history';
+type InputSection = 'prompts' | 'history' | 'activities';
 
 const UserInputs: React.FC = () => {
-  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<InputSection>('prompts');
   const [savedActivities, setSavedActivities] = useState<Activity[]>([]);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Load saved activities from localStorage on component mount
   useEffect(() => {
@@ -41,28 +37,10 @@ const UserInputs: React.FC = () => {
     }
   }, []);
 
-  const openActivityModal = () => {
-    setIsActivityModalOpen(true);
-    setHasUnsavedChanges(false);
-  };
-
-  const closeActivityModal = () => {
-    if (hasUnsavedChanges) {
-      const confirmClose = window.confirm('You have unsaved changes. Are you sure you want to close?');
-      if (!confirmClose) return;
-    }
-    setIsActivityModalOpen(false);
-  };
-
   const handleSaveActivities = (activities: Activity[]) => {
     setSavedActivities(activities);
-    setHasUnsavedChanges(false);
     // You can add additional logic here if needed, such as syncing with a backend
     console.log('Activities saved:', activities);
-  };
-
-  const handleActivitiesChanged = () => {
-    setHasUnsavedChanges(true);
   };
 
   return (
@@ -97,15 +75,23 @@ const UserInputs: React.FC = () => {
               </svg>
               Input History
             </button>
-            <div className="flex-1"></div>
             <button
-              onClick={openActivityModal}
-              className="ml-auto flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              onClick={() => setActiveSection('activities')}
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeSection === 'activities'
+                  ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              Configure Activity List
+              Configure Activities
+              {savedActivities.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full shadow-sm border border-green-200 flex items-center justify-center min-w-[1.5rem]">
+                  {savedActivities.length}
+                </span>
+              )}
             </button>
           </nav>
         </div>
@@ -115,33 +101,15 @@ const UserInputs: React.FC = () => {
       <div className="flex-1 overflow-auto p-4">
         {activeSection === 'prompts' && <AgentPrompts />}
         {activeSection === 'history' && <InputHistory />}
-      </div>
-
-      {/* Activity List Configuration Modal */}
-      {isActivityModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">Configure Activity List</h3>
-              <button 
-                onClick={closeActivityModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <ConfigureActivityList 
-                savedActivities={savedActivities}
-                onSave={handleSaveActivities}
-                onChange={handleActivitiesChanged}
-              />
-            </div>
+        {activeSection === 'activities' && (
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+            <ConfigureActivities 
+              savedActivities={savedActivities}
+              onSave={handleSaveActivities}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

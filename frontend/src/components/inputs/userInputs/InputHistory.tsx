@@ -9,56 +9,57 @@ interface InputHistoryEntry {
   status: 'completed' | 'failed' | 'pending';
 }
 
-const InputHistory: React.FC = () => {
-  // Mock data for input history
-  const [historyEntries, setHistoryEntries] = useState<InputHistoryEntry[]>([
-    {
-      id: 'entry1',
-      timestamp: '2025-03-07T08:30:00',
-      user: 'John Doe',
-      inputType: 'Question',
-      content: 'What are the key findings from clinical trial CT-2023-001?',
-      status: 'completed'
-    },
-    {
-      id: 'entry2',
-      timestamp: '2025-03-06T14:45:00',
-      user: 'Jane Smith',
-      inputType: 'Query',
-      content: 'Compare efficacy results between Site 1 and Site 2',
-      status: 'completed'
-    },
-    {
-      id: 'entry3',
-      timestamp: '2025-03-05T11:20:00',
-      user: 'John Doe',
-      inputType: 'Activity',
-      content: 'Monthly safety report for Drug X',
-      status: 'failed'
-    },
-    {
-      id: 'entry4',
-      timestamp: '2025-03-04T09:15:00',
-      user: 'Alice Johnson',
-      inputType: 'Question',
-      content: 'What are the inclusion criteria for the upcoming trial?',
-      status: 'completed'
-    },
-    {
-      id: 'entry5',
-      timestamp: '2025-03-03T16:50:00',
-      user: 'Bob Williams',
-      inputType: 'Activity',
-      content: 'Weekly data quality check',
-      status: 'pending'
-    }
-  ]);
+const mockHistoryData: InputHistoryEntry[] = [
+  {
+    id: 'entry1',
+    timestamp: '2025-03-07T08:30:00',
+    user: 'John Doe',
+    inputType: 'Question',
+    content: 'What are the key findings from clinical trial CT-2023-001?',
+    status: 'completed' as 'completed' | 'failed' | 'pending'
+  },
+  {
+    id: 'entry2',
+    timestamp: '2025-03-06T14:45:00',
+    user: 'Jane Smith',
+    inputType: 'Query',
+    content: 'Compare efficacy results between Site 1 and Site 2',
+    status: 'completed' as 'completed' | 'failed' | 'pending'
+  },
+  {
+    id: 'entry3',
+    timestamp: '2025-03-05T11:20:00',
+    user: 'John Doe',
+    inputType: 'Activity',
+    content: 'Monthly safety report for Drug X',
+    status: 'failed' as 'completed' | 'failed' | 'pending'
+  },
+  {
+    id: 'entry4',
+    timestamp: '2025-03-04T09:15:00',
+    user: 'Alice Johnson',
+    inputType: 'Question',
+    content: 'What are the inclusion criteria for the upcoming trial?',
+    status: 'completed' as 'completed' | 'failed' | 'pending'
+  },
+  {
+    id: 'entry5',
+    timestamp: '2025-03-03T16:50:00',
+    user: 'Bob Williams',
+    inputType: 'Activity',
+    content: 'Weekly data quality check',
+    status: 'pending' as 'completed' | 'failed' | 'pending'
+  }
+];
 
+const InputHistory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'failed' | 'pending'>('all');
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [selectedEntry, setSelectedEntry] = useState<InputHistoryEntry | null>(null);
+
+  const historyEntries = mockHistoryData;
 
   // Get unique users for filter dropdown
   const uniqueUsers = Array.from(new Set(historyEntries.map(entry => entry.user)));
@@ -117,7 +118,7 @@ const InputHistory: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
+    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
       <h2 className="text-xl font-semibold mb-4">Input History</h2>
       <p className="text-gray-600 mb-6">
         View and manage the history of user inputs, including questions, queries, and scheduled activities.
@@ -125,7 +126,7 @@ const InputHistory: React.FC = () => {
 
       {/* Search and Filters */}
       <div className="mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
+        <div className="flex flex-col md:flex-row md:items-center md:space-x-4 p-3 bg-gray-50 rounded-md border border-gray-200 shadow-sm">
           <div className="flex-1 mb-2 md:mb-0">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -183,8 +184,8 @@ const InputHistory: React.FC = () => {
         </div>
       </div>
 
-      {/* History Table */}
-      <div className="overflow-x-auto">
+      {/* History Entries Table */}
+      <div className="border rounded-lg overflow-hidden shadow-md">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -252,8 +253,8 @@ const InputHistory: React.FC = () => {
 
       {/* Entry Details Modal */}
       {selectedEntry && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+        <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto">
             <div className="flex justify-between items-center p-4 border-b">
               <h3 className="text-lg font-semibold">Input Details</h3>
               <button 
@@ -266,35 +267,36 @@ const InputHistory: React.FC = () => {
               </button>
             </div>
             <div className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">ID</p>
-                  <p className="text-sm font-mono">{selectedEntry.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Timestamp</p>
-                  <p className="text-sm">{formatDate(selectedEntry.timestamp)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">User</p>
-                  <p className="text-sm">{selectedEntry.user}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Type</p>
-                  <p className="text-sm">{selectedEntry.inputType}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Status</p>
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(selectedEntry.status)}`}>
-                    {selectedEntry.status.charAt(0).toUpperCase() + selectedEntry.status.slice(1)}
-                  </span>
+              <div className="border rounded-lg p-4 mb-4 bg-gray-50 shadow-sm">
+                <h4 className="font-medium mb-2">Input Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">ID</p>
+                    <p className="text-sm font-mono">{selectedEntry.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Timestamp</p>
+                    <p className="text-sm">{formatDate(selectedEntry.timestamp)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">User</p>
+                    <p className="text-sm">{selectedEntry.user}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Type</p>
+                    <p className="text-sm">{selectedEntry.inputType}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Status</p>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(selectedEntry.status)}`}>
+                      {selectedEntry.status.charAt(0).toUpperCase() + selectedEntry.status.slice(1)}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-500">Content</p>
-                <div className="mt-1 p-3 bg-gray-50 rounded-md border border-gray-200">
-                  <p className="text-sm whitespace-pre-wrap">{selectedEntry.content}</p>
-                </div>
+              <div className="mb-4 border rounded-lg p-4 bg-gray-50 shadow-sm">
+                <h4 className="font-medium mb-2">Content</h4>
+                <p className="text-sm whitespace-pre-wrap">{selectedEntry.content}</p>
               </div>
               <div className="flex justify-end space-x-2">
                 <button
