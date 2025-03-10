@@ -43,17 +43,18 @@ interface Activity {
 }
 
 interface ConfigureActivityListProps {
+  savedActivities?: Activity[]; // Add this prop to accept saved activities from parent
   onSave?: (activities: Activity[]) => void;
   onChange?: () => void;
 }
 
 const STORAGE_KEY = 'turing-activity-list-config';
 
-const ConfigureActivityList: React.FC<ConfigureActivityListProps> = ({ onSave, onChange }) => {
+const ConfigureActivityList: React.FC<ConfigureActivityListProps> = ({ savedActivities, onSave, onChange }) => {
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [selectedArea, setSelectedArea] = useState<string>('');
   const [customQuestion, setCustomQuestion] = useState<string>('');
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<Activity[]>(savedActivities || []);
   
   // Scheduling states
   const [scheduleFrequency, setScheduleFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'custom'>('daily');
@@ -65,15 +66,17 @@ const ConfigureActivityList: React.FC<ConfigureActivityListProps> = ({ onSave, o
 
   // Load saved activities from localStorage on component mount
   useEffect(() => {
-    const savedActivities = localStorage.getItem(STORAGE_KEY);
-    if (savedActivities) {
-      try {
-        setActivities(JSON.parse(savedActivities));
-      } catch (error) {
-        console.error('Error loading saved activities:', error);
+    if (!savedActivities) {
+      const savedActivities = localStorage.getItem(STORAGE_KEY);
+      if (savedActivities) {
+        try {
+          setActivities(JSON.parse(savedActivities));
+        } catch (error) {
+          console.error('Error loading saved activities:', error);
+        }
       }
     }
-  }, []);
+  }, [savedActivities]);
 
   // Get areas for the selected site
   const availableAreas = mockSites.find(site => site.id === selectedSite)?.areas || [];

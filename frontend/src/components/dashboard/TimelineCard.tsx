@@ -37,29 +37,102 @@ export const TimelineCard: React.FC = () => {
     };
   }, []);
 
+  // Generate trial data if empty
+  useEffect(() => {
+    if (trials.length === 0) {
+      // Create initial trials data - all start at 0% when modal opens
+      const newTrials = [
+        // In-progress trials all starting fresh
+        ...Array(10).fill(null).map((_, index) => ({
+          id: `trial-${index + 1}`,
+          name: `Trial ${index + 1}`,
+          number: index + 1,
+          progress: 0,
+          isLive: true,
+          startTime: 0, // Will be set when modal opens
+        })),
+        
+        // Already completed trials
+        ...Array(5).fill(null).map((_, index) => ({
+          id: `trial-${index + 11}`,
+          name: `Trial ${index + 11}`,
+          number: index + 11,
+          progress: 100,
+          isLive: false,
+        })),
+      ];
+      
+      setTrials(newTrials);
+    }
+  }, [trials]);
+
+  // Initialize start times when modal opens
+  useEffect(() => {
+    if (showTrialsModal) {
+      const modalOpenTime = Date.now();
+      
+      // Set start times for all trials when modal opens
+      setTrials(prevTrials => {
+        return prevTrials.map(trial => {
+          if (trial.isLive) {
+            // Randomize start delay (0-4 seconds) for each trial
+            const startDelay = Math.floor(Math.random() * 4000);
+            return {
+              ...trial,
+              progress: 0, // Reset progress to 0
+              startTime: modalOpenTime + startDelay, // Start in the future
+            };
+          }
+          return trial;
+        });
+      });
+    }
+  }, [showTrialsModal]);
+
+  // Handle trial progress updates - each trial takes exactly 5 seconds
   useEffect(() => {
     if (!showTrialsModal) return;
 
-    // Update progress for live trials at different speeds
-    const progressIntervals = trials
-      .filter(trial => trial.isLive)
-      .map(trial => {
-        const speed = Math.random() * (2000 - 500) + 500; // Random speed between 500ms and 2000ms
-        return setInterval(() => {
-          setTrials(prevTrials =>
-            prevTrials.map(t =>
-              t.id === trial.id && t.progress < 100
-                ? { ...t, progress: Math.min(t.progress + (Math.random() * 5 + 1), 100) }
-                : t
-            )
-          );
-        }, speed);
+    // Main timer for updating all trial progress
+    const progressInterval = setInterval(() => {
+      const currentTime = Date.now();
+      
+      setTrials(prevTrials => {
+        return prevTrials.map(trial => {
+          // Skip already completed trials
+          if (!trial.isLive) {
+            return trial;
+          }
+          
+          // Skip trials that haven't started yet
+          if (currentTime < trial.startTime) {
+            return trial;
+          }
+          
+          // Calculate elapsed time since this trial's start
+          const elapsedTime = currentTime - trial.startTime;
+          
+          // Calculate progress based on exactly 5-second timeline
+          const progressPercent = Math.min((elapsedTime / 5000) * 100, 100);
+          
+          // Ensure the progress number is a clean integer
+          const displayProgress = Math.min(Math.floor(progressPercent), 100);
+          
+          // Check if trial should complete (exactly at 5 seconds)
+          if (elapsedTime >= 5000) {
+            return { ...trial, progress: 100, isLive: false };
+          }
+          
+          // Just update progress
+          return { ...trial, progress: displayProgress };
+        });
       });
+    }, 50); // Update every 50ms for smooth animation
 
     return () => {
-      progressIntervals.forEach(interval => clearInterval(interval));
+      clearInterval(progressInterval);
     };
-  }, [showTrialsModal, trials]);
+  }, [showTrialsModal]);
 
   const timelineData: TimelinePoint[] = [
     {
@@ -94,33 +167,15 @@ export const TimelineCard: React.FC = () => {
   ];
 
   const handleTrialsClick = () => {
-    const currentTrialsAudited = q4TrialsAudited;
-    
-    // Generate trials with decreasing numbers
-    const liveTrials = Array.from({ length: 25 }, (_, i) => ({
-      id: `TRIAL-${i + 1}`,
-      name: `Clinical Trial ${currentTrialsAudited - i}`,
-      progress: 0,
-      isLive: true,
-      number: currentTrialsAudited - i
-    }));
-
-    const completedTrials = Array.from({ length: 100 }, (_, i) => ({
-      id: `TRIAL-${i + 26}`,
-      name: `Clinical Trial ${currentTrialsAudited - (i + 25)}`,
-      progress: 100,
-      isLive: false,
-      number: currentTrialsAudited - (i + 25)
-    }));
-
-    setTrials([...liveTrials, ...completedTrials]);
     setShowTrialsModal(true);
   };
 
   const handleAlertsClick = () => {
     // Generate random alerts data
-    const regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America'];
-    const countries = {
+    const regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America'] as const;
+    type Region = typeof regions[number];
+    
+    const countries: Record<Region, string[]> = {
       'North America': ['USA', 'Canada'],
       'Europe': ['UK', 'Germany', 'France', 'Spain'],
       'Asia Pacific': ['Japan', 'China', 'Australia', 'South Korea'],

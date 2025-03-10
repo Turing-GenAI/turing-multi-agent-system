@@ -6,6 +6,25 @@ import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { ActionItems } from '../components/dashboard/ActionItems';
 import { TimelineCard } from '../components/dashboard/TimelineCard';
 
+// Import the Activity type to ensure type consistency
+interface Activity {
+  id: string;
+  title: string;
+  description: string;
+  timestamp: Date;
+  type: 'finding' | 'action' | 'deviation';
+  status?: string;
+}
+
+interface ActionItem {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  dueDate: Date;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
 // Mock data - Replace with actual data from your backend
 const mockStats = {
   totalDeviations: 156,
@@ -14,7 +33,7 @@ const mockStats = {
   completedActions: 45,
 };
 
-const mockActivities = [
+const mockActivities: Activity[] = [
   {
     id: '1',
     title: 'New Critical Finding Detected',
@@ -40,7 +59,7 @@ const mockActivities = [
   },
 ];
 
-const mockActions = [
+const mockActions: ActionItem[] = [
   {
     id: '1',
     title: 'Review Temperature Logs',
