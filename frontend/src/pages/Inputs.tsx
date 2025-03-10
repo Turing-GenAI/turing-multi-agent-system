@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Database, Users, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Database, Users, Activity, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import DataSources from '../components/inputs/DataSources';
 import UserInputs from '../components/inputs/UserInputs';
 import SystemArchitecture from '../components/inputs/SystemArchitecture';
+import MultiAgentArchitecture from '../components/inputs/MultiAgentArchitecture';
 
 // Define the tab types
-type TabType = 'data_sources' | 'user_inputs' | 'system_architecture';
+type TabType = 'data_sources' | 'system_architecture' | 'multi_agent_architecture' | 'user_inputs';
 
 export const Inputs: React.FC = () => {
   // State to track the selected tab
@@ -77,16 +78,6 @@ export const Inputs: React.FC = () => {
                 </button>
                 
                 <button
-                  onClick={() => setSelectedTab('user_inputs')}
-                  className={getTabClasses('user_inputs')}
-                  title="User Inputs"
-                >
-                  <div className={getIndicatorClasses('user_inputs')}></div>
-                  <Users className="w-5 h-5 min-w-5" />
-                  {!isSidebarCollapsed && <span className="ml-3">User Inputs</span>}
-                </button>
-                
-                <button
                   onClick={() => setSelectedTab('system_architecture')}
                   className={getTabClasses('system_architecture')}
                   title="System Architecture"
@@ -95,6 +86,26 @@ export const Inputs: React.FC = () => {
                   <Activity className="w-5 h-5 min-w-5" />
                   {!isSidebarCollapsed && <span className="ml-3">System Architecture</span>}
                 </button>
+                
+                <button
+                  onClick={() => setSelectedTab('multi_agent_architecture')}
+                  className={getTabClasses('multi_agent_architecture')}
+                  title="Multi Agent Architecture"
+                >
+                  <div className={getIndicatorClasses('multi_agent_architecture')}></div>
+                  <Layers className="w-5 h-5 min-w-5" />
+                  {!isSidebarCollapsed && <span className="ml-3">Multi Agent Architecture</span>}
+                </button>
+                
+                <button
+                  onClick={() => setSelectedTab('user_inputs')}
+                  className={getTabClasses('user_inputs')}
+                  title="User Inputs"
+                >
+                  <div className={getIndicatorClasses('user_inputs')}></div>
+                  <Users className="w-5 h-5 min-w-5" />
+                  {!isSidebarCollapsed && <span className="ml-3">User Inputs</span>}
+                </button>
               </div>
             </nav>
           </div>
@@ -102,8 +113,9 @@ export const Inputs: React.FC = () => {
           {/* Right Panel - Content Area */}
           <div className="flex-1 overflow-auto">
             {selectedTab === 'data_sources' && <DataSources />}
-            {selectedTab === 'user_inputs' && <UserInputs />}
             {selectedTab === 'system_architecture' && <SystemArchitecture />}
+            {selectedTab === 'multi_agent_architecture' && <MultiAgentArchitecture />}
+            {selectedTab === 'user_inputs' && <UserInputs />}
           </div>
         </div>
       </div>

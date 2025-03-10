@@ -905,12 +905,12 @@ export const SystemArchitecture: React.FC = () => {
   }, [reactFlowInstance]);
 
   return (
-    <div className="p-6 bg-gray-50">
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">System Architecture Visualization</h1>
-        <p className="text-gray-600 mt-2">Interactive diagram showing the components and data flow of the Turing Multi-Agent System</p>
-      </div>
-      <div className="border rounded-lg shadow-lg bg-white" style={{ height: '80vh' }}>
+    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+      <h2 className="text-xl font-semibold mb-4">System Architecture</h2>
+      <p className="text-gray-600 mb-6">
+        Interactive diagram showing the components and data flow of the Turing Multi-Agent System.
+      </p>
+      <div className="border rounded-md shadow-md bg-white" style={{ height: '70vh' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
