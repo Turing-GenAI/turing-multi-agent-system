@@ -21,18 +21,10 @@ const mockInspectionAreas: Site[] = [
   }
 ];
 
-interface Schedule {
-  frequency: 'monthly' | 'quarterly' | 'biannually' | 'custom';
-  dayOfMonth?: number; // 1-31
-  months?: number[]; // Array of months (1-12)
-  time: string; // HH:MM format
-}
-
 interface Activity {
   id: string;
   inspectionAreaId: string;
   description: string;
-  schedule: Schedule;
   enabled: boolean;
 }
 
@@ -50,13 +42,6 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
   const [showNewInspectionAreaInput, setShowNewInspectionAreaInput] = useState<boolean>(false);
   const [activityList, setActivityList] = useState<string>('');
   const [activities, setActivities] = useState<Activity[]>(savedActivities || []);
-  
-  // Scheduling states
-  const [scheduleFrequency, setScheduleFrequency] = useState<'monthly' | 'quarterly' | 'biannually' | 'custom'>('monthly');
-  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState<number>(1);
-  const [scheduleMonths, setScheduleMonths] = useState<number[]>([1,4,7,10]); // Default for quarterly
-  const [scheduleTime, setScheduleTime] = useState<string>('09:00');
-  const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
   
   // Notification state
   const [notification, setNotification] = useState<{
@@ -124,38 +109,6 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
     setActivityList(e.target.value);
   };
 
-  const handleFrequencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const frequency = e.target.value as 'monthly' | 'quarterly' | 'biannually' | 'custom';
-    setScheduleFrequency(frequency);
-    
-    // Set default months for each frequency
-    switch (frequency) {
-      case 'quarterly':
-        setScheduleMonths([1, 4, 7, 10]);
-        break;
-      case 'biannually':
-        setScheduleMonths([1, 7]);
-        break;
-      case 'monthly':
-        setScheduleMonths(Array.from({length: 12}, (_, i) => i + 1));
-        break;
-      default:
-        setScheduleMonths([]);
-    }
-  };
-
-  const handleDayOfMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setScheduleDayOfMonth(parseInt(e.target.value));
-  };
-
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setScheduleTime(e.target.value);
-  };
-
-  const toggleScheduleModal = () => {
-    setShowScheduleModal(!showScheduleModal);
-  };
-
   const handleAddActivity = () => {
     if (selectedInspectionArea && activityList.trim()) {
       // Split the activity list by new lines to create multiple activities
@@ -165,18 +118,10 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
       
       if (activityDescriptions.length === 0) return;
       
-      const schedule: Schedule = {
-        frequency: scheduleFrequency,
-        dayOfMonth: scheduleDayOfMonth,
-        months: scheduleMonths,
-        time: scheduleTime
-      };
-      
       const newActivities = activityDescriptions.map(description => ({
         id: `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         inspectionAreaId: selectedInspectionArea,
         description: description.trim(),
-        schedule,
         enabled: true
       }));
       
@@ -236,28 +181,6 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
     setTimeout(() => {
       setNotification((prev: {show: boolean, message: string, type: 'success' | 'error' | 'info'}) => ({ ...prev, show: false }));
     }, 3000);
-  };
-
-  const getScheduleDescription = (schedule: Schedule): string => {
-    let description = '';
-    
-    switch (schedule.frequency) {
-      case 'monthly':
-        const dayOfMonth = schedule.dayOfMonth || 1;
-        description = `Every month on day ${dayOfMonth}`;
-        break;
-      case 'quarterly':
-        description = 'Every quarter (Jan, Apr, Jul, Oct)';
-        break;
-      case 'biannually':
-        description = 'Every 6 months (Jan, Jul)';
-        break;
-      case 'custom':
-        description = 'Custom schedule';
-        break;
-    }
-    
-    return `${description} at ${schedule.time}`;
   };
 
   // Group activities by inspection area
@@ -324,28 +247,55 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
         Choose an inspection area and enter the activities to be carried out by the agent
       </p>
 
-      {/* Floating Toast Notification */}
+      {/* Improved Toast Notification */}
       {notification.show && (
-        <div className="fixed bottom-6 right-6 z-100 shadow-md animate-fadeIn max-w-sm w-full m-4 p-6">
-          <div className={`p-4 rounded-md ${
-            notification.type === 'success' ? 'bg-green-600 text-white' :
-            notification.type === 'error' ? 'bg-red-600 text-white' :
-            'bg-blue-600 text-white'
-          } flex items-center justify-between`}>
+        <div className="fixed top-4 right-4 z-50 max-w-md animate-slideIn">
+          <div 
+            className={`
+              shadow-lg rounded-lg border border-l-4 px-4 py-3 flex items-center justify-between
+              ${notification.type === 'success' 
+                ? 'bg-white border-green-500 text-green-800' 
+                : notification.type === 'error' 
+                ? 'bg-white border-red-500 text-red-800' 
+                : 'bg-white border-blue-500 text-blue-800'
+              }
+            `}
+          >
             <div className="flex items-center">
               {notification.type === 'success' && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+                <div className="rounded-full bg-green-100 p-1 mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
               )}
-              {notification.message}
+              {notification.type === 'error' && (
+                <div className="rounded-full bg-red-100 p-1 mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+              {notification.type === 'info' && (
+                <div className="rounded-full bg-blue-100 p-1 mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+              <div>
+                <p className="font-medium">
+                  {notification.type === 'success' ? 'Success!' : notification.type === 'error' ? 'Error!' : 'Information'}
+                </p>
+                <p className="text-sm">{notification.message}</p>
+              </div>
             </div>
             <button 
-              onClick={() => setNotification((prev: {show: boolean, message: string, type: 'success' | 'error' | 'info'}) => ({ ...prev, show: false }))}
-              className="text-white ml-4"
+              onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+              className="ml-4 text-gray-400 hover:text-gray-500 focus:outline-none"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </button>
           </div>
@@ -411,19 +361,8 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
           <p className="text-xs text-gray-500 mt-1">Enter each activity on a new line</p>
         </div>
 
-        {/* Schedule Configuration Button */}
-        <div className="flex justify-between items-center">
-          <button
-            onClick={toggleScheduleModal}
-            className="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors flex items-center disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-            disabled={!selectedInspectionArea || !activityList.trim()}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Configure Schedule
-          </button>
-          
+        {/* Add Activity Button */}
+        <div className="flex justify-start items-center">
           <button
             onClick={handleAddActivity}
             disabled={!selectedInspectionArea || !activityList.trim()}
@@ -435,93 +374,6 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
             Add Activity
           </button>
         </div>
-
-        {/* Schedule Configuration Modal */}
-        {showScheduleModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg max-w-md w-full m-4 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Schedule Configuration</h3>
-                <button
-                  onClick={toggleScheduleModal}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="frequency-select" className="block text-sm font-medium text-gray-700 mb-1">
-                    Frequency
-                  </label>
-                  <select
-                    id="frequency-select"
-                    value={scheduleFrequency}
-                    onChange={handleFrequencyChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="monthly">Every Month</option>
-                    <option value="quarterly">Every Quarter</option>
-                    <option value="biannually">Every 6 Months</option>
-                    <option value="custom">Custom Schedule</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="day-of-month" className="block text-sm font-medium text-gray-700 mb-1">
-                    Day of Month
-                  </label>
-                  <select
-                    id="day-of-month"
-                    value={scheduleDayOfMonth}
-                    onChange={handleDayOfMonthChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day}>{day}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="schedule-time" className="block text-sm font-medium text-gray-700 mb-1">
-                    Time
-                  </label>
-                  <input
-                    id="schedule-time"
-                    type="time"
-                    value={scheduleTime}
-                    onChange={handleTimeChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="bg-blue-50 p-3 rounded-md border border-blue-100 mt-4">
-                  <p className="text-sm text-blue-800">
-                    <span className="font-medium">Schedule Summary:</span> {getScheduleDescription({
-                      frequency: scheduleFrequency,
-                      dayOfMonth: scheduleDayOfMonth,
-                      months: scheduleMonths,
-                      time: scheduleTime
-                    })}
-                  </p>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <button
-                    onClick={toggleScheduleModal}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                  >
-                    Confirm Schedule
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Activity List */}
         {activities.length > 0 && (
@@ -608,12 +460,6 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
                                         <div className={`w-3 h-3 rounded-full mr-2 ${activity.enabled ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                                         <div className="text-sm font-medium">{activity.description}</div>
                                       </div>
-                                      <div className="text-xs text-indigo-600 mt-1 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        {getScheduleDescription(activity.schedule)}
-                                      </div>
                                     </div>
                                     <div className="flex space-x-2">
                                       <button
@@ -652,12 +498,6 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
                                 <div className="text-sm font-medium">{area}</div>
                               </div>
                               <div className="text-sm text-gray-600 mt-1">{activity.description}</div>
-                              <div className="text-xs text-indigo-600 mt-1 flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                {getScheduleDescription(activity.schedule)}
-                              </div>
                             </div>
                             <div className="flex space-x-2">
                               <button
@@ -757,9 +597,12 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
           <button
             onClick={handleSaveActivities}
             disabled={activities.length === 0}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
           >
-            Save
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Save Activities
           </button>
         </div>
       </div>

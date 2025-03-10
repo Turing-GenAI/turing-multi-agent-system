@@ -4,51 +4,94 @@ interface InputHistoryEntry {
   id: string;
   timestamp: string;
   user: string;
-  inputType: string;
+  inputType: 'Agent Prompt' | 'Activity' | 'Schedule' | 'Other';
   content: string;
   status: 'completed' | 'failed' | 'pending';
+  details?: {
+    section?: string;
+    actionType?: string;
+    relatedItems?: string[];
+  };
 }
 
 const mockHistoryData: InputHistoryEntry[] = [
   {
     id: 'entry1',
-    timestamp: '2025-03-07T08:30:00',
+    timestamp: '2025-03-10T14:30:00',
     user: 'John Doe',
-    inputType: 'Question',
-    content: 'What are the key findings from clinical trial CT-2023-001?',
-    status: 'completed' as 'completed' | 'failed' | 'pending'
+    inputType: 'Agent Prompt',
+    content: 'Updated agent prompt for data analysis',
+    status: 'completed',
+    details: {
+      section: 'Agent Prompts',
+      actionType: 'Update',
+      relatedItems: ['Data Analysis Agent']
+    }
   },
   {
     id: 'entry2',
-    timestamp: '2025-03-06T14:45:00',
+    timestamp: '2025-03-10T13:45:00',
     user: 'Jane Smith',
-    inputType: 'Query',
-    content: 'Compare efficacy results between Site 1 and Site 2',
-    status: 'completed' as 'completed' | 'failed' | 'pending'
+    inputType: 'Activity',
+    content: 'Added new inspection activities for Site A',
+    status: 'completed',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Create',
+      relatedItems: ['Site A', 'Quality Control', 'Safety Inspection']
+    }
   },
   {
     id: 'entry3',
-    timestamp: '2025-03-05T11:20:00',
+    timestamp: '2025-03-10T11:20:00',
     user: 'John Doe',
-    inputType: 'Activity',
-    content: 'Monthly safety report for Drug X',
-    status: 'failed' as 'completed' | 'failed' | 'pending'
+    inputType: 'Schedule',
+    content: 'Set up monthly safety audit schedule',
+    status: 'completed',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Create',
+      relatedItems: ['Monthly', 'Day 15', '09:00 AM']
+    }
   },
   {
     id: 'entry4',
-    timestamp: '2025-03-04T09:15:00',
+    timestamp: '2025-03-09T16:15:00',
     user: 'Alice Johnson',
-    inputType: 'Question',
-    content: 'What are the inclusion criteria for the upcoming trial?',
-    status: 'completed' as 'completed' | 'failed' | 'pending'
+    inputType: 'Activity',
+    content: 'Modified inspection activities for regulatory compliance',
+    status: 'completed',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Update',
+      relatedItems: ['Regulatory', 'Compliance', 'Documentation Review']
+    }
   },
   {
     id: 'entry5',
-    timestamp: '2025-03-03T16:50:00',
+    timestamp: '2025-03-09T10:50:00',
     user: 'Bob Williams',
-    inputType: 'Activity',
-    content: 'Weekly data quality check',
-    status: 'pending' as 'completed' | 'failed' | 'pending'
+    inputType: 'Schedule',
+    content: 'Updated weekly data quality check schedule',
+    status: 'pending',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Update',
+      relatedItems: ['Weekly', 'Friday', '14:00 PM']
+    }
+  },
+  {
+    id: 'entry6',
+    timestamp: '2025-03-08T09:30:00',
+    user: 'Jane Smith',
+    inputType: 'Agent Prompt',
+    content: 'Refined agent prompt for safety monitoring',
+    status: 'failed',
+    details: {
+      section: 'Agent Prompts',
+      actionType: 'Update',
+      relatedItems: ['Safety Monitor Agent']
+    }
   }
 ];
 
@@ -99,240 +142,272 @@ const InputHistory: React.FC = () => {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
     });
   };
 
-  const getStatusBadgeClass = (status: string): string => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+  // Get color based on input type
+  const getTypeColor = (type: string): string => {
+    switch(type) {
+      case 'Agent Prompt':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Activity':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Schedule':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Get color based on status
+  const getStatusColor = (status: string): string => {
+    switch(status) {
+      case 'completed':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
-      <h2 className="text-xl font-semibold mb-4">Input History</h2>
-      <p className="text-gray-600 mb-6">
-        View and manage the history of user inputs, including questions, queries, and scheduled activities.
-      </p>
-
+    <div className="bg-white rounded-lg shadow p-6 h-full flex flex-col">
+      <h2 className="text-xl font-semibold text-gray-800 mb-6">Input History</h2>
+      
       {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:space-x-4 p-3 bg-gray-50 rounded-md border border-gray-200 shadow-sm">
-          <div className="flex-1 mb-2 md:mb-0">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by content or user..."
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="block w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="all">All Statuses</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-              <option value="pending">Pending</option>
-            </select>
-            <select
-              value={filterUser}
-              onChange={(e) => setFilterUser(e.target.value)}
-              className="block w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="all">All Users</option>
-              {uniqueUsers.map(user => (
-                <option key={user} value={user}>{user}</option>
-              ))}
-            </select>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="block w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="all">All Types</option>
-              {uniqueTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="col-span-1 md:col-span-4">
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <input
+            type="text"
+            id="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by content or user..."
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+            Status
+          </label>
+          <select
+            id="status-filter"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          >
+            <option value="all">All Statuses</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+        
+        <div>
+          <label htmlFor="user-filter" className="block text-sm font-medium text-gray-700 mb-1">
+            User
+          </label>
+          <select
+            id="user-filter"
+            value={filterUser}
+            onChange={(e) => setFilterUser(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          >
+            <option value="all">All Users</option>
+            {uniqueUsers.map(user => (
+              <option key={user} value={user}>{user}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div>
+          <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 mb-1">
+            Input Type
+          </label>
+          <select
+            id="type-filter"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          >
+            <option value="all">All Types</option>
+            {uniqueTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="flex items-end">
+          <button
+            onClick={handleClearFilters}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+      
+      {/* History List */}
+      <div className="flex-grow overflow-y-auto border border-gray-200 rounded-md">
+        {filteredEntries.length > 0 ? (
+          <ul className="divide-y divide-gray-200">
+            {filteredEntries.map(entry => (
+              <li 
+                key={entry.id} 
+                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => handleViewDetails(entry)}
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between">
+                  <div className="flex-grow">
+                    <div className="flex items-center mb-2">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full shadow-sm border ${getTypeColor(entry.inputType)} mr-2`}>
+                        {entry.inputType}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full shadow-sm border ${getStatusColor(entry.status)}`}>
+                        {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800">{entry.content}</p>
+                    <div className="flex items-center mt-1 text-xs text-gray-500">
+                      <span>{entry.user}</span>
+                      <span className="mx-2">•</span>
+                      <span>{formatDate(entry.timestamp)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 md:mt-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewDetails(entry);
+                      }}
+                      className="text-sm text-yellow-600 hover:text-yellow-800 flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-gray-600">No history entries found matching your filters.</p>
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="mt-4 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200 transition-colors"
             >
               Clear Filters
             </button>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* History Entries Table */}
-      <div className="border rounded-lg overflow-hidden shadow-md">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date & Time
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Content
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredEntries.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No matching entries found.
-                </td>
-              </tr>
-            ) : (
-              filteredEntries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(entry.timestamp)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {entry.user}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {entry.inputType}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                    {entry.content}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(entry.status)}`}>
-                      {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleViewDetails(entry)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      View Details
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Entry Details Modal */}
+      
+      {/* Details Modal */}
       {selectedEntry && (
-        <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">Input Details</h3>
-              <button 
-                onClick={handleCloseDetails}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <div className="border rounded-lg p-4 mb-4 bg-gray-50 shadow-sm">
-                <h4 className="font-medium mb-2">Input Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">ID</p>
-                    <p className="text-sm font-mono">{selectedEntry.id}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Timestamp</p>
-                    <p className="text-sm">{formatDate(selectedEntry.timestamp)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">User</p>
-                    <p className="text-sm">{selectedEntry.user}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Type</p>
-                    <p className="text-sm">{selectedEntry.inputType}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Status</p>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(selectedEntry.status)}`}>
-                      {selectedEntry.status.charAt(0).toUpperCase() + selectedEntry.status.slice(1)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="mb-4 border rounded-lg p-4 bg-gray-50 shadow-sm">
-                <h4 className="font-medium mb-2">Content</h4>
-                <p className="text-sm whitespace-pre-wrap">{selectedEntry.content}</p>
-              </div>
-              <div className="flex justify-end space-x-2">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Input Details</h3>
                 <button
                   onClick={handleCloseDetails}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <div className="flex items-center mb-4">
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full shadow-sm border ${getTypeColor(selectedEntry.inputType)} mr-2`}>
+                    {selectedEntry.inputType}
+                  </span>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full shadow-sm border ${getStatusColor(selectedEntry.status)}`}>
+                    {selectedEntry.status.charAt(0).toUpperCase() + selectedEntry.status.slice(1)}
+                  </span>
+                </div>
+                
+                <h4 className="text-xl font-medium text-gray-800 mb-2">{selectedEntry.content}</h4>
+                
+                <div className="flex items-center text-sm text-gray-500 mb-6">
+                  <span>{selectedEntry.user}</span>
+                  <span className="mx-2">•</span>
+                  <span>{formatDate(selectedEntry.timestamp)}</span>
+                </div>
+                
+                {selectedEntry.details && (
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h5 className="font-medium text-gray-700 mb-2">Additional Details</h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedEntry.details.section && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Section</p>
+                          <p className="text-sm text-gray-800">{selectedEntry.details.section}</p>
+                        </div>
+                      )}
+                      
+                      {selectedEntry.details.actionType && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Action Type</p>
+                          <p className="text-sm text-gray-800">{selectedEntry.details.actionType}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {selectedEntry.details.relatedItems && selectedEntry.details.relatedItems.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-600 mb-2">Related Items</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedEntry.details.relatedItems.map((item, index) => (
+                            <span 
+                              key={index} 
+                              className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md border border-gray-200"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCloseDetails}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                 >
                   Close
                 </button>
-                {selectedEntry.status === 'failed' && (
-                  <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Retry
-                  </button>
-                )}
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Info Box */}
-      <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-100">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-blue-700">
-              This history shows all user inputs processed by the system. You can filter and search to find specific entries.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
