@@ -42,21 +42,21 @@ export const TimelineCard: React.FC = () => {
     if (trials.length === 0) {
       // Create initial trials data - all start at 0% when modal opens
       const newTrials = [
-        // In-progress trials all starting fresh
+        // In-progress trials starting from trial 101
         ...Array(10).fill(null).map((_, index) => ({
-          id: `trial-${index + 1}`,
-          name: `Trial ${index + 1}`,
-          number: index + 1,
+          id: `trial-${index + 101}`,
+          name: `Trial ${index + 101}`,
+          number: index + 101,
           progress: 0,
           isLive: true,
           startTime: 0, // Will be set when modal opens
         })),
         
-        // Already completed trials
-        ...Array(5).fill(null).map((_, index) => ({
-          id: `trial-${index + 11}`,
-          name: `Trial ${index + 11}`,
-          number: index + 11,
+        // Already completed trials (first 100 trials)
+        ...Array(100).fill(null).map((_, index) => ({
+          id: `trial-${index + 1}`,
+          name: `Trial ${index + 1}`,
+          number: index + 1,
           progress: 100,
           isLive: false,
         })),
@@ -98,7 +98,11 @@ export const TimelineCard: React.FC = () => {
       const currentTime = Date.now();
       
       setTrials(prevTrials => {
-        return prevTrials.map(trial => {
+        // Create a copy of the current trials
+        let updatedTrials = [...prevTrials];
+        
+        // Update progress for existing trials
+        updatedTrials = updatedTrials.map(trial => {
           // Skip already completed trials
           if (!trial.isLive) {
             return trial;
@@ -126,6 +130,35 @@ export const TimelineCard: React.FC = () => {
           // Just update progress
           return { ...trial, progress: displayProgress };
         });
+        
+        // Check if we need to add a new trial (when one completes)
+        const completedCount = updatedTrials.filter(t => !t.isLive).length;
+        const inProgressCount = updatedTrials.filter(t => t.isLive).length;
+        
+        // Find the highest trial number currently in the system
+        const highestTrialNumber = Math.max(...updatedTrials.map(t => t.number));
+        
+        // If we have fewer than 10 in-progress trials, add a new one
+        if (inProgressCount < 10) {
+          // Create a new trial with the next number (up to ~30,000)
+          const newTrialNumber = Math.min(highestTrialNumber + 1, 30000);
+          
+          // Only add a new trial if we haven't reached 30,000 yet
+          if (newTrialNumber < 30000) {
+            const newTrial = {
+              id: `trial-${newTrialNumber}`,
+              name: `Trial ${newTrialNumber}`,
+              number: newTrialNumber,
+              progress: 0,
+              isLive: true,
+              startTime: currentTime + Math.floor(Math.random() * 2000), // Start in 0-2 seconds
+            };
+            
+            updatedTrials.push(newTrial);
+          }
+        }
+        
+        return updatedTrials;
       });
     }, 50); // Update every 50ms for smooth animation
 
@@ -133,6 +166,77 @@ export const TimelineCard: React.FC = () => {
       clearInterval(progressInterval);
     };
   }, [showTrialsModal]);
+
+  const handleTrialsClick = () => {
+    setShowTrialsModal(true);
+  };
+
+  const handleAlertsClick = () => {
+    // Generate random alerts data
+    const regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America'] as const;
+    type Region = typeof regions[number];
+    
+    const countries: Record<Region, string[]> = {
+      'North America': ['USA', 'Canada'],
+      'Europe': ['UK', 'Germany', 'France', 'Spain'],
+      'Asia Pacific': ['Japan', 'China', 'Australia', 'South Korea'],
+      'Latin America': ['Brazil', 'Mexico', 'Argentina']
+    };
+    const statuses: ('In Progress' | 'Completed')[] = ['In Progress', 'Completed'];
+
+    // Start from trial number 100 and scale up to approximately 30,000
+    // Always have some trials in "In Progress" status (10-20 trials)
+    const inProgressCount = 10 + Math.floor(Math.random() * 10); // 10-20 trials in progress
+    const completedCount = 100; // Show 100 completed trials initially
+    
+    // Generate completed trials (first 100 trials)
+    const completedAlerts = Array.from({ length: completedCount }, (_, i) => {
+      const region = regions[Math.floor(Math.random() * regions.length)];
+      const trialNumber = i + 1; // Trials 1-100 are completed
+      return {
+        trialId: `TRIAL-${trialNumber}`,
+        status: 'Completed' as const,
+        region,
+        country: countries[region][Math.floor(Math.random() * countries[region].length)],
+        pdAlerts: Math.floor(Math.random() * 5),
+        aeAlerts: Math.floor(Math.random() * 8),
+        cssAlerts: Math.floor(Math.random() * 4),
+        sgrAlerts: Math.floor(Math.random() * 3)
+      };
+    });
+    
+    // Generate in-progress trials (starting from 101)
+    const inProgressAlerts = Array.from({ length: inProgressCount }, (_, i) => {
+      const region = regions[Math.floor(Math.random() * regions.length)];
+      // Start from 101 and randomly distribute up to ~30,000
+      const trialNumber = 101 + Math.floor(Math.random() * 29900);
+      return {
+        trialId: `TRIAL-${trialNumber}`,
+        status: 'In Progress' as const,
+        region,
+        country: countries[region][Math.floor(Math.random() * countries[region].length)],
+        pdAlerts: Math.floor(Math.random() * 5),
+        aeAlerts: Math.floor(Math.random() * 8),
+        cssAlerts: Math.floor(Math.random() * 4),
+        sgrAlerts: Math.floor(Math.random() * 3)
+      };
+    });
+
+    // Combine and sort the alerts
+    const newAlerts = [...inProgressAlerts, ...completedAlerts].sort((a, b) => {
+      // Sort by status first (In Progress first)
+      if (a.status === 'In Progress' && b.status !== 'In Progress') return -1;
+      if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
+      
+      // Then sort by trial number (extract number from trialId)
+      const aNum = parseInt(a.trialId.replace('TRIAL-', ''));
+      const bNum = parseInt(b.trialId.replace('TRIAL-', ''));
+      return aNum - bNum;
+    });
+
+    setAlerts(newAlerts);
+    setShowAlertsModal(true);
+  };
 
   const timelineData: TimelinePoint[] = [
     {
@@ -165,41 +269,6 @@ export const TimelineCard: React.FC = () => {
       isLive: true
     }
   ];
-
-  const handleTrialsClick = () => {
-    setShowTrialsModal(true);
-  };
-
-  const handleAlertsClick = () => {
-    // Generate random alerts data
-    const regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America'] as const;
-    type Region = typeof regions[number];
-    
-    const countries: Record<Region, string[]> = {
-      'North America': ['USA', 'Canada'],
-      'Europe': ['UK', 'Germany', 'France', 'Spain'],
-      'Asia Pacific': ['Japan', 'China', 'Australia', 'South Korea'],
-      'Latin America': ['Brazil', 'Mexico', 'Argentina']
-    };
-    const statuses: ('In Progress' | 'Completed')[] = ['In Progress', 'Completed'];
-
-    const newAlerts = Array.from({ length: 50 }, (_, i) => {
-      const region = regions[Math.floor(Math.random() * regions.length)];
-      return {
-        trialId: `TRIAL-${30000 - i}`,
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        region,
-        country: countries[region][Math.floor(Math.random() * countries[region].length)],
-        pdAlerts: Math.floor(Math.random() * 5),
-        aeAlerts: Math.floor(Math.random() * 8),
-        cssAlerts: Math.floor(Math.random() * 4),
-        sgrAlerts: Math.floor(Math.random() * 3)
-      };
-    });
-
-    setAlerts(newAlerts);
-    setShowAlertsModal(true);
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

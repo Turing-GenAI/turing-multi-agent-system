@@ -22,13 +22,25 @@ interface AlertsCardProps {
 export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
   const [selectedTrialForPD, setSelectedTrialForPD] = useState<string | null>(null);
   const [selectedTrialForAE, setSelectedTrialForAE] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
   
   // Sort alerts so "In Progress" trials appear at the top
   const sortedAlerts = [...alerts].sort((a, b) => {
     if (a.status === 'In Progress' && b.status !== 'In Progress') return -1;
     if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
-    return 0;
+    
+    // Then sort by trial number
+    const aNum = parseInt(a.trialId.replace('TRIAL-', ''));
+    const bNum = parseInt(b.trialId.replace('TRIAL-', ''));
+    return aNum - bNum;
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedAlerts.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = sortedAlerts.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePDAlertClick = (trialId: string) => {
     setSelectedTrialForPD(trialId);
@@ -45,6 +57,8 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
   const closeAEDialog = () => {
     setSelectedTrialForAE(null);
   };
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
@@ -74,7 +88,7 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedAlerts.map((alert) => (
+              {currentItems.map((alert) => (
                 <tr key={alert.trialId} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{alert.trialId}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -116,6 +130,65 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
               ))}
             </tbody>
           </table>
+        </div>
+        
+        <div className="p-4 border-t">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, sortedAlerts.length)}</span> of <span className="font-medium">{sortedAlerts.length}</span> results
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <select
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="15">15 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+              <div className="flex space-x-1">
+                <button 
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 border rounded text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Calculate page numbers to show (centered around current page)
+                  const pageOffset = Math.max(0, Math.min(totalPages - 5, currentPage - 3));
+                  const pageNum = i + 1 + pageOffset;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => paginate(pageNum)}
+                      className={`w-8 h-8 text-sm ${
+                        currentPage === pageNum
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-600 hover:bg-gray-50'
+                      } rounded`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button 
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 border rounded text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
