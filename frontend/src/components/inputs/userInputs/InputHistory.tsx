@@ -15,82 +15,204 @@ interface InputHistoryEntry {
 }
 
 const mockHistoryData: InputHistoryEntry[] = [
+  // Agent Prompts History
   {
-    id: 'entry1',
-    timestamp: '2025-03-10T14:30:00',
+    id: 'entry-ap-1',
+    timestamp: '2025-03-10T15:45:00',
     user: 'John Doe',
     inputType: 'Agent Prompt',
-    content: 'Updated agent prompt for data analysis',
+    content: 'Updated Planner Agent prompt to include detailed inspection guidelines',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Data Analysis Agent']
+      relatedItems: ['Planner Agent', 'Clinical Trial Inspection']
     }
   },
   {
-    id: 'entry2',
-    timestamp: '2025-03-10T13:45:00',
-    user: 'Jane Smith',
-    inputType: 'Activity',
-    content: 'Added new inspection activities for Site A',
+    id: 'entry-ap-2',
+    timestamp: '2025-03-10T14:30:00',
+    user: 'Sarah Chen',
+    inputType: 'Agent Prompt',
+    content: 'Modified Critique Agent prompt to enhance feedback on protocol compliance questions',
     status: 'completed',
     details: {
-      section: 'Configure Activities',
-      actionType: 'Create',
-      relatedItems: ['Site A', 'Quality Control', 'Safety Inspection']
-    }
-  },
-  {
-    id: 'entry3',
-    timestamp: '2025-03-10T11:20:00',
-    user: 'John Doe',
-    inputType: 'Schedule',
-    content: 'Set up monthly safety audit schedule',
-    status: 'completed',
-    details: {
-      section: 'Configure Schedule',
-      actionType: 'Create',
-      relatedItems: ['Monthly', 'Day 15', '09:00 AM']
-    }
-  },
-  {
-    id: 'entry4',
-    timestamp: '2025-03-09T16:15:00',
-    user: 'Alice Johnson',
-    inputType: 'Activity',
-    content: 'Modified inspection activities for regulatory compliance',
-    status: 'completed',
-    details: {
-      section: 'Configure Activities',
+      section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Regulatory', 'Compliance', 'Documentation Review']
+      relatedItems: ['Critique Agent', 'Protocol Compliance']
     }
   },
   {
-    id: 'entry5',
-    timestamp: '2025-03-09T10:50:00',
-    user: 'Bob Williams',
-    inputType: 'Schedule',
-    content: 'Updated weekly data quality check schedule',
-    status: 'pending',
+    id: 'entry-ap-3',
+    timestamp: '2025-03-09T11:20:00',
+    user: 'Michael Brown',
+    inputType: 'Agent Prompt',
+    content: 'Updated RAG Agent prompt to prioritize regulatory guidelines for data integrity',
+    status: 'completed',
     details: {
-      section: 'Configure Schedule',
+      section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Weekly', 'Friday', '14:00 PM']
+      relatedItems: ['RAG Agent', 'Data Integrity', 'Regulatory Guidelines']
     }
   },
   {
-    id: 'entry6',
+    id: 'entry-ap-4',
     timestamp: '2025-03-08T09:30:00',
     user: 'Jane Smith',
     inputType: 'Agent Prompt',
-    content: 'Refined agent prompt for safety monitoring',
+    content: 'Refined Self-Reflection Agent prompt for document relevance evaluation',
     status: 'failed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Safety Monitor Agent']
+      relatedItems: ['Self-Reflection Agent', 'Document Relevance']
+    }
+  },
+  {
+    id: 'entry-ap-5',
+    timestamp: '2025-03-07T16:15:00',
+    user: 'Robert Johnson',
+    inputType: 'Agent Prompt',
+    content: 'Updated Generate Findings Agent prompt to improve analytical conclusions',
+    status: 'completed',
+    details: {
+      section: 'Agent Prompts',
+      actionType: 'Update',
+      relatedItems: ['Generate Findings Agent', 'Analytical Conclusions']
+    }
+  },
+  
+  // Configure Activities History
+  {
+    id: 'entry-ca-1',
+    timestamp: '2025-03-10T16:30:00',
+    user: 'Jane Smith',
+    inputType: 'Activity',
+    content: 'Added new Protocol Compliance activities for informed consent verification',
+    status: 'completed',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Create',
+      relatedItems: ['Protocol Compliance', 'Informed Consent', 'Documentation Review']
+    }
+  },
+  {
+    id: 'entry-ca-2',
+    timestamp: '2025-03-09T13:45:00',
+    user: 'Michael Brown',
+    inputType: 'Activity',
+    content: 'Created Data Integrity activities for source data verification',
+    status: 'completed',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Create',
+      relatedItems: ['Data Integrity', 'Source Data', 'CRF Verification']
+    }
+  },
+  {
+    id: 'entry-ca-3',
+    timestamp: '2025-03-08T10:15:00',
+    user: 'Sarah Chen',
+    inputType: 'Activity',
+    content: 'Added Subject Safety activities for adverse event reporting review',
+    status: 'completed',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Create',
+      relatedItems: ['Subject Safety', 'Adverse Events', 'Safety Monitoring']
+    }
+  },
+  {
+    id: 'entry-ca-4',
+    timestamp: '2025-03-07T14:20:00',
+    user: 'Robert Johnson',
+    inputType: 'Activity',
+    content: 'Modified Protocol Compliance activities for protocol deviation documentation',
+    status: 'pending',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Update',
+      relatedItems: ['Protocol Compliance', 'Protocol Deviations', 'Documentation']
+    }
+  },
+  {
+    id: 'entry-ca-5',
+    timestamp: '2025-03-06T11:30:00',
+    user: 'John Doe',
+    inputType: 'Activity',
+    content: 'Updated Data Integrity activities for electronic data capture system auditing',
+    status: 'completed',
+    details: {
+      section: 'Configure Activities',
+      actionType: 'Update',
+      relatedItems: ['Data Integrity', 'EDC System', 'Access Controls']
+    }
+  },
+  
+  // Configure Schedule History
+  {
+    id: 'entry-cs-1',
+    timestamp: '2025-03-10T17:00:00',
+    user: 'Robert Johnson',
+    inputType: 'Schedule',
+    content: 'Set up monthly Protocol Compliance inspection schedule',
+    status: 'completed',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Create',
+      relatedItems: ['Monthly', 'Protocol Compliance', 'Day 15', '09:00 AM']
+    }
+  },
+  {
+    id: 'entry-cs-2',
+    timestamp: '2025-03-09T15:30:00',
+    user: 'Sarah Chen',
+    inputType: 'Schedule',
+    content: 'Created weekly Data Integrity verification schedule',
+    status: 'completed',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Create',
+      relatedItems: ['Weekly', 'Data Integrity', 'Friday', '14:00 PM']
+    }
+  },
+  {
+    id: 'entry-cs-3',
+    timestamp: '2025-03-08T12:45:00',
+    user: 'Jane Smith',
+    inputType: 'Schedule',
+    content: 'Set up daily Subject Safety monitoring schedule',
+    status: 'pending',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Create',
+      relatedItems: ['Daily', 'Subject Safety', '08:00 AM']
+    }
+  },
+  {
+    id: 'entry-cs-4',
+    timestamp: '2025-03-07T10:00:00',
+    user: 'Michael Brown',
+    inputType: 'Schedule',
+    content: 'Modified monthly Protocol Compliance schedule to include additional sites',
+    status: 'completed',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Update',
+      relatedItems: ['Monthly', 'Protocol Compliance', 'Multiple Sites']
+    }
+  },
+  {
+    id: 'entry-cs-5',
+    timestamp: '2025-03-06T09:15:00',
+    user: 'John Doe',
+    inputType: 'Schedule',
+    content: 'Updated weekly Data Integrity schedule to include audit trail review',
+    status: 'failed',
+    details: {
+      section: 'Configure Schedule',
+      actionType: 'Update',
+      relatedItems: ['Weekly', 'Data Integrity', 'Audit Trail Review']
     }
   }
 ];

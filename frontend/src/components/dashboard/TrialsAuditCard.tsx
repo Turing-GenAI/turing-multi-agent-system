@@ -130,7 +130,7 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
               <h3 className="text-lg font-semibold mb-4">Completed Trials</h3>
               <div className="space-y-4 overflow-y-auto max-h-[60vh]">
                 {completedTrials
-                  .sort((a, b) => a.number - b.number)
+                  .sort((a, b) => b.number - a.number) // Reverse sort order to show highest trial numbers (most recent) first
                   .map(trial => (
                     <div 
                       key={trial.id} 

@@ -13,8 +13,8 @@ interface TimelinePoint {
 }
 
 export const TimelineCard: React.FC = () => {
-  const [q4TrialsAudited, setQ4TrialsAudited] = useState(30891);
-  const [q4OpenAlerts, setQ4OpenAlerts] = useState(162);
+  const [q4TrialsAudited, setQ4TrialsAudited] = useState(100);
+  const [q4OpenAlerts, setQ4OpenAlerts] = useState(15);
   const [showTrialsModal, setShowTrialsModal] = useState(false);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [trials, setTrials] = useState<any[]>([]);
@@ -257,7 +257,7 @@ export const TimelineCard: React.FC = () => {
       quarter: 'Q4 2024',
       ongoingTrials: 30891,
       trialsAudited: 30891,
-      openAlerts: 162,
+      openAlerts: 125,
       completedAlerts: 80123
     },
     {

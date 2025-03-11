@@ -9,15 +9,96 @@ interface Site {
 const mockInspectionAreas: Site[] = [
   {
     id: 'area1',
-    name: 'Inspection Area 1'
+    name: 'Protocol Compliance'
   },
   {
     id: 'area2',
-    name: 'Inspection Area 2'
+    name: 'Data Integrity'
   },
   {
     id: 'area3',
-    name: 'Inspection Area 3'
+    name: 'Subject Safety'
+  }
+];
+
+// Mock activities for each inspection area
+const mockActivities: Activity[] = [
+  // Protocol Compliance activities
+  {
+    id: 'activity-pc-1',
+    inspectionAreaId: 'area1',
+    description: 'Verify informed consent documentation is complete and properly executed',
+    enabled: true
+  },
+  {
+    id: 'activity-pc-2',
+    inspectionAreaId: 'area1',
+    description: 'Audit protocol deviation documentation and reporting',
+    enabled: true
+  },
+  {
+    id: 'activity-pc-3',
+    inspectionAreaId: 'area1',
+    description: 'Review investigator qualifications and training records',
+    enabled: true
+  },
+  {
+    id: 'activity-pc-4',
+    inspectionAreaId: 'area1',
+    description: 'Assess adherence to inclusion/exclusion criteria',
+    enabled: true
+  },
+  
+  // Data Integrity activities
+  {
+    id: 'activity-di-1',
+    inspectionAreaId: 'area2',
+    description: 'Verify source data against CRF entries for accuracy',
+    enabled: true
+  },
+  {
+    id: 'activity-di-2',
+    inspectionAreaId: 'area2',
+    description: 'Review data correction procedures and audit trails',
+    enabled: true
+  },
+  {
+    id: 'activity-di-3',
+    inspectionAreaId: 'area2',
+    description: 'Audit electronic data capture system access controls',
+    enabled: true
+  },
+  {
+    id: 'activity-di-4',
+    inspectionAreaId: 'area2',
+    description: 'Evaluate data query resolution process and timelines',
+    enabled: true
+  },
+  
+  // Subject Safety activities
+  {
+    id: 'activity-ss-1',
+    inspectionAreaId: 'area3',
+    description: 'Review adverse event reporting procedures and timelines',
+    enabled: true
+  },
+  {
+    id: 'activity-ss-2',
+    inspectionAreaId: 'area3',
+    description: 'Audit safety monitoring documentation and follow-up',
+    enabled: true
+  },
+  {
+    id: 'activity-ss-3',
+    inspectionAreaId: 'area3',
+    description: 'Verify proper documentation of concomitant medications',
+    enabled: true
+  },
+  {
+    id: 'activity-ss-4',
+    inspectionAreaId: 'area3',
+    description: 'Assess protocol-specific safety parameter monitoring compliance',
+    enabled: true
   }
 ];
 
@@ -34,14 +115,27 @@ interface ConfigureActivitiesProps {
   onChange?: () => void;
 }
 
-const STORAGE_KEY = 'turing-activity-list-config';
+const STORAGE_KEY = 'configuredActivities';
+const savedActivities = (() => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch (error) {
+    console.error('Error parsing saved activities:', error);
+    return null;
+  }
+})();
 
 const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActivities, onSave, onChange }) => {
-  const [selectedInspectionArea, setSelectedInspectionArea] = useState<string>('');
+  const [inspectionAreas, setInspectionAreas] = useState<Site[]>(mockInspectionAreas);
+  const [selectedInspectionArea, setSelectedInspectionArea] = useState<string>(mockInspectionAreas[0]?.id || '');
   const [newInspectionAreaName, setNewInspectionAreaName] = useState<string>('');
   const [showNewInspectionAreaInput, setShowNewInspectionAreaInput] = useState<boolean>(false);
   const [activityList, setActivityList] = useState<string>('');
-  const [activities, setActivities] = useState<Activity[]>(savedActivities || []);
+  
+  // Initialize with mock activities if no saved activities exist
+  const initialActivities = savedActivities && savedActivities.length > 0 ? savedActivities : mockActivities;
+  const [activities, setActivities] = useState<Activity[]>(initialActivities);
   
   // Notification state
   const [notification, setNotification] = useState<{
@@ -62,13 +156,23 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [expandedGroups, setExpandedGroups] = useState<{[key: string]: boolean}>({});
 
+  // Clear any existing saved activities to ensure mock activities are shown
+  useEffect(() => {
+    // Remove any saved activities from localStorage to ensure mock activities are shown by default
+    localStorage.removeItem(STORAGE_KEY);
+  }, []);
+
   // Load saved activities from localStorage on component mount
   useEffect(() => {
     if (!savedActivities) {
-      const savedActivities = localStorage.getItem(STORAGE_KEY);
-      if (savedActivities) {
+      const savedActivitiesString = localStorage.getItem(STORAGE_KEY);
+      if (savedActivitiesString) {
         try {
-          setActivities(JSON.parse(savedActivities));
+          const loadedActivities = JSON.parse(savedActivitiesString);
+          // Only use saved activities if they exist and aren't empty
+          if (loadedActivities && loadedActivities.length > 0) {
+            setActivities(loadedActivities);
+          }
         } catch (error) {
           console.error('Error loading saved activities:', error);
         }
@@ -159,6 +263,28 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
     if (onChange) {
       onChange();
     }
+  };
+
+  const handleClearAllActivities = () => {
+    // Clear all activities
+    setActivities([]);
+    
+    // Notify parent component of changes
+    if (onChange) {
+      onChange();
+    }
+    
+    // Show success notification
+    setNotification({
+      show: true,
+      message: 'All activities have been cleared!',
+      type: 'info'
+    });
+    
+    // Auto-hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification((prev: {show: boolean, message: string, type: 'success' | 'error' | 'info'}) => ({ ...prev, show: false }));
+    }, 3000);
   };
 
   const handleSaveActivities = () => {
@@ -603,6 +729,16 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             Save Activities
+          </button>
+          <button
+            onClick={handleClearAllActivities}
+            disabled={activities.length === 0}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center ml-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Clear All
           </button>
         </div>
       </div>
