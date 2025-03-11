@@ -101,7 +101,7 @@ def get_human_feedback_for_sub_activities(feedback_node, sub_activities):
     Returns:
         str: 'y' if approved by the user, otherwise a processed feedback response.
     """
-    human_feedback = input(feedback_messages.get(feedback_node, "{sub_activities_list}; Feedback: ").format(sub_activities_list="\n".join(sub_activities)))
+    human_feedback = input(feedback_messages.get(feedback_node, "{sub_activities_list}; Feedback: ").format(sub_activities_list=" -> " + "\n -> ".join(sub_activities)))
     response_dict = {}
     if human_feedback.lower() == "y":
         response_dict.update({"human_feedback": human_feedback, "response_val": "y"})
@@ -159,7 +159,7 @@ def run_graph(inputs, config, scratchpad_filename=None):
         if first_run:
             # Run the graph
             events = graph.stream(
-                inputs, config=config, stream_mode="values", subgraphs=True,
+                input=inputs, config=config, stream_mode="values", subgraphs=True,
             )
             first_run = False
         else:
@@ -182,11 +182,11 @@ def run_graph(inputs, config, scratchpad_filename=None):
             # get the purpose and last node
             purpose = state["purpose"]
             last_node = state["last_node"]
+            logger.debug(f"Purpose: {purpose}, Last Node: {last_node}") 
 
             if purpose == "get_user_feedback_for_sub_activities":
                 # get human feedback
                 sub_activities = state["final_sub_activities"].sub_activities
-                # print(f"Sub-Activities: {bold_start}{sub_activities}{bold_end}", "\n")
                 response_dict = get_human_feedback_for_sub_activities(last_node, sub_activities=sub_activities)
                 human_feedback = response_dict.get("human_feedback", "NA")
                 response_val = response_dict.get("response_val", "NA")
@@ -194,24 +194,14 @@ def run_graph(inputs, config, scratchpad_filename=None):
                 logger.debug(f"Human Feedback: {human_feedback}")
                 logger.debug(f"Response: {response_val}")
                 logger.debug(f"final_sub_activities: {final_sub_activities}")
-                # print(f"Human Feedback: {bold_start}{human_feedback}{bold_end}", "\n")
 
                 # get current config for updating state
                 config_ = graph.get_state(config, subgraphs=True).tasks[0].state.config
-                graph.update_state(
-                    config_, {"final_sub_activities": final_sub_activities}
-                )
-                
-                graph.stream(
-                Command(resume = {"final_sub_activities": final_sub_activities}), 
-                config=config_
-                )
-                
-            # if purpose == "get_user_feedback_for_sub_activities":
-                # graph.update_state(
-                #         config_, {"final_sub_activities": final_sub_activities}
-                #     )
             
+                graph.invoke(
+                Command(resume = {"final_sub_activities": final_sub_activities}), 
+                config=config_, subgraphs=True
+                )
             # if purpose is to get user feedback, then collect user feedback
             if purpose == "get_user_feedback":
                 # get human feedback
@@ -223,16 +213,6 @@ def run_graph(inputs, config, scratchpad_filename=None):
                 graph.update_state(
                     config_, {"human_feedback": agent_feedback}
                 )
-            # for other purposes, add the code below
-            # config_ = graph.get_state(config, subgraphs=True).tasks[0].state.config
-            # Create an instance of SubActivityResponse with three string inputs
-            # sub_activity_instance = SubActivityResponse(sub_activities=["How many protocol deviations happened?", 
-            #                                                             "What is the official timeline to resolve or close a protocol deviation?", 
-            #                                                             "Were the protocol deviations resolved or closed within the official timeline?"])
-            # graph.invoke(
-            #     Command(resume={"edited_text": sub_activity_instance}), 
-            #     config=config_
-            # )
         
     combine_txt_files_to_docx(folder_path = FINDINGS_OUTPUT_FOLDER, run_id=run_id,
                               output_filename = FINAL_OUTPUT_DOCX_FILENAME,
