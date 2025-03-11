@@ -9,15 +9,15 @@ interface Site {
 const mockInspectionAreas: Site[] = [
   {
     id: 'area1',
-    name: 'Protocol Compliance'
+    name: 'Inspection Area 1'
   },
   {
     id: 'area2',
-    name: 'Data Integrity'
+    name: 'Inspection Area 2'
   },
   {
     id: 'area3',
-    name: 'Subject Safety'
+    name: 'Inspection Area 3'
   }
 ];
 
