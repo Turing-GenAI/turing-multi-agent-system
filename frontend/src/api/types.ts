@@ -6,14 +6,15 @@ export interface ApiResponse<T> {
 
 export interface AIMessagesResponse {
   ai_messages: string;
-  new_ai_messages?: string[];
-  last_position?: number;
-  filtered_data?: TreeNode[];
-  findings?: {
-    pd: Finding[];
-    ae: Finding[];
-    sgr: Finding[];
-  };
+  new_ai_messages: string[];
+  last_position: number;
+  findings: any;
+  filtered_data: {
+    id: number;
+    name: string;
+    summary: string;
+    content: string;
+  }[];
 }
 
 export interface Finding {
@@ -26,7 +27,7 @@ export interface Finding {
 export interface AIMessagesRequest {
   ai_messages: boolean;
   findings: boolean;
-  last_position?: number;
+  last_position: number;
 }
 
 export interface ScheduleJobRequest {
