@@ -24,6 +24,13 @@ from ....utils.response_classes import DiscrepancyFunction
 from ....utils.state_definitions import InspectionAgentState
 from .inspection_functions import inspectionFunctions
 
+from ..config import REDIS_DB, REDIS_HOST, REDIS_PORT, REDIS_PWD, agent_outputs_path
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from redis import Redis
+from ....utils.setup_redis import connect_to_redis, initialize_redis_structure
+
 # Get the same logger instance set up earlier
 logger = get_logger()
 
@@ -572,6 +579,111 @@ class inspectionNodes:
     #     if FEEDBACK_FOR_PLANNER:
     #         return {"feedback": state["human_feedback"]}
     #     return {"feedback": "y"}
+
+    def save_sub_activities_to_redis(self, state: InspectionAgentState):
+        """
+        Save the generated final subactivities to the redis db for a given site area and activity.
+
+        This function saves the generated final subactivities to the redis db for a given site area and activity.
+        The subactivities are saved using a namespaced key format to avoid clashes with other data in Redis.
+        Key format: "copilot_saved_subactivities:{site_area}:{activity}"
+
+        Args:
+            state (InspectionAgentState): The current state of the planner agent, containing the site area, activity, and final subactivities.
+
+        Returns:
+            dict: A dictionary containing a success message.
+        """
+        logger.debug("Calling function: save_sub_activities_to_redis...")
+        
+        try:
+            # Connect to Redis using the imported configuration
+            redis_client = Redis(
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=REDIS_DB,
+                password=REDIS_PWD,
+                decode_responses=True
+            )
+            
+            # Test the connection
+            if not redis_client.ping():
+                logger.error("Failed to connect to Redis")
+                return {"success": False, "message": "Failed to connect to Redis"}
+            
+            site_area = state["site_area"]
+            activity = state["activity"]
+            sub_activities = state["final_sub_activities"].sub_activities
+            
+            # Use a namespaced key to avoid clashes with other data in Redis
+            # Format: copilot_saved_subactivities:{site_area}:{activity}
+            key = f"copilot_saved_subactivities:{site_area}:{activity}"
+            
+            # First clear any existing data for this key
+            redis_client.delete(key)
+            
+            # Add each sub-activity to the list
+            for sub_activity in sub_activities:
+                redis_client.rpush(key, sub_activity)
+            
+            logger.debug(f"Successfully saved {len(sub_activities)} sub-activities to Redis for {site_area}:{activity}")
+            return {"success": True, "message": f"Successfully saved {len(sub_activities)} sub-activities to Redis"}
+            
+        except Exception as e:
+            logger.error(f"Error saving sub-activities to Redis: {str(e)}")
+            return {"success": False, "message": f"Error saving sub-activities to Redis: {str(e)}"}
+
+    def fetch_sub_activities_from_redis(self, state: InspectionAgentState):
+        """
+        Fetch the list of sub-activities for a given site area and activity from Redis.
+        
+        Args:
+            site_area (str): The site area identifier.
+            activity (str): The activity name.
+            
+        Returns:
+            dict: A dictionary containing the success status, message, and the list of sub-activities if successful.
+        """
+        logger.debug(f"Fetching sub-activities from Redis for {site_area}:{activity}")
+        
+        site_area = state["site_area"]
+        activity = state["activity"]
+        try:
+            # Connect to Redis using the imported configuration
+            redis_client = Redis(
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=REDIS_DB,
+                password=REDIS_PWD,
+                decode_responses=True
+            )
+            
+            # Test the connection
+            if not redis_client.ping():
+                logger.error("Failed to connect to Redis")
+                return {"success": False, "message": "Failed to connect to Redis", "sub_activities": []}
+            
+            # Use the same namespaced key format as in save_sub_activities_to_redis
+            key = f"copilot_saved_subactivities:{site_area}:{activity}"
+            
+            # Check if the key exists
+            if not redis_client.exists(key):
+                logger.warning(f"No sub-activities found for {site_area}:{activity}")
+                return {"success": False, "message": f"No sub-activities found for {site_area}:{activity}", "sub_activities": []}
+            
+            # Retrieve all items from the list
+            sub_activities = redis_client.lrange(key, 0, -1)
+            
+            logger.debug(f"Successfully retrieved {len(sub_activities)} sub-activities from Redis for {site_area}:{activity}")
+            return {
+                "success": True, 
+                "message": f"Successfully retrieved {len(sub_activities)} sub-activities", 
+                "sub_activities": sub_activities
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching sub-activities from Redis: {str(e)}")
+            return {"success": False, "message": f"Error fetching sub-activities from Redis: {str(e)}", "sub_activities": []}
 
     def generate_findings(self, state: InspectionAgentState):
         logger.debug("Calling function : generate_findings...")

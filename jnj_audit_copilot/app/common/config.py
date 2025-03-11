@@ -80,3 +80,8 @@ SHEET_SELECTION = True
 REQUIRED_SHEETS = ["protocol_deviation", "Adverse Events", "3. InformedConsent"]
 
 FEEDBACK_FOR_PLANNER = True
+
+REDIS_HOST = "redis"
+REDIS_PORT = 6379
+REDIS_DB = 0
+REDIS_PWD = ""
