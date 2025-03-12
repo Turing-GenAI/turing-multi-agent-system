@@ -27,6 +27,7 @@ redis = "^5.1.1"
 litellm = "^1.51.3"
 retry = "^0.9.2"
 ipykernel = "^6.29.5"
+psycopg2-binary = "^2.9.10"
 
 
 [tool.poetry.group.dev.dependencies]
