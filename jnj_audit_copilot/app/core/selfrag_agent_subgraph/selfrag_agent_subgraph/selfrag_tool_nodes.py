@@ -52,6 +52,7 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
         # for doc in retrieved_docs:
         #     site_data_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
         #     i += 1
+        
 
         summary_df = read_file(
             file_path=input_filepaths_dict[site_area]["summary_df_file_path"],
