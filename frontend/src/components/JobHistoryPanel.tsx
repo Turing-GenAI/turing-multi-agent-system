@@ -433,14 +433,20 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
   };
 
   // Helper function to get status color
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): string => {
     switch (status.toLowerCase()) {
       case 'completed':
         return 'bg-green-100 text-green-800';
-      case 'failed':
+      case 'error':
         return 'bg-red-100 text-red-800';
       case 'processing':
         return 'bg-blue-100 text-blue-800';
+      case 'queued':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'take_human_feedback':
+        return 'bg-purple-100 text-purple-800';
+      case 'got_human_feedback':
+        return 'bg-indigo-100 text-indigo-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -450,10 +456,16 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
     switch (status.toLowerCase()) {
       case 'completed':
         return <CheckCircle className="w-4 h-4" />;
-      case 'failed':
+      case 'error':
         return <AlertCircle className="w-4 h-4" />;
       case 'processing':
+        return <RefreshCw className="w-4 h-4 animate-spin" />;
+      case 'queued':
         return <Clock className="w-4 h-4" />;
+      case 'take_human_feedback':
+        return <MessageSquare className="w-4 h-4" />;
+      case 'got_human_feedback':
+        return <MessageSquare className="w-4 h-4 text-indigo-600 rotate-180" />;
       default:
         return <Clock className="w-4 h-4" />;
     }
