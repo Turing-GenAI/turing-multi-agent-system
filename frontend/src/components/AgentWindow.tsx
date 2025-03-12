@@ -81,9 +81,20 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     }
   }, [handleScroll]);
 
+  // useEffect(() => {
+  //   scrollToBottom();
+  // }, [messages, shouldAutoScroll]);
+
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+
+  // Add this state at the top with other useState declarations
   useEffect(() => {
+    if (isFirstLoad) {
+      setIsFirstLoad(false);
+      return;
+    }
     scrollToBottom();
-  }, [messages, shouldAutoScroll]);
+  }, [messages, shouldAutoScroll, isFirstLoad]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

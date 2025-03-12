@@ -1137,32 +1137,10 @@ export const AuditPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-6">
-        <div className="mb-4">
-          <img src="/icons/icon.png" alt="App Icon" className="w-10 h-10" />
-        </div>
-        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <Home className="w-6 h-6 text-gray-600" />
-        </div>
-        <div className="p-2 bg-blue-50 rounded-lg cursor-pointer">
-          <FileText className="w-6 h-6 text-blue-600" />
-        </div>
-        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <AlertCircle className="w-6 h-6 text-gray-600" />
-        </div>
-        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <Settings className="w-6 h-6 text-gray-600" />
-        </div>
-        <div className="mt-auto p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <HelpCircle className="w-6 h-6 text-gray-600" />
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 py-4 px-6">
+        {/* <header className="bg-white border-b border-gray-200 py-4 px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
@@ -1179,11 +1157,11 @@ export const AuditPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </header>
+        </header> */}
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full p-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <AgentWindow
                 messages={messagesByAgent[selectedAgentTab]}
@@ -1206,7 +1184,15 @@ export const AuditPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Insights Panel</h2>
+                <h2 className="text-lg font-semibold text-gray-800">Insights Panel</h2>
+                <button
+                  onClick={() => setShowJobHistory(true)}
+                  disabled={false}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Job History
+                </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <FindingsTable 
@@ -1260,7 +1246,7 @@ export const AuditPage: React.FC = () => {
         {/* Footer */}
         <footer className="bg-white border-t border-gray-200 py-4 px-6">
           <div className="flex justify-between items-center text-sm text-gray-600">
-            <div> 2025 Clinical Trial Audit Assistant</div>
+            <div> Audit Copilot </div>
             <div className="flex space-x-4">
               <a 
                 href="#" 
