@@ -18,8 +18,7 @@ class inspectionSubgraph_p1:
         logger.debug("Initialising helper functions for inspectionSubgraph p1...")
         self.inspection_nodes = inspectionNodes()
         self.inspection_conditional_functions = inspectionConditionalFunctions()
-        selfrag_agent_subgraph = selfragAgentSubgraph()
-        self.child_graph = selfrag_agent_subgraph.create_selfrag_agent_subgraph()
+        # selfrag_agent_subgraph = selfragAgentSubgraph()
 
     def create_inspection_subgraph(self):
         logger.debug("Creating inspection subgraph")

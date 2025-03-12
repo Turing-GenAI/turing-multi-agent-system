@@ -15,7 +15,7 @@ logger = get_logger()
 class inspectionSubgraph_p2:
     def __init__(self):
         logger.debug("Initialising inspectionSubgraph_p2 ...")
-        logger.debug("Initialising helper functions for inspectionSubgraph")
+        logger.debug("Initialising helper functions for inspectionSubgraph_p2")
         self.inspection_nodes = inspectionNodes()
         self.inspection_conditional_functions = inspectionConditionalFunctions()
         selfrag_agent_subgraph = selfragAgentSubgraph()
@@ -26,11 +26,13 @@ class inspectionSubgraph_p2:
         builder = StateGraph(InspectionAgentState)
         builder.add_node("site_area_agent", self.inspection_nodes.site_area_agent_node)
         builder.add_node("site_area_router", self.inspection_nodes.site_area_router_node)
-        builder.add_node("planner_agent", self.inspection_nodes.sub_activity_generator_node)
-        builder.add_node("critique_agent", self.inspection_nodes.validate_sub_activity_node)
-        builder.add_node("feedback_agent", self.inspection_nodes.work_on_feedback_node)
-        builder.add_node("planner_user_validation", self.inspection_nodes.interrupt_for_planner_feedback)
-        # builder.add_node("add_human_in_the_loop", self.inspection_nodes.add_human_in_the_loop_node)
+        # builder.add_node("planner_agent", self.inspection_nodes.sub_activity_generator_node)
+        # builder.add_node("critique_agent", self.inspection_nodes.validate_sub_activity_node)
+        # builder.add_node("feedback_agent", self.inspection_nodes.work_on_feedback_node)
+        # builder.add_node("planner_user_validation", self.inspection_nodes.interrupt_for_planner_feedback)
+        # # builder.add_node("add_human_in_the_loop", self.inspection_nodes.add_human_in_the_loop_node)
+        
+        builder.add_node("fetch_sub_activities_from_redis", self.inspection_nodes.fetch_sub_activities_from_redis)
         builder.add_node("selfrag_subgraph", self.child_graph)
         builder.add_node("generate_findings_agent", self.inspection_nodes.generate_findings)
         builder.add_node(
