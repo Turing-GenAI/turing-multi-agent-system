@@ -15,6 +15,8 @@ from ....prompt_hub.selfrag_prompts import selfrag_prompts
 from ....utils.helpers import input_filepaths_dict, read_file
 from ....utils.langchain_azure_openai import azure_chat_openai_client as model
 from ....utils.log_setup import get_logger
+from ....utils.retriever import SummaryRetriever
+
 
 # Get the same logger instance set up earlier
 logger = get_logger()
@@ -33,21 +35,23 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
     """
     Retrieves relevant answers from the site data to answer the query
     """
-    ingestor = IngestionFacade(site_area=site_area, site_id=site_id, trial_id=trial_id, ingested_previously=True)
-    summary_vectorstore, data_retriever = ingestor.ingest_data()
-
+    # ingestor = IngestionFacade(site_area=site_area, site_id=site_id, trial_id=trial_id, ingested_previously=True)
+    # summary_vectorstore, data_retriever = ingestor.ingest_data()
+    data_retriever = SummaryRetriever(site_area)
     logger.debug("Calling function : site_data_retriever_tool...")
 
     if data_retriever is not None:
-        retrieved_docs = data_retriever.invoke(sub_activity, n_results=1)
-        retrieved_doc_filename = retrieved_docs[0].metadata["filename"]
-        logger.debug(f"Retrieved data from file: {retrieved_doc_filename}")
+        retriever_response = SummaryRetriever.retrieve_relevant_documents(query=sub_activity, k = 1, site_id=site_id, trial_id=trial_id)
+        # retrieved_docs = data_retriever.invoke(sub_activity, n_results=1)
+        # retrieved_doc_filename = retrieved_docs[0].metadata["filename"]
+        retrieved_docs = [i['original_data'] for i in retriever_response]
+        logger.debug(f"Retrieved data from table: {retriever_response["metadata"]["table_name"]}")
 
-        site_data_context_dict = {}
-        i = 0
-        for doc in retrieved_docs:
-            site_data_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
-            i += 1
+        # site_data_context_dict = {}
+        # i = 0
+        # for doc in retrieved_docs:
+        #     site_data_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
+        #     i += 1
 
         summary_df = read_file(
             file_path=input_filepaths_dict[site_area]["summary_df_file_path"],
