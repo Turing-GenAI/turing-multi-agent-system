@@ -1,7 +1,7 @@
 import os
 import re
 import pandas as pd
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text
 from typing import List, Dict, Tuple, Optional
 
 from langchain_chroma import Chroma
@@ -23,7 +23,6 @@ class SQLGenerator:
     def __init__(self):
         self.engine = create_engine(db_url)
         self.persist_directory = os.path.join(CHROMADB_DIR, CHROMADB_SUMMARY_FOLDER_NAME, "summaries_db")
-        self.inspector = inspect(self.engine)
         
         # Initialize ChromaDB
         self.vectorstore = Chroma(
@@ -33,13 +32,10 @@ class SQLGenerator:
         
         # Define the SQL query generation prompt
         self.sql_prompt = ChatPromptTemplate.from_template("""
-        Based on the following table information and user question, generate a SQL query.
+        Based on the following table summary and user question, generate a SQL query.
         
         Table Summary:
         {table_summary}
-        
-        Table Schema (Available Columns):
-        {table_columns}
         
         User Question:
         {question}
@@ -47,12 +43,11 @@ class SQLGenerator:
         Additional Context:
         - The schema name is: {schema_name}
         - The table name is: {table_name}
-        - Include site_id='{site_id}' and trial_id='{trial_id}' in the WHERE clause if these columns exist
-        - PostgreSQL is case-sensitive, so use exact column names as shown in Table Schema
+        - Include site_id={site_id} and trial_id={trial_id} in the WHERE clause if these columns exist
         
         Generate a SQL query that:
         1. Uses the correct schema and table names
-        2. Selects only necessary columns from the available columns list
+        2. Selects only necessary columns
         3. Includes appropriate WHERE clauses
         4. Uses proper JOIN statements if needed
         5. Formats the query for readability
@@ -65,17 +60,6 @@ class SQLGenerator:
         Explanation:
         Brief explanation of what the query does and why you chose these columns.
         """)
-
-    def get_table_columns(self, schema_name: str, table_name: str) -> List[str]:
-        """
-        Get the column names for a specific table.
-        """
-        try:
-            columns = self.inspector.get_columns(table_name, schema=schema_name)
-            return [col['name'] for col in columns]
-        except Exception as e:
-            logger.error(f"Error getting table columns: {e}")
-            return []
 
     def get_relevant_summary(self, question: str, k: int = 1) -> List[Dict]:
         """
@@ -133,20 +117,10 @@ class SQLGenerator:
             most_relevant = relevant_docs[0]
             table_name = most_relevant['metadata']['table_name']
             
-            # Get table columns
-            columns = self.get_table_columns(schema_name, table_name)
-            if not columns:
-                logger.error(f"Could not get columns for table {schema_name}.{table_name}")
-                return None, None
-            
-            # Format columns for prompt
-            columns_str = "\n".join([f"- {col}" for col in columns])
-            
             # Generate SQL query using LLM
             prompt_response = azure_chat_openai_client.invoke(
                 self.sql_prompt.format(
                     table_summary=most_relevant['content'],
-                    table_columns=columns_str,
                     question=question,
                     schema_name=schema_name,
                     table_name=table_name,
@@ -154,9 +128,6 @@ class SQLGenerator:
                     trial_id=trial_id or "NULL"
                 )
             )
-            
-            # Log the full prompt and response for debugging
-            logger.debug(f"LLM Response:\n{prompt_response.content}")
             
             # Extract SQL query from response
             sql_query = self.extract_sql_query(prompt_response.content)
@@ -172,7 +143,6 @@ class SQLGenerator:
             
         except Exception as e:
             logger.error(f"Error generating SQL query: {e}")
-            logger.error(f"Error details: {str(e)}")
             return None, None
 
 def test_sql_generator():
