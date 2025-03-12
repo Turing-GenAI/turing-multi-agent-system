@@ -1246,7 +1246,7 @@ export const AuditPage: React.FC = () => {
         {/* Footer */}
         <footer className="bg-white border-t border-gray-200 py-4 px-6">
           <div className="flex justify-between items-center text-sm text-gray-600">
-            <div> Audit Copilot </div>
+            <div>&copy; 2025 Audit Copilot</div>
             <div className="flex space-x-4">
               <a 
                 href="#" 
