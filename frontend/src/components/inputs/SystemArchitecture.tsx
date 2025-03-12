@@ -21,6 +21,25 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+// New component to display the system architecture image
+const SystemArchitectureImage: React.FC = () => {
+  return (
+    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+      <h2 className="text-xl font-semibold mb-4">System Architecture</h2>
+      <p className="text-gray-600 mb-6">
+        Diagram showing the components and data flow of the Turing Multi-Agent System.
+      </p>
+      <div className="flex justify-center">
+        <img 
+          src="/images/system-architecture.png" 
+          alt="System Architecture Diagram" 
+          className="max-w-full h-auto border rounded-lg shadow-sm"
+        />
+      </div>
+    </div>
+  );
+};
+
 // Smaller “child” node component
 const CustomNode = ({ data }: { data: any }) => {
   const bgColor = data.bgColor || '#ffffff';
@@ -805,226 +824,227 @@ const initialEdges: Edge[] = [
 ];
 
 export const SystemArchitecture: React.FC = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const reactFlowInstance = useRef(null);
+  // const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  // const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // const reactFlowInstance = useRef(null);
 
-  const onConnect = useCallback(
-    (params: Connection) =>
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            type: 'bezier',
-            animated: true,
-            style: { stroke: '#333', strokeWidth: 2 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 15,
-              height: 15,
-              color: '#333',
-            },
-            zIndex: 1000,
-          },
-          eds
-        )
-      ),
-    [setEdges]
-  );
+  // const onConnect = useCallback(
+  //   (params: Connection) =>
+  //     setEdges((eds) =>
+  //       addEdge(
+  //         {
+  //           ...params,
+  //           type: 'bezier',
+  //           animated: true,
+  //           style: { stroke: '#333', strokeWidth: 2 },
+  //           markerEnd: {
+  //             type: MarkerType.ArrowClosed,
+  //             width: 15,
+  //             height: 15,
+  //             color: '#333',
+  //           },
+  //           zIndex: 1000,
+  //         },
+  //         eds
+  //       )
+  //     ),
+  //   [setEdges]
+  // );
 
-  const defaultEdgeOptions = {
-    type: 'bezier',
-    animated: true,
-    style: { stroke: '#333', strokeWidth: 2 },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 15,
-      height: 15,
-      color: '#333',
-    },
-    zIndex: 1000,
-  };
+  // const defaultEdgeOptions = {
+  //   type: 'bezier',
+  //   animated: true,
+  //   style: { stroke: '#333', strokeWidth: 2 },
+  //   markerEnd: {
+  //     type: MarkerType.ArrowClosed,
+  //     width: 15,
+  //     height: 15,
+  //     color: '#333',
+  //   },
+  //   zIndex: 1000,
+  // };
 
-  // Ensure nodes are properly positioned on initial render and data nodes are always on top
-  React.useEffect(() => {
-    // Small delay to ensure the flow is rendered before positioning
-    const timer = setTimeout(() => {
-      setNodes((nds) => 
-        nds.map(node => {
-          // Special handling for data nodes
-          if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                zIndex: 999,
-              },
-              zIndex: 999,
-              style: { 
-                ...node.style,
-                zIndex: 999 
-              },
-              selectable: true,
-              draggable: true, // Make data nodes draggable
-            };
-          }
+  // // Ensure nodes are properly positioned on initial render and data nodes are always on top
+  // React.useEffect(() => {
+  //   // Small delay to ensure the flow is rendered before positioning
+  //   const timer = setTimeout(() => {
+  //     setNodes((nds) => 
+  //       nds.map(node => {
+  //         // Special handling for data nodes
+  //         if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
+  //           return {
+  //             ...node,
+  //             data: {
+  //               ...node.data,
+  //               zIndex: 999,
+  //             },
+  //             zIndex: 999,
+  //             style: { 
+  //               ...node.style,
+  //               zIndex: 999 
+  //             },
+  //             selectable: true,
+  //             draggable: true, // Make data nodes draggable
+  //           };
+  //         }
           
-          return {
-            ...node,
-            // Ensure all nodes have proper z-index
-            data: {
-              ...node.data,
-              zIndex: node.type === 'container' ? 0 : 10,
-            },
-            // Ensure nodes are selectable and draggable as needed
-            selectable: node.type !== 'container',
-            draggable: node.type !== 'container',
-          };
-        })
-      );
-    }, 100);
+  //         return {
+  //           ...node,
+  //           // Ensure all nodes have proper z-index
+  //           data: {
+  //             ...node.data,
+  //             zIndex: node.type === 'container' ? 0 : 10,
+  //           },
+  //           // Ensure nodes are selectable and draggable as needed
+  //           selectable: node.type !== 'container',
+  //           draggable: node.type !== 'container',
+  //         };
+  //       })
+  //     );
+  //   }, 100);
     
-    return () => clearTimeout(timer);
-  }, [setNodes]);
+  //   return () => clearTimeout(timer);
+  // }, [setNodes]);
 
-  // Update the fitView options to better handle the new layout
-  React.useEffect(() => {
-    // Fit view after a short delay to ensure all elements are rendered
-    const timer = setTimeout(() => {
-      if (reactFlowInstance.current) {
-        reactFlowInstance.current.fitView({
-          padding: 0.2,
-          includeHiddenNodes: true,
-          minZoom: 0.6,
-          maxZoom: 1.0
-        });
-      }
-    }, 200);
+  // // Update the fitView options to better handle the new layout
+  // React.useEffect(() => {
+  //   // Fit view after a short delay to ensure all elements are rendered
+  //   const timer = setTimeout(() => {
+  //     if (reactFlowInstance.current) {
+  //       reactFlowInstance.current.fitView({
+  //         padding: 0.2,
+  //         includeHiddenNodes: true,
+  //         minZoom: 0.6,
+  //         maxZoom: 1.0
+  //       });
+  //     }
+  //   }, 200);
     
-    return () => clearTimeout(timer);
-  }, [reactFlowInstance]);
+  //   return () => clearTimeout(timer);
+  // }, [reactFlowInstance]);
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
-      <h2 className="text-xl font-semibold mb-4">System Architecture</h2>
-      <p className="text-gray-600 mb-6">
-        Interactive diagram showing the components and data flow of the Turing Multi-Agent System.
-      </p>
-      <div className="border rounded-md shadow-md bg-white" style={{ height: '70vh' }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          defaultEdgeOptions={defaultEdgeOptions}
-          connectionLineComponent={({ fromX, fromY, toX, toY }) => (
-            <g>
-              <path
-                d={`M${fromX},${fromY} L${toX},${toY}`}
-                stroke="#333"
-                strokeWidth={2}
-                fill="none"
-                strokeDasharray="5,5"
-                style={{ zIndex: 1000 }}
-              />
-              <circle cx={toX} cy={toY} fill="#333" r={3} />
-            </g>
-          )}
-          elevateEdgesOnSelect={true}
-          fitView
-          minZoom={0.5}
-          maxZoom={1.5}
-          defaultZoom={0.7} // Slightly smaller default zoom to see more
-          fitViewOptions={{ 
-            padding: 0.2,
-            includeHiddenNodes: true
-          }}
-          onInit={instance => reactFlowInstance.current = instance}
-          proOptions={{ hideAttribution: true }}
-          nodesDraggable={false} // Default for most nodes
-          nodesConnectable={false} // Prevent new connections by default
-          elementsSelectable={true} // Allow selection for better interaction
-          zoomOnScroll={true}
-          panOnScroll={true}
-          preventScrolling={false}
-          onNodeClick={(event, node) => {
-            // When a node is clicked, ensure it's brought to the front
-            if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
-              setNodes((nds) =>
-                nds.map((n) => {
-                  if (n.id === node.id) {
-                    return {
-                      ...n,
-                      zIndex: 999,
-                      style: { ...n.style, zIndex: 999 },
-                      data: { ...n.data, zIndex: 999 }
-                    };
-                  }
-                  return n;
-                })
-              );
-            }
-          }}
-          onNodeDragStop={(event, node) => {
-            // When a node is dragged, ensure edges follow it properly
-            if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
-              // Update the node's position in the state
-              setNodes((nds) =>
-                nds.map((n) => {
-                  if (n.id === node.id) {
-                    return {
-                      ...n,
-                      position: node.position,
-                      zIndex: 999, // Ensure high z-index is maintained
-                      style: { ...n.style, zIndex: 999 }
-                    };
-                  }
-                  return n;
-                })
-              );
-            }
-          }}
-        >
-          <Controls showInteractive={false} />
-          <MiniMap 
-            nodeStrokeColor={(n) => {
-              return '#fff';
-            }}
-            nodeColor={(n) => {
-              return n.data.bgColor;
-            }}
-            nodeBorderRadius={2}
-          />
-          <Background color="#f8f8f8" gap={16} />
-          <Panel position="top-right">
-            <div className="bg-white p-3 rounded shadow-md border border-gray-200">
-              <h3 className="font-bold text-sm text-gray-800 mb-2">Legend</h3>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded mr-2"></div>
-                  <span className="text-xs text-gray-700">User Interface</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-green-100 border border-green-300 rounded mr-2"></div>
-                  <span className="text-xs text-gray-700">Agent System</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded mr-2"></div>
-                  <span className="text-xs text-gray-700">Data Storage</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded mr-2"></div>
-                  <span className="text-xs text-gray-700">External Systems</span>
-                </div>
-              </div>
-            </div>
-          </Panel>
-        </ReactFlow>
-      </div>
-    </div>
+    // <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+    //   <h2 className="text-xl font-semibold mb-4">System Architecture</h2>
+    //   <p className="text-gray-600 mb-6">
+    //     Interactive diagram showing the components and data flow of the Turing Multi-Agent System.
+    //   </p>
+    //   <div className="border rounded-md shadow-md bg-white" style={{ height: '70vh' }}>
+    //     <ReactFlow
+    //       nodes={nodes}
+    //       edges={edges}
+    //       onNodesChange={onNodesChange}
+    //       onEdgesChange={onEdgesChange}
+    //       onConnect={onConnect}
+    //       nodeTypes={nodeTypes}
+    //       edgeTypes={edgeTypes}
+    //       defaultEdgeOptions={defaultEdgeOptions}
+    //       connectionLineComponent={({ fromX, fromY, toX, toY }) => (
+    //         <g>
+    //           <path
+    //             d={`M${fromX},${fromY} L${toX},${toY}`}
+    //             stroke="#333"
+    //             strokeWidth={2}
+    //             fill="none"
+    //             strokeDasharray="5,5"
+    //             style={{ zIndex: 1000 }}
+    //           />
+    //           <circle cx={toX} cy={toY} fill="#333" r={3} />
+    //         </g>
+    //       )}
+    //       elevateEdgesOnSelect={true}
+    //       fitView
+    //       minZoom={0.5}
+    //       maxZoom={1.5}
+    //       defaultZoom={0.7} // Slightly smaller default zoom to see more
+    //       fitViewOptions={{ 
+    //         padding: 0.2,
+    //         includeHiddenNodes: true
+    //       }}
+    //       onInit={instance => reactFlowInstance.current = instance}
+    //       proOptions={{ hideAttribution: true }}
+    //       nodesDraggable={false} // Default for most nodes
+    //       nodesConnectable={false} // Prevent new connections by default
+    //       elementsSelectable={true} // Allow selection for better interaction
+    //       zoomOnScroll={true}
+    //       panOnScroll={true}
+    //       preventScrolling={false}
+    //       onNodeClick={(event, node) => {
+    //         // When a node is clicked, ensure it's brought to the front
+    //         if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
+    //           setNodes((nds) =>
+    //             nds.map((n) => {
+    //               if (n.id === node.id) {
+    //                 return {
+    //                   ...n,
+    //                   zIndex: 999,
+    //                   style: { ...n.style, zIndex: 999 },
+    //                   data: { ...n.data, zIndex: 999 }
+    //                 };
+    //               }
+    //               return n;
+    //             })
+    //           );
+    //         }
+    //       }}
+    //       onNodeDragStop={(event, node) => {
+    //         // When a node is dragged, ensure edges follow it properly
+    //         if (node.id === 'cosmos_db' || node.id === 'vector_store' || node.id === 'app_db') {
+    //           // Update the node's position in the state
+    //           setNodes((nds) =>
+    //             nds.map((n) => {
+    //               if (n.id === node.id) {
+    //                 return {
+    //                   ...n,
+    //                   position: node.position,
+    //                   zIndex: 999, // Ensure high z-index is maintained
+    //                   style: { ...n.style, zIndex: 999 }
+    //                 };
+    //               }
+    //               return n;
+    //             })
+    //           );
+    //         }
+    //       }}
+    //     >
+    //       <Controls showInteractive={false} />
+    //       <MiniMap 
+    //         nodeStrokeColor={(n) => {
+    //           return '#fff';
+    //         }}
+    //         nodeColor={(n) => {
+    //           return n.data.bgColor;
+    //         }}
+    //         nodeBorderRadius={2}
+    //       />
+    //       <Background color="#f8f8f8" gap={16} />
+    //       <Panel position="top-right">
+    //         <div className="bg-white p-3 rounded shadow-md border border-gray-200">
+    //           <h3 className="font-bold text-sm text-gray-800 mb-2">Legend</h3>
+    //           <div className="space-y-2">
+    //             <div className="flex items-center">
+    //               <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded mr-2"></div>
+    //               <span className="text-xs text-gray-700">User Interface</span>
+    //             </div>
+    //             <div className="flex items-center">
+    //               <div className="w-4 h-4 bg-green-100 border border-green-300 rounded mr-2"></div>
+    //               <span className="text-xs text-gray-700">Agent System</span>
+    //             </div>
+    //             <div className="flex items-center">
+    //               <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded mr-2"></div>
+    //               <span className="text-xs text-gray-700">Data Storage</span>
+    //             </div>
+    //             <div className="flex items-center">
+    //               <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded mr-2"></div>
+    //               <span className="text-xs text-gray-700">External Systems</span>
+    //             </div>
+    //           </div>
+    //         </div>
+    //       </Panel>
+    //     </ReactFlow>
+    //   </div>
+    // </div>
+    <SystemArchitectureImage />
   );
 };
 

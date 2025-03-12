@@ -670,6 +670,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                     Object.keys(level4.context_dict_key).forEach(contextKey => {
                       const contextItem = level4.context_dict_key[contextKey];
                       if (contextItem && contextItem.metadata && contextItem.page_content) {
+                        // Debug: Log the context item and its metadata
+                        console.log('Context Item:', contextItem);
+                        console.log('Context Item Metadata:', contextItem.metadata);
+                        console.log('Context Key:', contextKey);
+                        console.log('Key1:', key1);
+                        console.log('Key2:', key2);
+                        console.log('Key3:', key3);
+                        
                         // Check if there's HTML table content
                         let htmlTable = null;
                         if (contextItem.metadata.text_as_html) {
@@ -703,6 +711,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                         // Try to extract activity and subActivity info
                         let activity = '';
                         let subActivity = '';
+                        let question = '';
                         
                         // Try to extract activity from the context key or path
                         if (contextKey.includes('PD') || key1.includes('PD') || key2.includes('PD') || key3.includes('PD')) {
@@ -714,9 +723,29 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                           activity = 'AE_SAE';
                         }
                         
-                        // Try to extract the sub-activity from keys
-                        if (key2.includes('activity') || key3.includes('activity')) {
+                        // Try to extract the sub-activity from keys using a pattern similar to RetrievedContextModal
+                        if (key2.includes('<activity_id#') || key3.includes('<activity_id#')) {
+                          subActivity = key2.includes('<activity_id#') ? key2 : key3;
+                          // Remove numerical prefix if present (like "0_", "1_", etc.)
+                          subActivity = subActivity.replace(/^\d+_/, '');
+                          console.log('Found subActivity with activity_id pattern:', subActivity);
+                        } else if (key2.includes('activity') || key3.includes('activity')) {
+                          // Fallback to the original method
                           subActivity = key2.includes('activity') ? key2 : key3;
+                          console.log('Found subActivity with fallback method:', subActivity);
+                        }
+                        
+                        // Try to extract question from metadata or from keys
+                        if (contextItem.metadata.question) {
+                          question = contextItem.metadata.question;
+                          console.log('Found question in metadata:', question);
+                        } else {
+                          // Try to find a question in the keys after the subActivity
+                          // This is similar to how RetrievedContextModal extracts questions
+                          if (subActivity && key3 && !key3.includes('<activity_id#') && !key3.includes('activity')) {
+                            question = key3.replace(/^\d+_/, '');
+                            console.log('Found question in keys:', question);
+                          }
                         }
                         
                         const chunk = {
@@ -726,8 +755,16 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                           htmlTable: htmlTable,
                           category: 'Other',
                           activity,
-                          subActivity
+                          subActivity,
+                          question
                         };
+                        
+                        // Debug: Log the final chunk with extracted fields
+                        console.log('Final chunk:', {
+                          activity: chunk.activity,
+                          subActivity: chunk.subActivity,
+                          question: chunk.question
+                        });
                         
                         // Categorize chunks based on their source or content
                         const source = chunk.source.toLowerCase();
@@ -1215,29 +1252,25 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {/* Display activity */}
-                                        {chunk.activity && (
-                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              <strong>Activity</strong>
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              <strong>{chunk.activity}</strong>
-                                            </td>
-                                          </tr>
-                                        )}
+                                        {/* Display subActivity as Activity - always show even if empty */}
+                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                            <strong>Activity</strong>
+                                          </td>
+                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                            {chunk.subActivity ? cleanSubactivityValue(chunk.subActivity) : (chunk.activity || 'Unknown')}
+                                          </td>
+                                        </tr>
                                         
-                                        {/* Display subActivity as Activity */}
-                                        {chunk.subActivity && (
-                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              <strong>Activity</strong>
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              {cleanSubactivityValue(chunk.subActivity)}
-                                            </td>
-                                          </tr>
-                                        )}
+                                        {/* Display question as Sub-activity - always show even if empty */}
+                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                            <strong>Sub-activity</strong>
+                                          </td>
+                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                            {chunk.question || 'Unknown'}
+                                          </td>
+                                        </tr>
                                         
                                         {/* Display other metadata fields */}
                                         {Object.entries(chunk.metadata)
@@ -1360,29 +1393,25 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {/* Display activity */}
-                                        {chunk.activity && (
-                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              <strong>Activity</strong>
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              <strong>{chunk.activity}</strong>
-                                            </td>
-                                          </tr>
-                                        )}
+                                        {/* Display subActivity as Activity - always show even if empty */}
+                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                            <strong>Activity</strong>
+                                          </td>
+                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                            {chunk.subActivity ? cleanSubactivityValue(chunk.subActivity) : (chunk.activity || 'Unknown')}
+                                          </td>
+                                        </tr>
                                         
-                                        {/* Display subActivity as Activity */}
-                                        {chunk.subActivity && (
-                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              <strong>Activity</strong>
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              {cleanSubactivityValue(chunk.subActivity)}
-                                            </td>
-                                          </tr>
-                                        )}
+                                        {/* Display question as Sub-activity - always show even if empty */}
+                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                            <strong>Sub-activity</strong>
+                                          </td>
+                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                            {chunk.question || 'Unknown'}
+                                          </td>
+                                        </tr>
                                         
                                         {/* Display other metadata fields */}
                                         {Object.entries(chunk.metadata)
@@ -1505,29 +1534,25 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {/* Display activity */}
-                                        {chunk.activity && (
-                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              <strong>Activity</strong>
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              <strong>{chunk.activity}</strong>
-                                            </td>
-                                          </tr>
-                                        )}
+                                        {/* Display subActivity as Activity - always show even if empty */}
+                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                            <strong>Activity</strong>
+                                          </td>
+                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                            {chunk.subActivity ? cleanSubactivityValue(chunk.subActivity) : (chunk.activity || 'Unknown')}
+                                          </td>
+                                        </tr>
                                         
-                                        {/* Display subActivity as Activity */}
-                                        {chunk.subActivity && (
-                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              <strong>Activity</strong>
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              {cleanSubactivityValue(chunk.subActivity)}
-                                            </td>
-                                          </tr>
-                                        )}
+                                        {/* Display question as Sub-activity - always show even if empty */}
+                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                            <strong>Sub-activity</strong>
+                                          </td>
+                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                            {chunk.question || 'Unknown'}
+                                          </td>
+                                        </tr>
                                         
                                         {/* Display other metadata fields */}
                                         {Object.entries(chunk.metadata)
