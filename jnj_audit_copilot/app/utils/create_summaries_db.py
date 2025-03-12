@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine, inspect
 
 from ..common.config import CHROMADB_DIR
-from ..common.constants import CHROMADB_SUMMARY_FOLDER_NAME
+from ..common.constants import CHROMADB_SUMMARY_FOLDER_NAME, CHROMADB_INDEX_SUMMARIES
 from .langchain_azure_openai import azure_embedding_openai_client
 from .log_setup import get_logger
 from langchain.schema import Document
@@ -15,84 +15,100 @@ logger = get_logger()
 # PostgreSQL connection
 db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
 
-def get_all_tables_from_summaries_schema():
+def get_all_tables_from_summaries_schema(site_area: str):
     """
     Get all tables from the summaries schema and combine them into a single DataFrame
     with table name as an additional column.
     """
+
     try:
         engine = create_engine(db_url)
         inspector = inspect(engine)
+
+        query = f'SELECT * FROM summaries."{site_area}"'
+        df = pd.read_sql(query, engine)
+        logger.info(f"Read {len(df)} rows from table {site_area}")
+        logger.info(f"Columns in {site_area}: {df.columns.tolist()}")
         
-        # Get all tables in the summaries schema
-        tables = inspector.get_table_names(schema='summaries')
-        logger.info(f"Found {len(tables)} tables in summaries schema")
-        
-        all_data = []
-        for table in tables:
-            # Read each table
-            query = f'SELECT * FROM summaries."{table}"'
-            df = pd.read_sql(query, engine)
-            logger.info(f"Read {len(df)} rows from table {table}")
-            logger.info(f"Columns in {table}: {df.columns.tolist()}")
-            
-            # Add table_name column
-            df['table_name'] = table
-            
-            all_data.append(df)
-        
-        # Combine all tables
-        if all_data:
-            combined_df = pd.concat(all_data, ignore_index=True)
-            logger.info(f"Combined {len(combined_df)} total rows from all tables")
-            logger.info(f"Final columns: {combined_df.columns.tolist()}")
-            return combined_df
-        return None
+        return df
     except Exception as e:
         logger.error(f"Error getting tables from summaries schema: {e}")
         return None
 
-def create_summaries_chromadb():
+def create_summaries_chromadb(site_area: str):
     """
     Create a new ChromaDB collection for summaries and store embeddings.
+    Each site area gets its own folder structure with document_persist, guidelines, and summary folders.
+    
+    Args:
+        site_area (str): Name of the site area (e.g., 'pd', 'ae_sae')
     """
     try:
-        # Get the combined data
-        logger.info("Fetching data from PostgreSQL...")
-        combined_df = get_all_tables_from_summaries_schema()
+        # Get the data for this site area
+        logger.info(f"Fetching data from PostgreSQL for {site_area}...")
+        df = get_all_tables_from_summaries_schema(site_area)
 
-        if combined_df is None or combined_df.empty:
-            logger.error("No data found in summaries schema")
+        if df is None or df.empty:
+            logger.error(f"No data found for site area: {site_area}")
             return
-        
+
         # Generate embeddings for the "Summary" column
         logger.info("Generating embeddings...")
-        summaries = combined_df["Summary"].tolist()
+        summaries = df["Summary"].tolist()
         
-        # Define ChromaDB persistence directory
-        persist_directory = os.path.join(CHROMADB_DIR, CHROMADB_SUMMARY_FOLDER_NAME, "summaries_db")
-        os.makedirs(persist_directory, exist_ok=True)
-        logger.info(f"Created directory at: {persist_directory}")
+        # Define base directory structure
+        base_dir = os.path.join("chromadb2", site_area)
+        
+        # Create all required directories
+        folders = ["document_persist", "guidelines", "summary"]
+        for folder in folders:
+            os.makedirs(os.path.join(base_dir, folder), exist_ok=True)
+            
+        # Define ChromaDB persistence directory for summaries
+        persist_directory = os.path.join(base_dir, "summary")
+        logger.info(f"Created directory structure at: {base_dir}")
 
-        # Store embeddings in ChromaDB
-        logger.info("Storing summaries in ChromaDB...")
+        # Store embeddings in ChromaDB with site-specific collection name
+        logger.info(f"Storing summaries in ChromaDB for {site_area}...")
         vectorstore = Chroma.from_texts(
             texts=summaries,
             embedding=azure_embedding_openai_client,
+            collection_name=CHROMADB_INDEX_SUMMARIES,  # Unique collection name for each site area
             metadatas=[{
-                "table_name": row["table_name"],
-                "source_file": row.get("source_file", "unknown"),  # Use get() to handle missing columns
-                "upload_timestamp": str(row.get("upload_timestamp", pd.Timestamp.now()))
-            } for _, row in combined_df.iterrows()],
+                "site_area": site_area,
+                "database_name": row.get("database_name"),
+                "schema_name": row.get("schema_name"),
+                "table_name": row.get("table_name")
+            } for _, row in df.iterrows()],
             persist_directory=persist_directory
         )
 
-        logger.info(f"Successfully stored {len(summaries)} embeddings in ChromaDB")
+        logger.info(f"Successfully stored {len(summaries)} embeddings in ChromaDB for {site_area}")
         return vectorstore
     except Exception as e:
-        logger.error(f"Error storing summaries in ChromaDB: {e}")
+        logger.error(f"Error storing summaries in ChromaDB for {site_area}: {e}")
         logger.error(f"Error details: {str(e)}")
         return None
+
+def process_all_site_areas():
+    """
+    Process all available site areas and create their respective ChromaDB collections.
+    """
+    try:
+        # Get list of all tables (site areas) from PostgreSQL
+        engine = create_engine(db_url)
+        inspector = inspect(engine)
+        site_areas = inspector.get_table_names(schema='summaries')
+        
+        logger.info(f"Found site areas: {site_areas}")
+        
+        # Process each site area
+        for site_area in site_areas:
+            logger.info(f"Processing site area: {site_area}")
+            create_summaries_chromadb(site_area)
+            
+    except Exception as e:
+        logger.error(f"Error processing site areas: {e}")
 
 def test_chromadb_query():
     """
@@ -135,9 +151,11 @@ def test_chromadb_query():
         return None
 
 if __name__ == "__main__":
-    # Create the database
-    db = create_summaries_chromadb()
-    if db is not None:
-        # Test querying the database
-        test_chromadb_query()
+    # Process all site areas
+    process_all_site_areas()
+    # # Create the database
+    # db = create_summaries_chromadb("ae_sae")
+    # if db is not None:
+    #     # Test querying the database
+    #     test_chromadb_query()
     
