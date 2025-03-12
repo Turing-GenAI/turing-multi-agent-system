@@ -74,7 +74,7 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+      className="fixed inset-0 bg-gray-50 bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div 
@@ -90,7 +90,7 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
           </div>
           <button 
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors text-yellow-500 hover:text-yellow-700"
+            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors text-gray-500 hover:text-gray-700"
           >
             <X size={20} />
           </button>
@@ -124,31 +124,27 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
             <div className="bg-white rounded-lg shadow">
               <div className="overflow-x-auto">
                 <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
-                  <thead className="bg-yellow-50/70 sticky top-0">
+                  <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Category</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Severity</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider border border-gray-200">Deviation</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider border border-gray-200">Description</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Category</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Severity</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Deviation</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Description</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {mockPDAlerts.map((alert, index) => (
-                      <tr key={index} className="hover:bg-yellow-50/30 transition-colors">
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.subject}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.protocol}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.site}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.category}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            alert.severity === 'Critical' ? 'bg-red-100 text-red-800' :
-                            alert.severity === 'Major' ? 'bg-orange-100 text-orange-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600`}>
                             {alert.severity}
                           </span>
                         </td>
@@ -171,7 +167,7 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
         <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-md text-white shadow-sm bg-yellow-500 hover:bg-yellow-600 transition-colors"
+            className="px-4 py-2 rounded-md text-white shadow-sm bg-gray-500 hover:bg-gray-600 transition-colors"
           >
             Close
           </button>

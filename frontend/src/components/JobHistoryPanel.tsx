@@ -583,21 +583,21 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
     return (
       <div className="overflow-x-auto mt-4">
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
-          <thead className="bg-yellow-50/70 sticky top-0">
+          <thead className="bg-gray-50 sticky top-0">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Category</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider border border-gray-200">Severity</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider border border-gray-200">Deviation</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Site</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Severity</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Deviation</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Description</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {findingData.table.map((row: any, index: number) => (
-              <tr key={index} className="hover:bg-yellow-50/30 transition-colors">
+              <tr key={index} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Subject}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Protocol_Name}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Site_Name}</td>
@@ -625,23 +625,23 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
     return (
       <div className="overflow-x-auto mt-4">
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
-          <thead className="bg-orange-50/70 sticky top-0">
+          <thead className="bg-gray-50 sticky top-0">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-40 border border-gray-200">Event Term</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Grade</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Outcome</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Start Date</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">End Date</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Treatment Given</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Serious</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-40 border border-gray-200">Action (Amivantamab)</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Site</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-40 border border-gray-200">Event Term</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-24 border border-gray-200">Grade</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Outcome</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Start Date</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">End Date</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Treatment Given</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-24 border border-gray-200">Serious</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-40 border border-gray-200">Action (Amivantamab)</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {findingData.table.map((row: any, index: number) => (
-              <tr key={index} className="hover:bg-orange-50/30 transition-colors">
+              <tr key={index} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Subject}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Site}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row["What is the adverse event term?"]}</td>
@@ -841,7 +841,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
       <div className="overflow-y-auto flex-1 p-4">
         {loading ? (
           <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
           </div>
         ) : error ? (
           <div className="bg-red-50 p-4 rounded-md text-red-700 flex items-start">
@@ -939,7 +939,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                 }}
                 disabled={loadingMessages}
                 className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-                  showAgentMessages ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  showAgentMessages ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                 } ${loadingMessages ? 'opacity-50' : ''}`}
               >
                 <MessageSquare className="w-4 h-4" />
@@ -960,7 +960,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                 }}
                 disabled={loadingFindings}
                 className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-                  showPDFindings ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  showPDFindings ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                 } ${loadingFindings ? 'opacity-50' : ''}`}
               >
                 <FileWarning className="w-4 h-4" />
@@ -982,7 +982,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                 }}
                 disabled={loadingFindings}
                 className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-                  showAEFindings ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  showAEFindings ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                 } ${loadingFindings ? 'opacity-50' : ''}`}
               >
                 <AlertCircle className="w-4 h-4" />
@@ -1004,7 +1004,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                 }}
                 disabled={loadingContext}
                 className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-                  showContext ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  showContext ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                 } ${loadingContext ? 'opacity-50' : ''}`}
               >
                 <Database className="w-4 h-4" />
@@ -1028,7 +1028,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                   </h3>
                   {loadingMessages ? (
                     <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
                     </div>
                   ) : messageError ? (
                     <div className="bg-red-50 p-4 rounded-md text-red-700 flex items-start">
@@ -1059,13 +1059,13 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
               {/* Show PD Findings */}
               {showPDFindings && (
                 <div className="bg-white rounded-lg p-4 shadow-sm border">
-                  <h3 className="text-lg font-semibold mb-4 text-yellow-700 flex items-center">
+                  <h3 className="text-lg font-semibold mb-4 text-yellow-600 flex items-center">
                     <FileWarning className="w-5 h-5 mr-2" />
                     Protocol Deviation Findings
                   </h3>
                   {loadingFindings ? (
                     <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-yellow-500"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
                     </div>
                   ) : findingsError ? (
                     <div className="bg-red-50 p-4 rounded-md text-red-700 flex items-start">
@@ -1078,9 +1078,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                      <div className="bg-yellow-100 p-3 cursor-pointer flex items-center justify-between transition-colors">
+                      <div className="bg-gray-100 p-3 cursor-pointer flex items-center justify-between transition-colors">
                         <div className="flex items-center">
-                          <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center mr-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                             <AlertTriangle size={14} className="text-yellow-500" />
                           </div>
                           <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
@@ -1095,7 +1095,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                           <div key={`pd-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
                             {/* Item Number */}
                             <div className="mb-2">
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-200 text-yellow-700 font-medium text-sm mr-2 shadow-sm">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
                                 {index + 1}
                               </span>
                               <span className="text-sm text-gray-500">Finding {index + 1} of {findings.pd.length}</span>
@@ -1130,13 +1130,13 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
               {/* Show AE Findings */}
               {showAEFindings && (
                 <div className="bg-white rounded-lg p-4 shadow-sm border">
-                  <h3 className="text-lg font-semibold mb-4 text-orange-700 flex items-center">
+                  <h3 className="text-lg font-semibold mb-4 text-orange-600 flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
                     Adverse Event Findings
                   </h3>
                   {loadingFindings ? (
                     <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
                     </div>
                   ) : findingsError ? (
                     <div className="bg-red-50 p-4 rounded-md text-red-700 flex items-start">
@@ -1149,9 +1149,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                      <div className="bg-orange-100 p-3 cursor-pointer flex items-center justify-between transition-colors">
+                      <div className="bg-gray-100 p-3 cursor-pointer flex items-center justify-between transition-colors">
                         <div className="flex items-center">
-                          <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mr-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                             <AlertCircle size={14} className="text-orange-500" />
                           </div>
                           <h4 className="font-medium text-orange-600">Adverse Events / Serious Adverse Events</h4>
@@ -1166,7 +1166,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                           <div key={`ae-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
                             {/* Item Number */}
                             <div className="mb-2">
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-200 text-orange-700 font-medium text-sm mr-2 shadow-sm">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
                                 {index + 1}
                               </span>
                               <span className="text-sm text-gray-500">Finding {index + 1} of {findings.ae.length}</span>
@@ -1207,7 +1207,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                   </h3>
                   {loadingContext ? (
                     <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
                     </div>
                   ) : contextError ? (
                     <div className="bg-red-50 p-4 rounded-md text-red-700 flex items-start">
@@ -1223,7 +1223,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                       {/* PD Section */}
                       {retrievedContext.pd && retrievedContext.pd.length > 0 && (
                         <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                          <div className="bg-yellow-100 p-3 cursor-pointer flex items-center justify-between transition-colors"
+                          <div className="bg-gray-100 p-3 cursor-pointer flex items-center justify-between transition-colors"
                                onClick={() => setPdExpanded(!pdExpanded)}>
                             <div className="flex items-center">
                               {pdExpanded ? 
@@ -1231,7 +1231,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                 <ChevronRight className="w-4 h-4 text-yellow-500" />
                               }
                               <div className="flex items-center">
-                                <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center mr-2">
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                                   <AlertTriangle size={14} className="text-yellow-500" />
                                 </div>
                                 <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
@@ -1248,7 +1248,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                 <div key={`pd-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
                                   {/* Item Number */}
                                   <div className="mb-2">
-                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-200 text-yellow-700 font-medium text-sm mr-2 shadow-sm">
+                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
                                       {index + 1}
                                     </span>
                                     <span className="text-sm text-gray-500">Item {index + 1} of {retrievedContext.pd.length}</span>
@@ -1258,7 +1258,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                   <div className="mb-3 overflow-x-auto">
                                     <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
                                       <thead>
-                                        <tr className="bg-yellow-50">
+                                        <tr className="bg-gray-50">
                                           <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
                                           <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
                                         </tr>
@@ -1331,8 +1331,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
-                                              '--header-bg-color': '#fef9c3',
-                                              '--header-text-color': '#854d0e'
+                                              '--header-bg-color': '#f3f4f6',
+                                              '--header-text-color': '#374151'
                                             } as React.CSSProperties}
                                             dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
                                           />
@@ -1364,7 +1364,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                       {/* AE Section */}
                       {retrievedContext.ae && retrievedContext.ae.length > 0 && (
                         <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                          <div className="bg-orange-100 p-3 cursor-pointer flex items-center justify-between transition-colors"
+                          <div className="bg-gray-100 p-3 cursor-pointer flex items-center justify-between transition-colors"
                                onClick={() => setAeExpanded(!aeExpanded)}>
                             <div className="flex items-center">
                               {aeExpanded ? 
@@ -1372,7 +1372,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                 <ChevronRight className="w-4 h-4 text-orange-500" />
                               }
                               <div className="flex items-center">
-                                <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mr-2">
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                                   <AlertCircle size={14} className="text-orange-500" />
                                 </div>
                                 <h4 className="font-medium text-orange-600">Adverse Events / Serious Adverse Events</h4>
@@ -1389,7 +1389,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                 <div key={`ae-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
                                   {/* Item Number */}
                                   <div className="mb-2">
-                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-200 text-orange-700 font-medium text-sm mr-2 shadow-sm">
+                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
                                       {index + 1}
                                     </span>
                                     <span className="text-sm text-gray-500">Item {index + 1} of {retrievedContext.ae.length}</span>
@@ -1399,7 +1399,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                   <div className="mb-3 overflow-x-auto">
                                     <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
                                       <thead>
-                                        <tr className="bg-orange-50">
+                                        <tr className="bg-gray-50">
                                           <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
                                           <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
                                         </tr>
@@ -1472,8 +1472,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
-                                              '--header-bg-color': '#ffedd5',
-                                              '--header-text-color': '#9a3412'
+                                              '--header-bg-color': '#f3f4f6',
+                                              '--header-text-color': '#374151'
                                             } as React.CSSProperties}
                                             dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
                                           />
@@ -1505,18 +1505,18 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                       {/* Other Section */}
                       {retrievedContext.other && retrievedContext.other.length > 0 && (
                         <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                          <div className="bg-blue-100 p-3 cursor-pointer flex items-center justify-between transition-colors"
+                          <div className="bg-gray-100 p-3 cursor-pointer flex items-center justify-between transition-colors"
                                onClick={() => setOtherExpanded(!otherExpanded)}>
                             <div className="flex items-center">
                               {otherExpanded ? 
-                                <ChevronDown className="w-4 h-4 text-blue-500" /> : 
-                                <ChevronRight className="w-4 h-4 text-blue-500" />
+                                <ChevronDown className="w-4 h-4 text-gray-700" /> : 
+                                <ChevronRight className="w-4 h-4 text-gray-700" />
                               }
                               <div className="flex items-center">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                                  <Database size={14} className="text-blue-500" />
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                                  <Database size={14} className="text-gray-700" />
                                 </div>
-                                <h4 className="font-medium text-blue-600">Other Context</h4>
+                                <h4 className="font-medium text-gray-700">Other Context</h4>
                                 <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                                   {retrievedContext.other.length} {retrievedContext.other.length === 1 ? 'item' : 'items'}
                                 </span>
@@ -1530,7 +1530,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                 <div key={`other-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
                                   {/* Item Number */}
                                   <div className="mb-2">
-                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-200 text-blue-700 font-medium text-sm mr-2 shadow-sm">
+                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
                                       {index + 1}
                                     </span>
                                     <span className="text-sm text-gray-500">Item {index + 1} of {retrievedContext.other.length}</span>
@@ -1540,7 +1540,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                   <div className="mb-3 overflow-x-auto">
                                     <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
                                       <thead>
-                                        <tr className="bg-blue-50">
+                                        <tr className="bg-gray-50">
                                           <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
                                           <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
                                         </tr>
@@ -1613,8 +1613,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
-                                              '--header-bg-color': '#dbeafe',
-                                              '--header-text-color': '#1e40af'
+                                              '--header-bg-color': '#f3f4f6',
+                                              '--header-text-color': '#374151'
                                             } as React.CSSProperties}
                                             dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
                                           />

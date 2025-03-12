@@ -86,7 +86,7 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+      className="fixed inset-0 bg-gray-50 bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div 
@@ -102,7 +102,7 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
           </div>
           <button 
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors text-orange-500 hover:text-orange-700"
+            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors text-gray-500 hover:text-gray-700"
           >
             <X size={20} />
           </button>
@@ -135,32 +135,28 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
             <div className="bg-white rounded-lg shadow">
               <div className="overflow-x-auto">
                 <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
-                  <thead className="bg-orange-50/70 sticky top-0">
+                  <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-40 border border-gray-200">Event Term</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Grade</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Outcome</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Start Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">End Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Treatment Given</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Serious</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Action</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-40 border border-gray-200">Event Term</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Grade</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Outcome</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Start Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">End Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Treatment Given</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Serious</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {mockAEAlerts.map((alert, index) => (
-                      <tr key={index} className="hover:bg-orange-50/30 transition-colors">
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.subject}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.site}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.eventTerm}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            alert.grade >= 3 ? 'bg-red-100 text-red-800' :
-                            alert.grade === 2 ? 'bg-orange-100 text-orange-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600`}>
                             Grade {alert.grade}
                           </span>
                         </td>
@@ -169,18 +165,12 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.endDate || 'Ongoing'}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.treatmentGiven}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            alert.serious === 'Yes' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600`}>
                             {alert.serious}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            alert.action === 'Study Drug Discontinuation' ? 'bg-red-100 text-red-800' :
-                            alert.action === 'Dose Reduction' || alert.action === 'Dose Interruption' ? 'bg-orange-100 text-orange-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600`}>
                             {alert.action}
                           </span>
                         </td>
@@ -196,7 +186,7 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
         <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-md text-white shadow-sm bg-orange-500 hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 rounded-md text-white shadow-sm bg-gray-500 hover:bg-gray-600 transition-colors"
           >
             Close
           </button>
