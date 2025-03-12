@@ -286,7 +286,9 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               </div>
               <button 
                 onClick={() => setDialogOpen(false)}
-                className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors text-gray-500 hover:text-gray-700"
+                className={`p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors ${
+                  selectedContent.type === 'pd' ? 'text-yellow-500 hover:text-yellow-600' : 'text-orange-500 hover:text-orange-600'
+                }`}
               >
                 <X size={20} />
               </button>
@@ -322,7 +324,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
             <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
               <button
                 onClick={() => setDialogOpen(false)}
-                className="px-4 py-2 rounded-md text-white shadow-sm bg-gray-500 hover:bg-gray-600 transition-colors"
+                className="px-4 py-2 rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 shadow-sm transition-colors"
               >
                 Close
               </button>

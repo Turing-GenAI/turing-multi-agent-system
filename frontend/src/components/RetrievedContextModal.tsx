@@ -368,22 +368,19 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
               
               // Format the display key with full form instead of abbreviations
               let formattedDisplayKey = displayKey;
-              let sectionColor = 'gray'; // Default color
               
               if (displayKey === 'PD') {
                 formattedDisplayKey = 'Protocol Deviations';
-                sectionColor = 'yellow';
               } else if (displayKey === 'AE_SAE') {
                 formattedDisplayKey = 'Adverse Events / Serious Adverse Events';
-                sectionColor = 'orange';
               }
               
               // Define color classes based on section type
               const headerBgClass = 'bg-gray-100';
-              const textColorClass = sectionColor === 'yellow' ? 'text-yellow-600' : (sectionColor === 'orange' ? 'text-orange-600' : 'text-gray-600');
-              const iconColorClass = sectionColor === 'yellow' ? 'text-yellow-500' : (sectionColor === 'orange' ? 'text-orange-500' : 'text-gray-500');
+              const textColorClass = 'text-gray-700';
+              const iconColorClass = 'text-gray-700';
               const badgeBgClass = 'bg-gray-50';
-              const badgeTextClass = sectionColor === 'yellow' ? 'text-yellow-600' : (sectionColor === 'orange' ? 'text-orange-600' : 'text-gray-600');
+              const badgeTextClass = 'text-gray-700';
               
               return (
                 <div key={key} className="border rounded-lg overflow-visible shadow-sm mb-4 bg-white">
@@ -398,13 +395,13 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                       }
                       <div className="flex items-center">
                         {displayKey === 'PD' && (
-                          <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center mr-2">
-                            <AlertTriangle size={14} className="text-yellow-500" />
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                            <AlertTriangle size={14} className="text-gray-700" />
                           </div>
                         )}
                         {displayKey === 'AE_SAE' && (
-                          <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mr-2">
-                            <AlertCircle size={14} className="text-orange-500" />
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                            <AlertCircle size={14} className="text-gray-700" />
                           </div>
                         )}
                         <h4 className={`font-medium ${textColorClass}`}>{formattedDisplayKey}</h4>

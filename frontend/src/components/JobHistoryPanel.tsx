@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Clock, MessageSquare, Database, FileWarning, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { X, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Clock, MessageSquare, Database, FileWarning, ChevronDown, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { auditService } from '../api/services/auditService';
 import { agentName } from '../data/agentNames';
@@ -879,8 +879,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                   {job.completed_at && <div>Completed: {formatDate(job.completed_at)}</div>}
                 </div>
                 <div className="mt-2 flex items-center text-blue-600 text-sm">
-                  <MessageSquare className="w-4 h-4 mr-1" />
-                  <span>View agent messages</span>
+                  <FileText className="w-4 h-4 mr-1" />
+                  <span>View job details</span>
                 </div>
               </div>
             ))}
@@ -908,7 +908,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
           <div className="animate-fadeIn bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="text-lg font-semibold">
-                Agent Messages for Job: <span className="font-mono">{selectedJob}</span>
+                Job Details: <span className="font-mono">{selectedJob}</span>
               </h2>
               <button
                 onClick={() => {
@@ -1227,14 +1227,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                onClick={() => setPdExpanded(!pdExpanded)}>
                             <div className="flex items-center">
                               {pdExpanded ? 
-                                <ChevronDown className="w-4 h-4 text-yellow-500" /> : 
-                                <ChevronRight className="w-4 h-4 text-yellow-500" />
+                                <ChevronDown className="w-4 h-4 text-gray-700" /> : 
+                                <ChevronRight className="w-4 h-4 text-gray-700" />
                               }
                               <div className="flex items-center">
                                 <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                                  <AlertTriangle size={14} className="text-yellow-500" />
+                                  <AlertTriangle size={14} className="text-gray-700" />
                                 </div>
-                                <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
+                                <h4 className="font-medium text-gray-700">Protocol Deviations</h4>
                                 <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                                   {retrievedContext.pd.length} {retrievedContext.pd.length === 1 ? 'item' : 'items'}
                                 </span>
@@ -1368,14 +1368,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                onClick={() => setAeExpanded(!aeExpanded)}>
                             <div className="flex items-center">
                               {aeExpanded ? 
-                                <ChevronDown className="w-4 h-4 text-orange-500" /> : 
-                                <ChevronRight className="w-4 h-4 text-orange-500" />
+                                <ChevronDown className="w-4 h-4 text-gray-700" /> : 
+                                <ChevronRight className="w-4 h-4 text-gray-700" />
                               }
                               <div className="flex items-center">
                                 <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                                  <AlertCircle size={14} className="text-orange-500" />
+                                  <AlertCircle size={14} className="text-gray-700" />
                                 </div>
-                                <h4 className="font-medium text-orange-600">Adverse Events / Serious Adverse Events</h4>
+                                <h4 className="font-medium text-gray-700">Adverse Events / Serious Adverse Events</h4>
                                 <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                                   {retrievedContext.ae.length} {retrievedContext.ae.length === 1 ? 'item' : 'items'}
                                 </span>
@@ -1516,7 +1516,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
                                 <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                                   <Database size={14} className="text-gray-700" />
                                 </div>
-                                <h4 className="font-medium text-gray-700">Other Context</h4>
+                                <h4 className="font-medium text-gray-700">Other Retrieved Context</h4>
                                 <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                                   {retrievedContext.other.length} {retrievedContext.other.length === 1 ? 'item' : 'items'}
                                 </span>
