@@ -3,6 +3,17 @@ import { X } from 'lucide-react';
 import { PDAlertsDialog } from './PDAlertsDialog';
 import { AEAlertsDialog } from './AEAlertsDialog';
 
+// Function to convert a trial ID to a numeric index for maintaining the ordering logic
+const getTrialIndex = (trialId: string): number => {
+  // Extract the last 3 digits if possible, or return a random large number
+  const match = trialId.match(/(\d{3})$/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  // Fallback for incompatible formats
+  return Math.floor(Math.random() * 1000);
+};
+
 interface Alert {
   trialId: string;
   status: 'In Progress' | 'Completed';
@@ -30,9 +41,9 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
     if (a.status === 'In Progress' && b.status !== 'In Progress') return -1;
     if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
     
-    // Then sort by trial number
-    const aNum = parseInt(a.trialId.replace('TRIAL-', ''));
-    const bNum = parseInt(b.trialId.replace('TRIAL-', ''));
+    // Then sort by trial number using the last 3 digits of the trial ID
+    const aNum = getTrialIndex(a.trialId);
+    const bNum = getTrialIndex(b.trialId);
     return aNum - bNum;
   });
 
@@ -64,7 +75,19 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
     <div className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="bg-white rounded-lg shadow-xl w-[1200px] max-h-[80vh] overflow-hidden flex flex-col animate-slideIn">
         <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Trial Audit Alerts</h2>
+          <h2 className="text-xl font-semibold flex items-center">
+            Trial Audit Alerts 
+            <div className="flex ml-3">
+              <span className="mr-2 px-2 py-0.5 text-sm font-medium bg-blue-100 text-blue-800 rounded-full flex items-center">
+                <span className="mr-1">{alerts.filter(a => a.status === 'In Progress').length}</span>
+                <span className="text-xs">In Progress</span>
+              </span>
+              <span className="px-2 py-0.5 text-sm font-medium bg-green-100 text-green-800 rounded-full flex items-center">
+                <span className="mr-1">{alerts.filter(a => a.status === 'Completed').length}</span>
+                <span className="text-xs">Completed</span>
+              </span>
+            </div>
+          </h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -78,7 +101,17 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trial ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status 
+                  <div className="inline-block ml-2">
+                    <span className="mr-1 px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-800 rounded-full inline-block">
+                      {currentItems.filter(a => a.status === 'In Progress').length}
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-800 rounded-full inline-block">
+                      {currentItems.filter(a => a.status === 'Completed').length}
+                    </span>
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PD Alerts</th>
@@ -89,7 +122,10 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentItems.map((alert) => (
-                <tr key={alert.trialId} className="hover:bg-gray-50">
+                <tr 
+                  key={alert.trialId} 
+                  className={`hover:bg-gray-50 ${alert.status === 'In Progress' ? 'bg-blue-50' : ''}`}
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{alert.trialId}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

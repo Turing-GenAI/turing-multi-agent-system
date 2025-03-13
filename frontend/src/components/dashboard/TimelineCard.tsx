@@ -21,12 +21,8 @@ export const TimelineCard: React.FC = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
 
   useEffect(() => {
-    // Update trials audited and open alerts every 5 seconds for Q1 2025
+    // Only keep the random increment for open alerts
     const updateInterval = setInterval(() => {
-      // Random increment between 1-3 for trials audited
-      const trialsIncrement = Math.floor(Math.random() * 3) + 1;
-      setQ4TrialsAudited(prev => prev + trialsIncrement);
-      
       // Random increment between 1-10 for open alerts
       const alertsIncrement = Math.floor(Math.random() * 10) + 1;
       setQ4OpenAlerts(prev => prev + alertsIncrement);
@@ -37,6 +33,17 @@ export const TimelineCard: React.FC = () => {
     };
   }, []);
 
+  // Add a useEffect to update trials audited count based on actual completed trials
+  useEffect(() => {
+    // Update the trials audited count based on the actual number of completed trials
+    const completedTrialsCount = trials.filter(t => !t.isLive).length;
+    
+    // Only update if there are completed trials and it's different from current count
+    if (completedTrialsCount > 0) {
+      setQ4TrialsAudited(completedTrialsCount);
+    }
+  }, [trials]);
+
   // Generate trial data if empty
   useEffect(() => {
     if (trials.length === 0) {
@@ -45,7 +52,7 @@ export const TimelineCard: React.FC = () => {
         // In-progress trials starting from trial 101
         ...Array(10).fill(null).map((_, index) => ({
           id: `trial-${index + 101}`,
-          name: `Trial ${index + 101}`,
+          name: generateTrialId(index + 101),
           number: index + 101,
           progress: 0,
           isLive: true,
@@ -55,7 +62,7 @@ export const TimelineCard: React.FC = () => {
         // Already completed trials (first 100 trials)
         ...Array(100).fill(null).map((_, index) => ({
           id: `trial-${index + 1}`,
-          name: `Trial ${index + 1}`,
+          name: generateTrialId(index + 1),
           number: index + 1,
           progress: 100,
           isLive: false,
@@ -69,9 +76,10 @@ export const TimelineCard: React.FC = () => {
   // Initialize start times when modal opens
   useEffect(() => {
     if (showTrialsModal) {
+      // Reset progress and set start times only when opening the modal
+      // This is just for visualization purposes
       const modalOpenTime = Date.now();
       
-      // Set start times for all trials when modal opens
       setTrials(prevTrials => {
         return prevTrials.map(trial => {
           if (trial.isLive) {
@@ -91,7 +99,27 @@ export const TimelineCard: React.FC = () => {
 
   // Handle trial progress updates - each trial takes exactly 5 seconds
   useEffect(() => {
-    if (!showTrialsModal) return;
+    // Initialize trial startTimes if they haven't been set yet
+    setTrials(prevTrials => {
+      const currentTime = Date.now();
+      
+      // Only initialize trials that don't have a startTime yet
+      if (prevTrials.some(trial => trial.isLive && !trial.startTime)) {
+        return prevTrials.map(trial => {
+          if (trial.isLive && !trial.startTime) {
+            // Random start delay between 0-4 seconds
+            const startDelay = Math.floor(Math.random() * 4000);
+            return {
+              ...trial,
+              startTime: currentTime + startDelay
+            };
+          }
+          return trial;
+        });
+      }
+      
+      return prevTrials;
+    });
 
     // Main timer for updating all trial progress
     const progressInterval = setInterval(() => {
@@ -140,14 +168,14 @@ export const TimelineCard: React.FC = () => {
         
         // If we have fewer than 10 in-progress trials, add a new one
         if (inProgressCount < 10) {
-          // Create a new trial with the next number (up to ~30,000)
-          const newTrialNumber = Math.min(highestTrialNumber + 1, 30000);
+          // Create a new trial with the next number (up to ~31,000)
+          const newTrialNumber = Math.min(highestTrialNumber + 1, 31000);
           
-          // Only add a new trial if we haven't reached 30,000 yet
-          if (newTrialNumber < 30000) {
+          // Only add a new trial if we haven't reached 31,000 yet
+          if (newTrialNumber < 31000) {
             const newTrial = {
               id: `trial-${newTrialNumber}`,
-              name: `Trial ${newTrialNumber}`,
+              name: generateTrialId(newTrialNumber),
               number: newTrialNumber,
               progress: 0,
               isLive: true,
@@ -165,7 +193,7 @@ export const TimelineCard: React.FC = () => {
     return () => {
       clearInterval(progressInterval);
     };
-  }, [showTrialsModal]);
+  }, []);
 
   const handleTrialsClick = () => {
     setShowTrialsModal(true);
@@ -193,8 +221,9 @@ export const TimelineCard: React.FC = () => {
     const completedAlerts = Array.from({ length: completedCount }, (_, i) => {
       const region = regions[Math.floor(Math.random() * regions.length)];
       const trialNumber = i + 1; // Trials 1-100 are completed
+      const trialId = generateTrialId(trialNumber);
       return {
-        trialId: `TRIAL-${trialNumber}`,
+        trialId,
         status: 'Completed' as const,
         region,
         country: countries[region][Math.floor(Math.random() * countries[region].length)],
@@ -210,8 +239,9 @@ export const TimelineCard: React.FC = () => {
       const region = regions[Math.floor(Math.random() * regions.length)];
       // Start from 101 and randomly distribute up to ~30,000
       const trialNumber = 101 + Math.floor(Math.random() * 29900);
+      const trialId = generateTrialId(trialNumber);
       return {
-        trialId: `TRIAL-${trialNumber}`,
+        trialId,
         status: 'In Progress' as const,
         region,
         country: countries[region][Math.floor(Math.random() * countries[region].length)],
@@ -229,8 +259,8 @@ export const TimelineCard: React.FC = () => {
       if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
       
       // Then sort by trial number (extract number from trialId)
-      const aNum = parseInt(a.trialId.replace('TRIAL-', ''));
-      const bNum = parseInt(b.trialId.replace('TRIAL-', ''));
+      const aNum = getTrialIndex(a.trialId);
+      const bNum = getTrialIndex(b.trialId);
       return aNum - bNum;
     });
 
@@ -269,6 +299,47 @@ export const TimelineCard: React.FC = () => {
       isLive: true
     }
   ];
+
+  // Helper function to generate realistic trial IDs based on provided examples
+  const generateTrialId = (index: number): string => {
+    // Trial ID prefixes - mix of numeric and alphabetic options
+    const numericPrefixes = ['54767414', '90014496', '70033093', '63733657', '42847922'];
+    const alphabeticPrefixes = ['CNTO1275', 'RIVAROX', 'VAC18193', 'VAC18194'];
+    
+    // Disease/study codes
+    const diseaseCodes = ['AMY', 'LYM', 'PUC', 'DMY', 'ACS', 'HFA', 'RSV', 'ALZ', 'MDD'];
+    
+    // Generate a random ID with the appropriate structure
+    const useNumericPrefix = Math.random() > 0.4; // 60% chance of alphabetic prefix
+    
+    let prefix;
+    if (useNumericPrefix) {
+      prefix = numericPrefixes[Math.floor(Math.random() * numericPrefixes.length)];
+    } else {
+      prefix = alphabeticPrefixes[Math.floor(Math.random() * alphabeticPrefixes.length)];
+    }
+    
+    const diseaseCode = diseaseCodes[Math.floor(Math.random() * diseaseCodes.length)];
+    
+    // Phase is usually 2 or 3, with 3 more likely for larger studies
+    const phase = Math.random() > 0.3 ? '3' : '2';
+    
+    // Format the sequential number based on index, with padding
+    const sequentialNumber = String(index % 1000).padStart(3, '0');
+    
+    return `${prefix}${diseaseCode}${phase}${sequentialNumber}`;
+  };
+
+  // Function to convert a trial ID to a numeric index for maintaining the ordering logic
+  const getTrialIndex = (trialId: string): number => {
+    // Extract the last 3 digits if possible, or return a random large number
+    const match = trialId.match(/(\d{3})$/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    // Fallback for incompatible formats
+    return Math.floor(Math.random() * 1000);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

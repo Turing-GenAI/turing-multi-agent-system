@@ -23,6 +23,23 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
   const inProgressTrials = trials.filter(trial => trial.isLive);
   const completedTrials = trials.filter(trial => !trial.isLive);
   
+  // Initialize completedTrialIds with all initially completed trials on mount
+  useEffect(() => {
+    // Get all initially completed trials
+    const initialCompletedTrials = trials.filter(trial => !trial.isLive);
+    
+    if (initialCompletedTrials.length > 0) {
+      // Add all initially completed trial IDs to the set immediately
+      setCompletedTrialIds(prev => {
+        const updated = new Set(prev);
+        initialCompletedTrials.forEach(trial => {
+          updated.add(trial.id);
+        });
+        return updated;
+      });
+    }
+  }, []); // Empty dependency array means this runs once on mount
+  
   // Track when trials reach 100% to trigger animations
   useEffect(() => {
     // Find trials that are about to complete (>= 95% progress)
@@ -80,7 +97,12 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
           <div className="grid grid-cols-2 gap-6 w-full">
             {/* Left column - In Progress */}
             <div className="p-4 border-r">
-              <h3 className="text-lg font-semibold mb-4">In Progress Trials</h3>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                In Progress Trials 
+                <span className="ml-2 px-2 py-0.5 text-sm font-medium bg-blue-100 text-blue-800 rounded-full">
+                  {inProgressTrials.length}
+                </span>
+              </h3>
               <div className="space-y-4 overflow-y-auto max-h-[60vh]">
                 {inProgressTrials.length > 0 ? (
                   inProgressTrials
@@ -103,7 +125,7 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
                         }}
                       >
                         <div className="flex justify-between mb-2">
-                          <span className="font-medium">Trial #{trial.number}</span>
+                          <span className="font-medium">{trial.name}</span>
                           <span className="text-blue-600">{Math.round(trial.progress)}%</span>
                         </div>
                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -127,7 +149,12 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
 
             {/* Right column - Completed */}
             <div className="p-4">
-              <h3 className="text-lg font-semibold mb-4">Completed Trials</h3>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                Completed Trials 
+                <span className="ml-2 px-2 py-0.5 text-sm font-medium bg-green-100 text-green-800 rounded-full">
+                  {completedTrials.length}
+                </span>
+              </h3>
               <div className="space-y-4 overflow-y-auto max-h-[60vh]">
                 {completedTrials
                   .sort((a, b) => b.number - a.number) // Reverse sort order to show highest trial numbers (most recent) first
@@ -141,7 +168,7 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
                     >
                       <div className="flex justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">Trial #{trial.number}</span>
+                          <span className="font-medium">{trial.name}</span>
                           <span className="text-green-600 flex items-center gap-1 text-sm">
                             <CheckCircle className="w-4 h-4" /> Completed
                           </span>
