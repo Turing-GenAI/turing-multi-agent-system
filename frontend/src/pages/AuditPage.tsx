@@ -51,6 +51,7 @@ export const AuditPage: React.FC = () => {
   const [isAELoading, setIsAELoading] = useState(false);
   const [isContextLoading, setIsContextLoading] = useState(false);
   const [showJobHistory, setShowJobHistory] = useState<boolean>(false);
+  const [jobCount, setJobCount] = useState<number>(0);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
   const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
@@ -917,6 +918,47 @@ export const AuditPage: React.FC = () => {
     };
   }, [jobId]);
 
+  useEffect(() => {
+    // Fetch job count on component mount and periodically refresh
+    const fetchJobCount = async () => {
+      try {
+        const response = await auditService.getJobs();
+        if (response.data && response.data.jobs) {
+          setJobCount(response.data.jobs.length);
+        }
+      } catch (error) {
+        console.error("Error fetching job count:", error);
+      }
+    };
+
+    // Fetch immediately on mount
+    fetchJobCount();
+
+    // Set up interval to refresh job count every 30 seconds
+    const intervalId = setInterval(fetchJobCount, 30000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (jobId && jobStatus === 'completed') {
+      // Refresh job count when a job completes
+      const fetchJobCount = async () => {
+        try {
+          const response = await auditService.getJobs();
+          if (response.data && response.data.jobs) {
+            setJobCount(response.data.jobs.length);
+          }
+        } catch (error) {
+          console.error("Error fetching job count:", error);
+        }
+      };
+      
+      fetchJobCount();
+    }
+  }, [jobId, jobStatus]);
+
   const handleSendMessage = (agent: AgentType, e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput[agent].trim()) return;
@@ -1192,6 +1234,11 @@ export const AuditPage: React.FC = () => {
                 >
                   <History className="w-4 h-4 mr-2" />
                   Job History
+                  {jobCount > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-gray-700 bg-gray-200 rounded-full border border-gray-300">
+                      {jobCount > 9 ? '9+' : jobCount}
+                    </span>
+                  )}
                 </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
@@ -1321,6 +1368,7 @@ export const AuditPage: React.FC = () => {
             <JobHistoryPanel
               onClose={() => setShowJobHistory(false)}
               onSelectJob={(jobId) => console.log(`Job selected: ${jobId}`)}
+              onJobCountChange={setJobCount}
             />
           </div>
         </div>
