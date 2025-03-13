@@ -35,33 +35,39 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
     """
     Retrieves relevant answers from the site data to answer the query
     """
+    logger.debug("Calling function : site_data_retriever_tool...")
     # ingestor = IngestionFacade(site_area=site_area, site_id=site_id, trial_id=trial_id, ingested_previously=True)
     # summary_vectorstore, data_retriever = ingestor.ingest_data()
-    data_retriever = SummaryRetriever(site_area)
-    logger.debug("Calling function : site_data_retriever_tool...")
+    data_retriever = SummaryRetriever(site_area=site_area)
+    retriever_response = data_retriever.retrieve_relevant_documents(query=sub_activity, k = 1, site_id=site_id, trial_id=trial_id)
+    
+    logger.debug(f"Retriever response: {retriever_response}")
 
-    if data_retriever is not None:
-        retriever_response = SummaryRetriever.retrieve_relevant_documents(query=sub_activity, k = 1, site_id=site_id, trial_id=trial_id)
+    if retriever_response is not None:
         # retrieved_docs = data_retriever.invoke(sub_activity, n_results=1)
         # retrieved_doc_filename = retrieved_docs[0].metadata["filename"]
-        retrieved_docs = [i['original_data'] for i in retriever_response]
-        logger.debug(f"Retrieved data from table: {retriever_response["metadata"]["table_name"]}")
-
-        # site_data_context_dict = {}
-        # i = 0
-        # for doc in retrieved_docs:
-        #     site_data_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
-        #     i += 1
+        retrieved_docs = [{'page_content': doc['original_data'], 
+                            'metadata': {'source': f"{doc['metadata']['database_name']}.{doc['metadata']['schema_name']}.{doc['metadata']['table_name']}"},
+                            'summary': doc['summary']} for doc in retriever_response]
+        
+        logger.debug(f"Retrieved data from table: {retriever_response[0]['metadata']['table_name']}")
+        
+        site_data_context_dict = {}
+        i = 0
+        for doc in retrieved_docs:
+            site_data_context_dict[i] = {"metadata": doc['metadata'], "page_content": doc['page_content']}
+            i += 1
         
 
-        summary_df = read_file(
-            file_path=input_filepaths_dict[site_area]["summary_df_file_path"],
-            file_format="xlsx",
-            index_col=0,
-        )
+        # summary_df = read_file(
+        #     file_path=input_filepaths_dict[site_area]["summary_df_file_path"],
+        #     file_format="xlsx",
+        #     index_col=0,
+        # )
+        summary_df = retrieved_docs[0]['summary']
         add_ai_msg = "\nExecuted Tool: site_data_retriever_tool. Retrieved site data"
         
-        metadata_list = [doc.metadata for doc in retrieved_docs]
+        # metadata_list = [doc.metadata for doc in retrieved_docs]
 
         # Build the output text
         # output = "The retrieved pieces of information have been obtained from the following source(s):\n"
@@ -80,10 +86,11 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
             logger.error(add_ai_msg)
             file_summary = ""
         else:
-            file_summary = summary_df.loc[summary_df["SheetName"] == retrieved_doc_filename]["Summary"].values[0]
+            # file_summary = summary_df.loc[summary_df["SheetName"] == retrieved_doc_filename]["Summary"].values[0]
+            file_summary = summary_df
 
         return {
-            "context": [retrieved_docs[0].page_content],
+            "context": [retrieved_docs[0]['page_content']],
             "retrieved_context_dict": site_data_context_dict,
             "used_site_data_flag": True,
             "file_summary": file_summary,
