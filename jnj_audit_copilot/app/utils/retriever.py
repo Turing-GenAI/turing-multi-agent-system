@@ -7,6 +7,7 @@ from ..common.constants import CHROMADB_INDEX_SUMMARIES
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_embedding_openai_client
 from ..common.descriptions import ref_dict
+
 # Get logger instance
 logger = get_logger()
 # PostgreSQL connection
