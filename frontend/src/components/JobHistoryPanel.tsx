@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Clock, MessageSquare, Database, FileWarning, ChevronDown, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
+import { X, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Clock, MessageSquare, Database, FileWarning, ChevronDown, ChevronRight, AlertTriangle, FileText, Copy, History, ClipboardList } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { auditService } from '../api/services/auditService';
 import { agentName } from '../data/agentNames';
@@ -59,6 +59,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
   
   // Cache for job data to prevent refetching
   const [jobCache, setJobCache] = useState<Record<string, JobCache>>({});
+  // State to track which IDs have been copied
+  const [copiedIds, setCopiedIds] = useState<{[key: string]: boolean}>({});
 
   useEffect(() => {
     initialFetchJobs();
@@ -416,20 +418,80 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
       .replace(/�/g, 'i'); // Another common encoding issue
   };
 
-  // Handle job click to view details
-  const handleJobClick = (jobId: string) => {
-    setSelectedJob(jobId);
-    fetchJobDetail(jobId);
+  // Format date to a more readable format
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    
+    // Format: Jan 15, 2025, 10:30 AM (UTC+5:30)
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    
+    // Get formatted date
+    const formattedDate = date.toLocaleDateString('en-US', options);
+    
+    // Get timezone offset
+    const offset = date.getTimezoneOffset();
+    const hours = Math.abs(Math.floor(offset / 60));
+    const minutes = Math.abs(offset % 60);
+    const sign = offset <= 0 ? '+' : '-';
+    const timezone = `UTC${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    
+    return `${formattedDate} (${timezone})`;
   };
 
-  // Helper function to format dates
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString();
-    } catch (e) {
-      return dateString;
+  // Format date range to a more readable format
+  const formatDateRange = (dateRange: string) => {
+    if (!dateRange) return '';
+    
+    // Helper function to format a date string in YYYY-MM-DD format
+    const formatSingleDate = (dateStr: string) => {
+      // Check if it matches YYYY-MM-DD format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (dateRegex.test(dateStr)) {
+        try {
+          const date = new Date(dateStr);
+          if (!isNaN(date.getTime())) {
+            // Format: Jan 15, 2025
+            const options: Intl.DateTimeFormatOptions = {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            };
+            return date.toLocaleDateString('en-US', options);
+          }
+        } catch (e) {
+          // If parsing fails, return the original string
+          return dateStr;
+        }
+      }
+      return dateStr; // Return original if not in YYYY-MM-DD format
+    };
+    
+    // If it contains "to", split and format each part
+    if (dateRange.includes('to')) {
+      const [start, end] = dateRange.split('to').map(d => d.trim());
+      return `${formatSingleDate(start)} - ${formatSingleDate(end)}`;
+    } 
+    // If it contains "-" as a separator (not within a date), split and format
+    else if (dateRange.includes(' - ')) {
+      const [start, end] = dateRange.split(' - ').map(d => d.trim());
+      return `${formatSingleDate(start)} - ${formatSingleDate(end)}`;
     }
+    // If it's a single date, just format it
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(dateRange)) {
+      return formatSingleDate(dateRange);
+    }
+    
+    // If it's not in any recognized format, return as is
+    return dateRange;
   };
 
   // Helper function to get status color
@@ -813,15 +875,37 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
     };
   };
 
+  // Copy text to clipboard and show success feedback
+  const copyToClipboard = (text: string, idType: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      // Set the specific ID as copied
+      setCopiedIds(prev => ({ ...prev, [idType + text]: true }));
+      
+      // Reset after delay
+      setTimeout(() => {
+        setCopiedIds(prev => ({ ...prev, [idType + text]: false }));
+      }, 1500);
+    });
+  };
+
+  // Handle job click to view details
+  const handleJobClick = (jobId: string) => {
+    setSelectedJob(jobId);
+    fetchJobDetail(jobId);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+    <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b">
-        <h2 className="text-lg font-semibold">Job History</h2>
-        <div className="flex space-x-2">
+      <div className="flex justify-between items-center p-5 border-b">
+        <h2 className="text-xl font-semibold flex items-center">
+          <History className="w-5 h-5 mr-2 text-blue-600" />
+          Job History
+        </h2>
+        <div className="flex space-x-3">
           <button
             onClick={fetchJobs}
-            className="p-1 rounded-full hover:bg-gray-100 transition-all disabled:opacity-50"
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-all disabled:opacity-50"
             title="Refresh job list"
             disabled={loading || isRefreshing}
           >
@@ -829,7 +913,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
           </button>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100"
+            className="p-1.5 rounded-full hover:bg-gray-100"
             title="Close panel"
           >
             <X className="w-5 h-5 text-gray-600" />
@@ -838,56 +922,149 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto flex-1 p-4">
+      <div className="overflow-y-auto flex-1 p-6">
         {loading ? (
-          <div className="flex justify-center items-center h-32">
+          <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-50 p-4 rounded-md text-red-700 flex items-start">
-            <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+          <div className="bg-red-50 p-5 rounded-md text-red-700 flex items-start my-4">
+            <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         ) : jobs.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>No job history found</p>
+          <div className="text-center py-16 my-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-100 min-h-[300px] flex flex-col justify-center">
+            <p className="text-lg mb-2">No job history found</p>
+            <p className="text-sm">Jobs will appear here when you run them</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {jobs.map(job => (
               <div 
                 key={job.id}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md group"
                 onClick={() => handleJobClick(job.id)}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-1">Job ID: <span className="font-mono font-bold">{job.id}</span></h3>
-                    <div className="text-sm text-gray-600 mb-2">
-                      <p>Trial: <strong>{job.trial_id}</strong></p>
-                      <p>Site: <strong>{job.site_id}</strong></p>
-                      <p>Date Range: <strong>{job.date}</strong></p>
+                {/* Card header with status */}
+                <div className="flex justify-between items-center px-5 py-3 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full mr-3">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="font-medium text-gray-800">
+                      Job <span className="font-mono font-bold text-blue-700">{job.id}</span>
+                      <button 
+                        className="ml-1 inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                        title="Copy Job ID"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent job click
+                          copyToClipboard(job.id, 'job_');
+                        }}
+                      >
+                        {copiedIds['job_' + job.id] ? 
+                          <CheckCircle className="w-3 h-3 text-green-500" /> : 
+                          <Copy className="w-3 h-3 text-blue-600/70" />
+                        }
+                      </button>
+                    </h3>
+                  </div>
+                  <div className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center ${getStatusColor(job.status)}`}>
+                    {getStatusIcon(job.status)}
+                    <span className="ml-1.5">{job.status}</span>
+                  </div>
+                </div>
+                
+                {/* Card body with details */}
+                <div className="px-5 py-4 hover:bg-gray-50/80 transition-all cursor-pointer">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    {/* Left column */}
+                    <div>
+                      <div className="flex">
+                        <div className="w-24 text-xs font-medium text-gray-500 uppercase tracking-wider pt-1">Trial</div>
+                        <div className="flex-1">
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-800">{job.trial_id}</span>
+                            <button 
+                              className="ml-1 inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                              title="Copy Trial ID"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent job click
+                                copyToClipboard(job.trial_id, 'trial_');
+                              }}
+                            >
+                              {copiedIds['trial_' + job.trial_id] ? 
+                                <CheckCircle className="w-3 h-3 text-green-500" /> : 
+                                <Copy className="w-3 h-3 text-blue-600/70" />
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex mt-3">
+                        <div className="w-24 text-xs font-medium text-gray-500 uppercase tracking-wider pt-1">Site</div>
+                        <div className="flex-1">
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-800">{job.site_id}</span>
+                            <button 
+                              className="ml-1 inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                              title="Copy Site ID"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent job click
+                                copyToClipboard(job.site_id, 'site_');
+                              }}
+                            >
+                              {copiedIds['site_' + job.site_id] ? 
+                                <CheckCircle className="w-3 h-3 text-green-500" /> : 
+                                <Copy className="w-3 h-3 text-blue-600/70" />
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Right column */}
+                    <div>
+                      <div className="flex">
+                        <div className="w-24 text-xs font-medium text-gray-500 uppercase tracking-wider pt-1">Date Range</div>
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-800">{formatDateRange(job.date)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex mt-3">
+                        <div className="w-24 text-xs font-medium text-gray-500 uppercase tracking-wider pt-1">Created</div>
+                        <div className="flex-1">
+                          <span className="text-gray-700">{formatDate(job.created_at)}</span>
+                        </div>
+                      </div>
+                      
+                      {job.completed_at && (
+                        <div className="flex mt-3">
+                          <div className="w-24 text-xs font-medium text-gray-500 uppercase tracking-wider pt-1">Completed</div>
+                          <div className="flex-1">
+                            <span className="text-gray-700">{formatDate(job.completed_at)}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center ${getStatusColor(job.status)}`}>
-                    {getStatusIcon(job.status)}
-                    <span className="ml-1">{job.status}</span>
+                </div>
+                
+                {/* Card footer with action */}
+                <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
+                  <div className="text-blue-600 text-sm font-medium flex items-center group-hover:text-blue-700 transition-colors">
+                    <span>View details</span>
+                    <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform duration-200" />
                   </div>
-                </div>
-                <div className="border-t pt-2 text-xs text-gray-500 flex justify-between">
-                  <div>Created: {formatDate(job.created_at)}</div>
-                  {job.completed_at && <div>Completed: {formatDate(job.completed_at)}</div>}
-                </div>
-                <div className="mt-2 flex items-center text-blue-600 text-sm">
-                  <FileText className="w-4 h-4 mr-1" />
-                  <span>View job details</span>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-      
+
       {/* Job Detail Modal */}
       {selectedJob && (
         <div 
@@ -909,6 +1086,18 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob 
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="text-lg font-semibold">
                 Job Details: <span className="font-mono">{selectedJob}</span>
+                <button 
+                  className="ml-1 inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                  title="Copy Job ID"
+                  onClick={() => {
+                    copyToClipboard(selectedJob || '', 'selected_');
+                  }}
+                >
+                  {copiedIds['selected_' + selectedJob] ? 
+                    <CheckCircle className="w-3 h-3 text-green-500" /> : 
+                    <Copy className="w-3 h-3 text-blue-600/70" />
+                  }
+                </button>
               </h2>
               <button
                 onClick={() => {
