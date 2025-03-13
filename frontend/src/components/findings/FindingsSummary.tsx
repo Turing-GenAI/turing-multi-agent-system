@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, AlertTriangle, CircleDot, Database, FileWarning, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CircleDot, FileWarning, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface AEFinding {
@@ -69,22 +69,14 @@ interface FindingsSummaryProps {
   findings?: {
     findings?: FindingsData;
   };
-  onRetrievedContextClick?: () => void;
-  hasRetrievedContext?: boolean;
-  retrievedContextCount?: number;
   isPDLoading?: boolean;
   isAELoading?: boolean;
-  isContextLoading?: boolean;
 }
 
 export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
   findings = {}, 
-  onRetrievedContextClick,
-  hasRetrievedContext = false,
-  retrievedContextCount = 0,
   isPDLoading = false,
-  isAELoading = false,
-  isContextLoading = false
+  isAELoading = false
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -237,25 +229,6 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               <div className="text-gray-500">{isAELoading ? 'Fetching...' : `${aeFindings} ${aeFindings === 1 ? 'finding' : 'findings'}`}</div>
             </div>
           </div>
-          
-          {onRetrievedContextClick && (
-            <div 
-              className={`flex items-center ${hasRetrievedContext ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
-              onClick={hasRetrievedContext ? onRetrievedContextClick : undefined}
-            >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                {isContextLoading ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-                ) : (
-                  <Database size={16} className="text-blue-500" />
-                )}
-              </div>
-              <div>
-                <div className="font-medium text-gray-700">Retrieved Context</div>
-                <div className="text-gray-500">{isContextLoading ? 'Fetching...' : `${retrievedContextCount} ${retrievedContextCount === 1 ? 'document' : 'documents'}`}</div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

@@ -70,16 +70,18 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
           <div className="p-4 border-b space-y-4">
             <FindingsSummary 
               findings={findings} 
-              onRetrievedContextClick={onRetrievedContextClick}
-              hasRetrievedContext={hasRetrievedContext}
-              retrievedContextCount={retrievedContextCount}
               isPDLoading={isPDLoading}
               isAELoading={isAELoading}
-              isContextLoading={isContextLoading}
             />
           </div>
           {selectedTreeNode && (
-            <DetailPane selectedNode={selectedTreeNode} />
+            <DetailPane 
+              selectedNode={selectedTreeNode} 
+              onRetrievedContextClick={onRetrievedContextClick}
+              hasRetrievedContext={hasRetrievedContext}
+              isContextLoading={isContextLoading}
+              retrievedContextCount={retrievedContextCount}
+            />
           )}
         </div>
       </Box>

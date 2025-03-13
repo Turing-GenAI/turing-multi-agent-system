@@ -1,7 +1,8 @@
 import React from 'react';
-import { Paper, Typography, Box, useTheme } from '@mui/material';
+import { Paper, Typography, Box, useTheme, Button, CircularProgress, Badge } from '@mui/material';
 import { motion } from 'framer-motion';
 import { getAgentDisplayNameByNode } from '../../../data/agentNames';
+import { Database } from 'lucide-react';
 
 interface TreeNode {
   name: string;
@@ -11,6 +12,10 @@ interface TreeNode {
 
 interface DetailPaneProps {
   selectedNode: TreeNode | null;
+  onRetrievedContextClick?: () => void;
+  hasRetrievedContext?: boolean;
+  isContextLoading?: boolean;
+  retrievedContextCount?: number;
 }
 
 const decodeSpecialChars = (text: string): string => {
@@ -19,7 +24,13 @@ const decodeSpecialChars = (text: string): string => {
   return textarea.value;
 };
 
-const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
+const DetailPane: React.FC<DetailPaneProps> = ({ 
+  selectedNode, 
+  onRetrievedContextClick,
+  hasRetrievedContext = false,
+  isContextLoading = false,
+  retrievedContextCount = 0
+}) => {
   const theme = useTheme();
 
   // Return empty div for any Unknown node to prevent details from showing
@@ -120,7 +131,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
         }
       }}
     >
-      <Box sx={{ p: 3, flexShrink: 0 }}>
+      <Box sx={{ p: 3, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography
           variant="h5"
           sx={{
@@ -142,6 +153,60 @@ const DetailPane: React.FC<DetailPaneProps> = ({ selectedNode }) => {
         >
           {getAgentDisplayNameByNode(selectedNode.name)}
         </Typography>
+
+        {/* Retrieved Context button only for Self RAG nodes */}
+        {getAgentDisplayNameByNode(selectedNode.name) === "Self RAG" && onRetrievedContextClick && (
+          <Button
+            variant="contained"
+            size="small"
+            onClick={onRetrievedContextClick}
+            disabled={!hasRetrievedContext || isContextLoading}
+            startIcon={isContextLoading ? <CircularProgress size={16} color="inherit" /> : <Database size={16} />}
+            sx={{
+              bgcolor: 'rgba(59, 130, 246, 0.1)',
+              color: 'rgb(59, 130, 246)',
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 2,
+              py: 0.75,
+              fontSize: '0.8rem',
+              '&:hover': {
+                bgcolor: 'rgba(59, 130, 246, 0.2)',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(229, 231, 235, 0.2)',
+                color: 'rgba(156, 163, 175, 0.7)',
+              },
+              position: 'relative'
+            }}
+          >
+            Retrieved Context
+            {retrievedContextCount > 0 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  backgroundColor: theme.palette.primary.main,
+                  color: '#fff',
+                  borderRadius: '50%',
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  border: '2px solid white',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}
+              >
+                {retrievedContextCount}
+              </Box>
+            )}
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ 
