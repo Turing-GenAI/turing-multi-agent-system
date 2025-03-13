@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle } from 'lucide-react';
+import { X, CheckCircle, FileCheck } from 'lucide-react';
 
 interface Trial {
   id: string;
@@ -80,10 +80,19 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
   }, [trials, animatingTrials]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-[90vw] max-w-[1200px] max-h-[80vh] overflow-hidden flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg w-[90vw] max-w-[1200px] max-h-[80vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Trials Audit Progress</h2>
+          <h2 className="text-xl font-semibold flex items-center">
+            <FileCheck className="w-5 h-5 mr-2 text-green-600" />
+            Trials Audit Progress
+          </h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"

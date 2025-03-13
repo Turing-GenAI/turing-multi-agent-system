@@ -92,11 +92,17 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
           onJobCountChange(sortedJobs.length);
         }
       } else {
+        // Successfully contacted the API but no jobs were returned
         setJobs([]);
+        if (onJobCountChange) {
+          onJobCountChange(0);
+        }
       }
     } catch (err) {
       console.error("Error fetching jobs:", err);
-      setError("Failed to load job history. Please try again later.");
+      setError("Failed to load job history. The backend API may be unavailable or experiencing issues. Please try again later.");
+      // Don't modify the jobs array when there's an API error
+      // This ensures we show the error message instead of "No jobs found"
     } finally {
       setLoading(false);
     }
@@ -108,10 +114,15 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (isRefreshing) return;
     
     setIsRefreshing(true);
-    setError(null);
+    
+    // Keep the previous error state until we confirm success or a new error
+    // Don't clear error right away to prevent flickering to "No jobs found" state
     
     try {
       const response = await auditService.getJobs();
+      // Only clear error state when we have a successful response
+      setError(null);
+      
       if (response.data && response.data.jobs) {
         // Sort jobs by creation date (newest first)
         const sortedJobs = response.data.jobs.sort((a, b) => {
@@ -130,11 +141,17 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
           onJobCountChange(sortedJobs.length);
         }
       } else {
+        // Successfully contacted the API but no jobs were returned
         setJobs([]);
+        if (onJobCountChange) {
+          onJobCountChange(0);
+        }
       }
     } catch (err) {
       console.error("Error fetching jobs:", err);
-      setError("Failed to load job history. Please try again later.");
+      setError("Failed to load job history. The backend API may be unavailable or experiencing issues. Please try again later.");
+      // Don't modify the jobs array when there's an API error
+      // This ensures we show the error message instead of "No jobs found"
     } finally {
       // Small delay before removing the refreshing state to make animation smoother
       setTimeout(() => {
@@ -934,21 +951,67 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       {/* Content */}
       <div className="overflow-y-auto flex-1 p-6">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500"></div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm min-h-[400px] min-w-[600px] w-full flex flex-col justify-center items-center bg-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-600">Loading job history...</p>
           </div>
         ) : error ? (
-          <div className="bg-red-50 p-5 rounded-md text-red-700 flex items-start my-4">
-            <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-            <p>{error}</p>
+          <div className="space-y-6">
+            <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md min-w-[600px] w-full">
+              {/* Card header with status - similar to job card header */}
+              <div className="flex justify-between items-center px-5 py-3 bg-white border-b border-gray-200">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 flex items-center justify-center bg-red-100 rounded-full mr-3">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                  </div>
+                  <h3 className="font-medium text-gray-800">Connection Error</h3>
+                </div>
+              </div>
+              
+              {/* Card body with error message - maintaining consistency with job cards */}
+              <div className="px-5 py-6 bg-white">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5 text-red-600" />
+                  <div>
+                    <p className="text-red-700 font-medium mb-2">Failed to load job history</p>
+                    <p className="text-gray-600">{error}</p>
+                    <button 
+                      onClick={fetchJobs}
+                      className="mt-4 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md flex items-center"
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : jobs.length === 0 ? (
-          <div className="text-center py-20 my-8 text-gray-500 bg-white rounded-lg border border-gray-200 min-h-[400px] flex flex-col justify-center items-center shadow-sm">
-            <div className="w-16 h-16 mb-4 bg-blue-50 rounded-full flex items-center justify-center">
-              <ClipboardList className="w-8 h-8 text-blue-400" />
+          <div className="space-y-6">
+            <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md min-w-[600px] w-full">
+              {/* Card header with status - similar to job card header */}
+              <div className="flex justify-between items-center px-5 py-3 bg-white border-b border-gray-200">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full mr-3">
+                    <ClipboardList className="w-4 h-4" />
+                  </div>
+                  <h3 className="font-medium text-gray-800">Job History</h3>
+                </div>
+              </div>
+              
+              {/* Card body with no jobs message - maintaining consistency with job cards */}
+              <div className="px-5 py-12 bg-white">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 mb-4 bg-blue-50 rounded-full flex items-center justify-center">
+                    <ClipboardList className="w-8 h-8 text-blue-400" />
+                  </div>
+                  <p className="text-xl font-medium text-gray-700 mb-3">No job history found</p>
+                  <p className="text-gray-500 max-w-md">Jobs will appear here when you run them</p>
+                </div>
+              </div>
             </div>
-            <p className="text-xl font-medium text-gray-700 mb-3">No job history found</p>
-            <p className="text-gray-500 max-w-md">Jobs will appear here when you run them</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -962,7 +1025,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                 <div className="flex justify-between items-center px-5 py-3 bg-white border-b border-gray-200">
                   <div className="flex items-center">
                     <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full mr-3">
-                      <FileText className="w-4 h-4 text-blue-600" />
+                      <FileText className="w-4 h-4" />
                     </div>
                     <h3 className="font-medium text-gray-800">
                       Job <span className="font-mono font-bold text-blue-700">{job.id}</span>

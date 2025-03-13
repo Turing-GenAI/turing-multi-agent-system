@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import { PDAlertsDialog } from './PDAlertsDialog';
 import { AEAlertsDialog } from './AEAlertsDialog';
 
@@ -72,10 +72,18 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-      <div className="bg-white rounded-lg shadow-xl w-[1200px] max-h-[80vh] overflow-hidden flex flex-col animate-slideIn">
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-50 animate-fadeIn" 
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl w-[1200px] max-h-[80vh] overflow-hidden flex flex-col animate-slideIn"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-semibold flex items-center">
+            <AlertCircle className="w-5 h-5 mr-2 text-yellow-600" />
             Trial Audit Alerts 
             <div className="flex ml-3">
               <span className="mr-2 px-2 py-0.5 text-sm font-medium bg-blue-100 text-blue-800 rounded-full flex items-center">
