@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { User, Bot } from 'lucide-react';
+import { User, Bot, MessageSquare } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ToolUI } from './ToolUI';
 import { MessageInput } from './agent/MessageInput';
@@ -184,10 +184,12 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
-      {/* <div className="border-b flex-shrink-0 h-16 flex items-center px-6"> */}
-        {/* <h2 className="text-lg font-semibold">Audit Copilot</h2> */}
-        {/* <AuditProgressSteps currentStep={currentStep} /> */}
-      {/* </div> */}
+      <div className="flex justify-between items-center p-5 border-b border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+          <MessageSquare className="w-5 h-5 mr-2 text-gray-800" />
+          Agent Window
+        </h2>
+      </div>
 
       <div ref={messageContainerRef} className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-6">

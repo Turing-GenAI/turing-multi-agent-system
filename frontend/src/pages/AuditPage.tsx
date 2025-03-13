@@ -11,7 +11,7 @@ import { ContactSupportModal } from '../components/modals/ContactSupportModal';
 import JobHistoryPanel from '../components/JobHistoryPanel'
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
-import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database, History } from 'lucide-react';
+import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database, History, Lightbulb } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 import { AIMessagesResponse, TreeNode, RetrievedContextResponse } from '../api';
 
@@ -1201,7 +1201,7 @@ export const AuditPage: React.FC = () => {
           </div>
         </header> */}
 
-        {/* Main Content Area */}
+        {/* Agent Window Area */}
         <div className="flex-1 overflow-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full p-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1226,7 +1226,10 @@ export const AuditPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">Insights Panel</h2>
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <Lightbulb className="w-5 h-5 mr-2 text-gray-800" />
+                  Insights Panel
+                </h2>
                 <button
                   onClick={() => setShowJobHistory(true)}
                   disabled={false}
