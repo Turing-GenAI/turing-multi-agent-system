@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 import pandas as pd
 # from langchain_community.vectorstores import Chroma
 from langchain_chroma import Chroma
-from ..common.constants import CHROMADB_INDEX_SUMMARIES
+from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_embedding_openai_client
 from ..common.descriptions import ref_dict
@@ -41,7 +41,13 @@ class SummaryRetriever:
         
         # Initialize ChromaDB for this site area
         project_root = get_project_root()
-        summary_persist_directory = os.path.join(project_root, "jnj_audit_copilot", "chromadb2", site_area, "summary")
+        if site_area == "PD":
+            site_area_ = 'pd'
+        elif site_area == 'AE_SAE':
+            site_area_ = 'ae_sae'
+        else:
+            site_area_ = site_area
+        summary_persist_directory = os.path.join(project_root, "jnj_audit_copilot", "chromadb2", site_area_, "summary")
         logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
         if not os.path.exists(summary_persist_directory):
@@ -148,5 +154,42 @@ def test_retriever(site_area):
     except Exception as e:
         logger.error(f"Error testing retriever: {e}")
 
-if __name__ == "__main__":
-    test_retriever(site_area="ae_sae")
+
+class GuidelinesRetriever:
+    def __init__(self, site_area: str) -> None:
+        self.site_area = site_area
+        # Initialize ChromaDB for this site area
+        project_root = get_project_root()
+        guidelines_persist_directory = os.path.join(project_root, "jnj_audit_copilot", "chromadb2", site_area, "guidelines") 
+        if not os.path.exists(guidelines_persist_directory):
+            raise ValueError(f"No ChromaDB found for site area: {site_area}")
+        self.vectorstore = Chroma(
+            persist_directory=guidelines_persist_directory,
+            embedding_function=azure_embedding_openai_client,
+            # collection_name=CHROMADB_INDEX_DOCS
+        )
+        logger.debug(f"guidelines_vectorstore: {self.vectorstore}")
+    def retrieve_relevant_documents(
+        self,
+        query: str,
+        k: int = 3,
+        site_id: Optional[str] = None,
+        trial_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve relevant documents based on the query and fetch original data from PostgreSQL.
+        Args:
+            query (str): Search query
+            k (int): Number of results to return
+            site_id (str, optional): Filter by site ID
+            trial_id (str, optional): Filter by trial ID
+        Returns:
+            List of dictionaries containing both vector search results and original data
+        """
+        try:
+            # Search in ChromaDB
+            results = self.vectorstore.similarity_search_with_relevance_scores(query, k=k)
+            logger.debug(f"chromadb result: {results}")
+            return results
+        except Exception as e:
+            logger.error(f"Error retrieving relevant documents: {e}")

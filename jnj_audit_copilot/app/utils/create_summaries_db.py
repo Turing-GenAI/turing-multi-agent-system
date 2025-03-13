@@ -7,7 +7,7 @@ from ..common.constants import CHROMADB_SUMMARY_FOLDER_NAME, CHROMADB_INDEX_SUMM
 from .langchain_azure_openai import azure_embedding_openai_client
 from .log_setup import get_logger
 from langchain.schema import Document
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 # Get logger instance
 logger = get_logger()
@@ -24,11 +24,11 @@ def get_all_tables_from_summaries_schema(site_area: str):
     try:
         engine = create_engine(db_url)
         inspector = inspect(engine)
-
-        query = f'SELECT * FROM summaries."{site_area}"'
+        table_name = site_area.lower()
+        query = f'SELECT * FROM summaries."{table_name}"'
         df = pd.read_sql(query, engine)
-        logger.info(f"Read {len(df)} rows from table {site_area}")
-        logger.info(f"Columns in {site_area}: {df.columns.tolist()}")
+        logger.info(f"Read {len(df)} rows from table {table_name}")
+        logger.info(f"Columns in {table_name}: {df.columns.tolist()}")
         
         return df
     except Exception as e:
@@ -50,7 +50,7 @@ def create_summaries_chromadb(site_area: str):
 
         if df is None or df.empty:
             logger.error(f"No data found for site area: {site_area}")
-            return
+            return None
 
         # Generate embeddings for the "Summary" column
         logger.info("Generating embeddings...")
@@ -60,7 +60,7 @@ def create_summaries_chromadb(site_area: str):
         base_dir = os.path.join("chromadb2", site_area)
         
         # Create all required directories
-        folders = ["document_persist", "guidelines", "summary"]
+        folders = ["summary"]
         for folder in folders:
             os.makedirs(os.path.join(base_dir, folder), exist_ok=True)
             
@@ -99,6 +99,9 @@ def process_all_site_areas():
         engine = create_engine(db_url)
         inspector = inspect(engine)
         site_areas = inspector.get_table_names(schema='summaries')
+
+        # Converting all extracted site_areas to upper as per the requirement
+        site_areas = [site_area.upper() for site_area in site_areas]
         
         logger.info(f"Found site areas: {site_areas}")
         

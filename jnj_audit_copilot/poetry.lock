@@ -563,6 +563,29 @@ webencodings = "*"
 css = ["tinycss2 (>=1.1.0,<1.5)"]
 
 [[package]]
+name = "box-sdk-gen"
+version = "1.12.0"
+description = "Official Box Python Generated SDK"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "box_sdk_gen-1.12.0-py3-none-any.whl", hash = "sha256:f1821898cde947b774abdbd0ba7969c0915c829ab4dfd26e7f250951dee2a984"},
+    {file = "box_sdk_gen-1.12.0.tar.gz", hash = "sha256:633439fe442edef405572fa44a794a836d2d7adc72c32c742f6d2c4489afced4"},
+]
+
+[package.dependencies]
+cryptography = {version = ">=3", optional = true, markers = "extra == \"jwt\""}
+pyjwt = {version = ">=1.7.0", optional = true, markers = "extra == \"jwt\""}
+requests = "*"
+requests-toolbelt = "*"
+
+[package.extras]
+dev = ["tox"]
+jwt = ["cryptography (>=3)", "pyjwt (>=1.7.0)"]
+test = ["cryptography (>=3)", "pyjwt (>=1.7.0)", "pytest", "pytest-cov", "pytest-timeout"]
+
+[[package]]
 name = "build"
 version = "1.2.2.post1"
 description = "A simple, correct Python build frontend"
@@ -4878,6 +4901,24 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pyjwt"
+version = "2.10.1"
+description = "JSON Web Token implementation in Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "PyJWT-2.10.1-py3-none-any.whl", hash = "sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb"},
+    {file = "pyjwt-2.10.1.tar.gz", hash = "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953"},
+]
+
+[package.extras]
+crypto = ["cryptography (>=3.4.0)"]
+dev = ["coverage[toml] (==5.0.4)", "cryptography (>=3.4.0)", "pre-commit", "pytest (>=6.0.0,<7.0.0)", "sphinx", "sphinx-rtd-theme", "zope.interface"]
+docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
+tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
+
+[[package]]
 name = "pypdf"
 version = "5.3.1"
 description = "A pure-python PDF library capable of splitting, merging, cropping, and transforming PDF files"
@@ -7145,4 +7186,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "ffebe9beec6494e018d42a32d59f5d14dc782574c71c6c6c29907ab4ab81aed9"
+content-hash = "fcb672ab714360f7f8b80db0d9690cb0a3dd72ba00ca7fe4f2563dfe9aa26cdf"

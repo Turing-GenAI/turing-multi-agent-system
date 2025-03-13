@@ -15,7 +15,7 @@ from ....prompt_hub.selfrag_prompts import selfrag_prompts
 from ....utils.helpers import input_filepaths_dict, read_file
 from ....utils.langchain_azure_openai import azure_chat_openai_client as model
 from ....utils.log_setup import get_logger
-from ....utils.retriever import SummaryRetriever
+from ....utils.retriever import SummaryRetriever, GuidelinesRetriever
 
 
 # Get the same logger instance set up earlier
@@ -120,24 +120,26 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
     Retrieves relevant answers from the guidelines data to answer the query
     """
     logger.debug("Calling function : guidelines_retriever_tool..")
-    ingestor = IngestionFacade(site_area=site_area, site_id=site_id, trial_id=trial_id, ingested_previously=True)
-    guidelines_vectorstore = ingestor.ingest_guidelines()
-
-    if guidelines_vectorstore:
-        guidelines_relevant_docs = guidelines_vectorstore.similarity_search(sub_activity, k=3)
-        all_metadata = " ,".join([str(doc.metadata) for doc in guidelines_relevant_docs])
-        
+    # ingestor = IngestionFacade(site_area=site_area, site_id=site_id, trial_id=trial_id, ingested_previously=True)
+    # guidelines_vectorstore = ingestor.ingest_guidelines()
+    guidelines_vectorstore = GuidelinesRetriever(site_area = site_area)
+    guidelines_relevant_docs = guidelines_vectorstore.retrieve_relevant_documents(query=sub_activity, k=3)
+    logger.debug(f"guidelines_relevant_docs: {guidelines_relevant_docs}")
+    if guidelines_relevant_docs:
+        # all_metadata = " ,".join([str(doc.metadata) for doc_ in guidelines_relevant_docs])
+        all_metadata_list = []
         guidelines_context_dict = {}
         i = 0
-        for doc in guidelines_relevant_docs:
-            guidelines_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content}
-            i += 1
-        
         context = ""
-        for i, doc in enumerate(guidelines_relevant_docs):
-            i1 = i + 1
-            context += f"******************************context_{i1}*****************************************\n"
+        for doc_with_score in guidelines_relevant_docs:
+            doc, score = doc_with_score
+            guidelines_context_dict[i] = {"metadata": doc.metadata, "page_content": doc.page_content, "score": score}
+            all_metadata_list.append(str(doc.metadata))
+            context += f"******************************context_{(i+1)}*****************************************\n"
             context += doc.page_content + "\n"
+            i += 1
+        all_metadata = " ,".join(all_metadata_list)
+        
         logger.debug(f"guidelines_relevant_docs: {all_metadata}")
         add_ai_msg = "Executed Tool: guidelines_retriever_tool. Retrieved guidelines documents"
 
