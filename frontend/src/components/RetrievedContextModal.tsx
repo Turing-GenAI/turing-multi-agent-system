@@ -291,7 +291,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   if (!data) {
     return (
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+        className="fixed inset-0 bg-gray-50 bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div 
@@ -323,7 +323,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+      className="fixed inset-0 bg-gray-50 bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div 
@@ -343,7 +343,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                   <RefreshCw size={14} className="text-blue-500" />
                 </span>
                 Last updated: {lastUpdateTime.toLocaleTimeString()} 
-                <span className="ml-2 px-2 py-0.5 bg-blue-50 rounded-full text-xs text-blue-600">
+                <span className="ml-2 px-2 py-0.5 bg-gray-50 rounded-full text-xs text-gray-600">
                   {updateCount} update{updateCount !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -368,21 +368,19 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
               
               // Format the display key with full form instead of abbreviations
               let formattedDisplayKey = displayKey;
-              let sectionColor = 'blue'; // Default color
               
               if (displayKey === 'PD') {
                 formattedDisplayKey = 'Protocol Deviations';
-                sectionColor = 'yellow';
               } else if (displayKey === 'AE_SAE') {
                 formattedDisplayKey = 'Adverse Events / Serious Adverse Events';
-                sectionColor = 'orange';
               }
               
               // Define color classes based on section type
-              const headerBgClass = sectionColor === 'yellow' ? 'bg-yellow-100' : 'bg-orange-100';
-              const textColorClass = sectionColor === 'yellow' ? 'text-yellow-600' : 'text-orange-600';
-              const iconColorClass = sectionColor === 'yellow' ? 'text-yellow-500' : 'text-orange-500';
-              const badgeBgClass = sectionColor === 'yellow' ? 'bg-yellow-50 text-yellow-600' : 'bg-orange-50 text-orange-600';
+              const headerBgClass = 'bg-gray-100';
+              const textColorClass = 'text-gray-700';
+              const iconColorClass = 'text-gray-700';
+              const badgeBgClass = 'bg-gray-50';
+              const badgeTextClass = 'text-gray-700';
               
               return (
                 <div key={key} className="border rounded-lg overflow-visible shadow-sm mb-4 bg-white">
@@ -397,17 +395,17 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                       }
                       <div className="flex items-center">
                         {displayKey === 'PD' && (
-                          <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center mr-2">
-                            <AlertTriangle size={14} className="text-yellow-500" />
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                            <AlertTriangle size={14} className="text-gray-700" />
                           </div>
                         )}
                         {displayKey === 'AE_SAE' && (
-                          <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mr-2">
-                            <AlertCircle size={14} className="text-orange-500" />
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                            <AlertCircle size={14} className="text-gray-700" />
                           </div>
                         )}
                         <h4 className={`font-medium ${textColorClass}`}>{formattedDisplayKey}</h4>
-                        <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
+                        <span className={`text-xs ${badgeTextClass} bg-white px-2 py-0.5 rounded-full ml-2`}>
                           {contentItems.length} {contentItems.length === 1 ? 'item' : 'items'}
                         </span>
                       </div>
@@ -420,7 +418,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                         <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
                           {/* Item Number */}
                           <div className="mb-2">
-                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${sectionColor === 'yellow' ? 'bg-yellow-200 text-yellow-700' : 'bg-orange-200 text-orange-700'} font-medium text-sm mr-2 shadow-sm`}>
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm`}>
                               {index + 1}
                             </span>
                             <span className="text-sm text-gray-500">Item {index + 1} of {contentItems.length}</span>
@@ -430,7 +428,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                           <div className="mb-3 overflow-x-auto">
                             <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
                               <thead>
-                                <tr className={`${sectionColor === 'yellow' ? 'bg-yellow-50' : 'bg-orange-50'}`}>
+                                <tr className="bg-gray-50">
                                   <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
                                   <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
                                 </tr>
@@ -504,8 +502,8 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                 <div 
                                   className="p-2 text-sm html-table-container" 
                                   style={{
-                                    '--header-bg-color': sectionColor === 'yellow' ? '#fef9c3' : '#ffedd5',
-                                    '--header-text-color': sectionColor === 'yellow' ? '#854d0e' : '#9a3412'
+                                    '--header-bg-color': '#f7f7f7',
+                                    '--header-text-color': '#333'
                                   } as React.CSSProperties}
                                   dangerouslySetInnerHTML={{ __html: item.htmlTable }}
                                 />

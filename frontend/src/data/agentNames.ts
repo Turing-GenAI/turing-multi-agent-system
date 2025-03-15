@@ -1,8 +1,8 @@
 export const agentName = {
   "trial_supervisor_agent": "Supervisor",
   "trial supervisor - crm_master_agent": "Supervisor - Master Agent 2",
-  "trial supervisor - inspection_master_agent": "Supervisor - Master Agent 1",
-  "inspection - site_area_agent": "Master Agent 1 - Domain Agent",
+  "trial supervisor - inspection_master_agent": "Supervisor Agent",
+  "inspection - site_area_agent": "Domain Agent 1",
   "CRM - fetch_sgr_data node": "CRM - Fetch SGR Data",
   "CRM - process_major_deviations node": "CRM - Process Major Deviations",
   "CRM - generate_findings_agent": "CRM - Generate Findings",
@@ -11,11 +11,11 @@ export const agentName = {
   "CRM - process_significant_issue_escalation_section node": "CRM - Escalation for Significant Issues",
   "CRM - process_qa_audit_section node": "CRM - Process QA Audit",
   "CRM - generate_final_report node": "CRM - Generate Final Report",
-  "inspection - data_ingestion node": "Master Agent 1 - Data Ingestion",
-  "inspection - site_area_router": "Master Agent 1 - Domain Router",
-  "inspection - planner_agent": "Master Agent 1 - Planner Agent",
-  "inspection - critique_agent": "Master Agent 1 - Critique Agent",
-  "inspection - feedback_agent node": "Master Agent 1 - Feedback Agent",
+  "inspection - data_ingestion node": "Domain Agent 1 - Data Ingestion",
+  "inspection - site_area_router": "Domain Agent 1 - Router",
+  "inspection - planner_agent": "Planner Agent",
+  "inspection - critique_agent": "Critique Agent",
+  "inspection - feedback_agent node": "Feedback Agent",
   "SelfRAG - self_rag_agent": "Self RAG",
   "SelfRAG - retrieval_agent": "Self RAG - Retrieval Agent",
   "SelfRAG - site_data_retriever tool": "Self RAG - Domain Data Retriever",
@@ -24,9 +24,9 @@ export const agentName = {
   "SelfRAG - generate_response_agent": "Self RAG - Generate Response ",
   "SelfRAG - guidelines_retriever tool": "Self RAG - Guidelines Retriever",
   "SelfRAG - site_data_retriever": "Self RAG - Domain Data Retriever",
-  "inspection - generate_findings_agent": "Master Agent 1 - Generate Findings Agent",
-  "Inspection - discrepancy_data_generator_node": "Master Agent 1 - Discrepancy Data Generator",
-  "Unknown": "Require Human Feedback"
+  "inspection - generate_findings_agent": "Generate Findings Agent",
+  "Inspection - discrepancy_data_generator_node": "Discrepancy Data Generator",
+  "Unknown": "Human Feedback Required"
 } as const;
 
 export const agentNodeName = {
@@ -60,11 +60,11 @@ export const agentNodeName = {
 } as const;
 
 export const getAgentDisplayName = (nodeName?: string): string => {
- if (!nodeName) return 'Assistant';
+ if (!nodeName) return 'Copilot';
  return nodeName in agentNodeName ? agentNodeName[nodeName as keyof typeof agentNodeName] : nodeName;
 };
 
 export const getAgentDisplayNameByNode = (node?: string): string => {
-  if (!node) return 'Assistant';
+  if (!node) return 'Copilot';
   return node in agentName ? agentName[node as keyof typeof agentName] : node;
  };

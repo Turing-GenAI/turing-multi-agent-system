@@ -1,5 +1,7 @@
 # Getting Started with Create React App
 
+> **Note:** This is an earlier version of the frontend. A newer version with enhanced features is available in the `/frontend` directory.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

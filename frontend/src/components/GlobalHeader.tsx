@@ -13,7 +13,7 @@ interface GlobalHeaderProps {
   title?: string;
 }
 
-export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ title = 'Audit Compliance' }) => {
+export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ title = 'Copilot' }) => {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [notificationCount] = React.useState(3); // Replace with actual notification count
 

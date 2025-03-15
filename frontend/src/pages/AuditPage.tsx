@@ -8,9 +8,10 @@ import { RetrievedContextModal } from '../components/RetrievedContextModal';
 import { PrivacyPolicyModal } from '../components/modals/PrivacyPolicyModal';
 import { TermsOfServiceModal } from '../components/modals/TermsOfServiceModal';
 import { ContactSupportModal } from '../components/modals/ContactSupportModal';
+import JobHistoryPanel from '../components/JobHistoryPanel'
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
-import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database } from 'lucide-react';
+import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database, History, Lightbulb } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 import { AIMessagesResponse, TreeNode, RetrievedContextResponse } from '../api';
 
@@ -49,6 +50,8 @@ export const AuditPage: React.FC = () => {
   const [isPDLoading, setIsPDLoading] = useState(false);
   const [isAELoading, setIsAELoading] = useState(false);
   const [isContextLoading, setIsContextLoading] = useState(false);
+  const [showJobHistory, setShowJobHistory] = useState<boolean>(false);
+  const [jobCount, setJobCount] = useState<number>(0);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
   const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
@@ -915,6 +918,47 @@ export const AuditPage: React.FC = () => {
     };
   }, [jobId]);
 
+  useEffect(() => {
+    // Fetch job count on component mount and periodically refresh
+    const fetchJobCount = async () => {
+      try {
+        const response = await auditService.getJobs();
+        if (response.data && response.data.jobs) {
+          setJobCount(response.data.jobs.length);
+        }
+      } catch (error) {
+        console.error("Error fetching job count:", error);
+      }
+    };
+
+    // Fetch immediately on mount
+    fetchJobCount();
+
+    // Set up interval to refresh job count every 30 seconds
+    const intervalId = setInterval(fetchJobCount, 30000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (jobId && jobStatus === 'completed') {
+      // Refresh job count when a job completes
+      const fetchJobCount = async () => {
+        try {
+          const response = await auditService.getJobs();
+          if (response.data && response.data.jobs) {
+            setJobCount(response.data.jobs.length);
+          }
+        } catch (error) {
+          console.error("Error fetching job count:", error);
+        }
+      };
+      
+      fetchJobCount();
+    }
+  }, [jobId, jobStatus]);
+
   const handleSendMessage = (agent: AgentType, e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput[agent].trim()) return;
@@ -1135,60 +1179,31 @@ export const AuditPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-6">
-        <div className="mb-4">
-          <img src="/icons/icon.png" alt="App Icon" className="w-10 h-10" />
-        </div>
-        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <Home className="w-6 h-6 text-gray-600" />
-        </div>
-        <div className="p-2 bg-blue-50 rounded-lg cursor-pointer">
-          <FileText className="w-6 h-6 text-blue-600" />
-        </div>
-        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <AlertCircle className="w-6 h-6 text-gray-600" />
-        </div>
-        <div className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <Settings className="w-6 h-6 text-gray-600" />
-        </div>
-        <div className="mt-auto p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <HelpCircle className="w-6 h-6 text-gray-600" />
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 py-4 px-6">
+        {/* <header className="bg-white border-b border-gray-200 py-4 px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
               <h1 className="text-xl font-semibold text-gray-800"> Audit Compliance Assistant</h1>
             </div>
-            {/* <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-3">
-                {['trial_master', 'inspection_master', 'crm_master'].map((agent) => (
-                  <button
-                    key={agent}
-                    onClick={() => setSelectedAgentTab(agent as AgentType)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      selectedAgentTab === agent
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {agent.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                  </button>
-                ))}
-              </div>
-            </div> */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowJobHistory(true)}
+                disabled={false}
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <History className="w-4 h-4 mr-2" />
+                Job History
+              </button>
+            </div>
           </div>
-        </header>
+        </header> */}
 
-        {/* Main Content Area */}
+        {/* Agent Window Area */}
         <div className="flex-1 overflow-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full p-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <AgentWindow
                 messages={messagesByAgent[selectedAgentTab]}
@@ -1211,7 +1226,23 @@ export const AuditPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Insights Panel</h2>
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <Lightbulb className="w-5 h-5 mr-2 text-gray-800" />
+                  Insights Panel
+                </h2>
+                <button
+                  onClick={() => setShowJobHistory(true)}
+                  disabled={false}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Job History
+                  {jobCount > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-gray-700 bg-gray-200 rounded-full border border-gray-300">
+                      {jobCount > 9 ? '9+' : jobCount}
+                    </span>
+                  )}
+                </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <FindingsTable 
@@ -1265,7 +1296,7 @@ export const AuditPage: React.FC = () => {
         {/* Footer */}
         <footer className="bg-white border-t border-gray-200 py-4 px-6">
           <div className="flex justify-between items-center text-sm text-gray-600">
-            <div> 2025 Clinical Trial Audit Assistant</div>
+            <div>&copy; 2025 Audit Copilot</div>
             <div className="flex space-x-4">
               <a 
                 href="#" 
@@ -1324,6 +1355,27 @@ export const AuditPage: React.FC = () => {
           }
         }}
       />
+      
+      {/* Job History Modal */}
+      {showJobHistory && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-in-out"
+          onClick={(e) => {
+            // Close when clicking the backdrop, not when clicking the panel itself
+            if (e.target === e.currentTarget) {
+              setShowJobHistory(false);
+            }
+          }}
+        >
+          <div className="animate-fadeIn">
+            <JobHistoryPanel
+              onClose={() => setShowJobHistory(false)}
+              onSelectJob={(jobId) => console.log(`Job selected: ${jobId}`)}
+              onJobCountChange={setJobCount}
+            />
+          </div>
+        </div>
+      )}
       
       {/* Privacy Policy Modal */}
       <PrivacyPolicyModal

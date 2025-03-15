@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, AlertTriangle, CircleDot, Database, FileWarning, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CircleDot, FileWarning, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface AEFinding {
@@ -69,22 +69,14 @@ interface FindingsSummaryProps {
   findings?: {
     findings?: FindingsData;
   };
-  onRetrievedContextClick?: () => void;
-  hasRetrievedContext?: boolean;
-  retrievedContextCount?: number;
   isPDLoading?: boolean;
   isAELoading?: boolean;
-  isContextLoading?: boolean;
 }
 
 export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
   findings = {}, 
-  onRetrievedContextClick,
-  hasRetrievedContext = false,
-  retrievedContextCount = 0,
   isPDLoading = false,
-  isAELoading = false,
-  isContextLoading = false
+  isAELoading = false
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -127,23 +119,23 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
       return (
         <div className="overflow-x-auto">
           <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
-            <thead className={`bg-orange-50/70 sticky top-0`}>
+            <thead className={`bg-gray-50 sticky top-0`}>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-40 border border-gray-200">Event Term</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Grade</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Outcome</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Start Date</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">End Date</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-32 border border-gray-200">Treatment Given</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-24 border border-gray-200">Serious</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider w-40 border border-gray-200">Action (Amivantamab)</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-40 border border-gray-200">Event Term</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Grade</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Outcome</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Start Date</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">End Date</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Treatment Given</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Serious</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-40 border border-gray-200">Action (Amivantamab)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {selectedContent.table.map((row: any, index) => (
-                <tr key={index} className="hover:bg-orange-50/30 transition-colors">
+                <tr key={index} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Subject}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Site}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row["What is the adverse event term?"]}</td>
@@ -165,21 +157,21 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
     return (
       <div className="overflow-x-auto">
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
-          <thead className={`bg-yellow-50/70 sticky top-0`}>
+          <thead className={`bg-gray-50 sticky top-0`}>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Category</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Severity</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider border border-gray-200">Deviation</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider border border-gray-200">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-yellow-600 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Severity</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Deviation</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Description</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {selectedContent.table.map((row: any, index) => (
-              <tr key={index} className="hover:bg-yellow-50/30 transition-colors">
+              <tr key={index} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Subject}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Protocol_Name}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{row.Site_Name}</td>
@@ -237,31 +229,12 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               <div className="text-gray-500">{isAELoading ? 'Fetching...' : `${aeFindings} ${aeFindings === 1 ? 'finding' : 'findings'}`}</div>
             </div>
           </div>
-          
-          {onRetrievedContextClick && (
-            <div 
-              className={`flex items-center ${hasRetrievedContext ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
-              onClick={hasRetrievedContext ? onRetrievedContextClick : undefined}
-            >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                {isContextLoading ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-                ) : (
-                  <Database size={16} className="text-blue-500" />
-                )}
-              </div>
-              <div>
-                <div className="font-medium text-gray-700">Retrieved Context</div>
-                <div className="text-gray-500">{isContextLoading ? 'Fetching...' : `${retrievedContextCount} ${retrievedContextCount === 1 ? 'document' : 'documents'}`}</div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       {dialogOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
+          className="fixed inset-0 bg-gray-50 bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn"
           onClick={() => setDialogOpen(false)}
         >
           <div 
@@ -287,7 +260,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               <button 
                 onClick={() => setDialogOpen(false)}
                 className={`p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors ${
-                  selectedContent.type === 'pd' ? 'text-yellow-500 hover:text-yellow-700' : 'text-orange-500 hover:text-orange-700'
+                  selectedContent.type === 'pd' ? 'text-yellow-500 hover:text-yellow-600' : 'text-orange-500 hover:text-orange-600'
                 }`}
               >
                 <X size={20} />
@@ -324,9 +297,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
             <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
               <button
                 onClick={() => setDialogOpen(false)}
-                className={`px-4 py-2 rounded-md text-white shadow-sm ${
-                  selectedContent.type === 'pd' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-orange-500 hover:bg-orange-600'
-                } transition-colors`}
+                className="px-4 py-2 rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 shadow-sm transition-colors"
               >
                 Close
               </button>

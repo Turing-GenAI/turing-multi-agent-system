@@ -52,8 +52,11 @@ export default {
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' }
+          '0%': { opacity: 0, transform: 'scale(0.95)' },
+          '100%': { opacity: 1, transform: 'scale(1)' }
+        },
+        spin: {
+          to: { transform: 'rotate(360deg)' },
         },
         slideIn: {
           '0%': { transform: 'translateY(20px)', opacity: '0' },
@@ -76,6 +79,7 @@ export default {
       },
       animation: {
         fadeIn: 'fadeIn 0.3s ease-in-out',
+        spin: 'spin 1s linear infinite',
         slideIn: 'slideIn 0.3s ease-out',
         slideDown: 'slideDown 0.3s ease-out',
         pulse: 'pulse 1.5s ease-in-out infinite'

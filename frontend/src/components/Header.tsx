@@ -11,7 +11,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center space-x-3">
             <Link to="/dashboard" className="flex items-center space-x-3 hover:text-blue-600">
               <Bot className="w-8 h-8 text-blue-500" />
-              <h1 className="text-2xl font-semibold text-gray-800">Audit Compliance</h1>
+              <h1 className="text-2xl font-semibold text-gray-800">Copilot</h1>
             </Link>
           </div>
           <div className="text-sm text-gray-500">

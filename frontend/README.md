@@ -22,9 +22,9 @@ This is the frontend application for the Turing Multi-Agent System, built with R
    ```
 4. Start the development server:
    ```bash
-   npm start
+   npm run dev
    # or
-   yarn start
+   yarn dev
    ```
 
 The application will be available at `http://localhost:5173`.
@@ -35,6 +35,8 @@ The application will be available at `http://localhost:5173`.
 frontend/
 ├── src/
 │   ├── components/    # Reusable UI components
+│   │   ├── Data/      # System architecture visualization components
+│   │   └── userInputs/ # User input configuration components
 │   ├── pages/         # Page components
 │   ├── services/      # API services and utilities
 │   ├── styles/        # Global styles and theme
@@ -43,9 +45,31 @@ frontend/
 └── package.json       # Project dependencies and scripts
 ```
 
+## Key Features
+
+### System Architecture Visualization
+The Data component provides a node-based visualization of the system architecture using ReactFlow, featuring:
+- Custom node types for different system components
+- Interactive connections between system elements
+- Detailed information panels for each node
+- Support for multiple flow visualizations
+
+### Comprehensive Input Configuration
+The UserInputs component includes:
+- ConfigureActivityList: Schedule activities with frequency settings (daily, weekly, monthly)
+- QueryTemplates: Manage predefined query templates
+- DefaultParameters: Configure system-wide defaults
+- InputValidation: Set validation rules
+- InputHistory: Track previous inputs
+
+### Enhanced User Experience
+- Markdown formatting for agent messages to highlight important information
+- Fixed message duplication issues with consistent message IDs
+- Improved agent window with better readability
+
 ## Available Scripts
 
-- `npm start` - Runs the app in development mode
+- `npm run dev` - Runs the app in development mode
 - `npm test` - Launches the test runner
 - `npm run build` - Builds the app for production
 - `npm run lint` - Runs the linter
