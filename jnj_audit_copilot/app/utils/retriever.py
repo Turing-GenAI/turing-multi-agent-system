@@ -8,7 +8,7 @@ from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_embedding_openai_client
 from ..common.descriptions import ref_dict
-from .create_vector_store import CHROMA_DB_FOLDER
+from .create_vector_store import CHROMA_DB_FOLDER, db_url
 
 # from ..utils.create_summaries_db import summary_persist_directory
 # Get logger instance
@@ -33,7 +33,7 @@ class SummaryRetriever:
             site_area_ = site_area
 
         summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area_, "summary")
-        logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
+        # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
         if not os.path.exists(summary_persist_directory):
             raise ValueError(f"No ChromaDB found for site area: {site_area}")
@@ -62,7 +62,7 @@ class SummaryRetriever:
         try:
             # Search in ChromaDB
             results = self.vectorstore.similarity_search_with_relevance_scores(query, k=k)
-            logger.debug(f"chromadb result: {results}")
+            # logger.debug(f"chromadb result: {results}")
             retrieved_docs = []
             for doc, score in results:
                 # Get metadata from ChromaDB result
@@ -73,17 +73,17 @@ class SummaryRetriever:
                 
                 # Build SQL query and parameters list
                 conditions = ["1=1"]
-                # mapping_dict = {'pd': 'PD','PD': 'PD', 'ae_sae': 'AE_SAE','AE_SAE': 'AE_SAE'}
-                logger.debug(f"ref_dict:{ref_dict}")
-                logger.debug(f"site_area:{self.site_area}")
-                logger.debug(f"table:{table}")
+
+                # logger.debug(f"ref_dict:{ref_dict}")
+                # logger.debug(f"site_area:{self.site_area}")
+                # logger.debug(f"table:{table}")
                 if table == 'adverse_events':
                     table_ = "Adverse Events"
                 else:
                     table_ = table
                 site_id_name = ref_dict.get(self.site_area).get(table_)['site_id']
                 trial_id_name = ref_dict.get(self.site_area).get(table_)['trial_id']
-                logger.info(f"site_id_name: {site_id_name}, trial_id_name: {trial_id_name}")
+                # logger.info(f"site_id_name: {site_id_name}, trial_id_name: {trial_id_name}")
                 if site_id and site_id_name:
                     conditions.append(f"\"{site_id_name}\" = '{site_id}'")
                 if trial_id and trial_id_name:
@@ -116,8 +116,7 @@ class GuidelinesRetriever:
     def __init__(self, site_area: str) -> None:
         self.site_area = site_area
         # Initialize ChromaDB for this site area
-        project_root = get_project_root()
-        guidelines_persist_directory = os.path.join(project_root, "jnj_audit_copilot", CHROMADB_DIR_NEW, site_area, "guidelines") 
+        guidelines_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "guidelines") 
         if not os.path.exists(guidelines_persist_directory):
             raise ValueError(f"No ChromaDB found for site area: {site_area}")
         self.vectorstore = Chroma(
@@ -125,7 +124,7 @@ class GuidelinesRetriever:
             embedding_function=azure_embedding_openai_client,
             collection_name=CHROMADB_INDEX_DOCS
         )
-        logger.debug(f"guidelines_vectorstore: {self.vectorstore}")
+        # logger.debug(f"guidelines_vectorstore: {self.vectorstore}")
 
     def retrieve_relevant_documents(
         self,
@@ -147,7 +146,7 @@ class GuidelinesRetriever:
         try:
             # Search in ChromaDB
             results = self.vectorstore.similarity_search_with_relevance_scores(query, k=k)
-            logger.debug(f"chromadb result: {results}")
+            # logger.debug(f"chromadb result: {results}")
             return results
         except Exception as e:
             logger.error(f"Error retrieving relevant documents: {e}")

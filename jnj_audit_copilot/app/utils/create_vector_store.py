@@ -35,7 +35,8 @@ def get_project_root():
     return project_root
 
 BOX_ROOT_FOLDER_ID = os.getenv("BOX_ROOT_FOLDER_ID", "0")
-BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'box_download')
+# BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'box_download')
+BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'documents')
 CHROMA_DB_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", CHROMADB_DIR_NEW)
 
 # PostgreSQL connection
@@ -350,7 +351,7 @@ class DataProcessor:
 if __name__ == "__main__":
     data_processor = DataProcessor()
     guidelines_processor = data_processor.GuidelinesProcessor(data_processor)
-    guidelines_processor.download_box_files()
+    # guidelines_processor.download_box_files()
     guidelines_processor.process_all_documents()
 
     site_data_processor = data_processor.SiteDataProcessor(data_processor)
