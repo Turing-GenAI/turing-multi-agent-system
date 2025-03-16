@@ -19,6 +19,25 @@ def get_box_client():
         private_key = os.getenv("BOX_PRIVATE_KEY")
         passphrase = os.getenv("BOX_PASSPHRASE")
         
+        # Check if required variables are present
+        if not all([client_id, client_secret, enterprise_id, jwt_key_id, private_key]):
+            print("Missing required Box authentication variables. Check your .env file.")
+            raise ValueError("Missing required Box authentication variables")
+        
+         # Format the private key properly - ensure it has proper line breaks
+        # This is a common issue when private keys are stored in environment variables
+        if private_key and "-----BEGIN" in private_key and "\n" not in private_key:
+            # Add line breaks every 64 characters for the base64 encoded part
+            header = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n"
+            footer = "\n-----END ENCRYPTED PRIVATE KEY-----"
+            
+            # Extract the base64 content between the header and footer
+            if "-----BEGIN ENCRYPTED PRIVATE KEY-----" in private_key:
+                base64_content = private_key.replace("-----BEGIN ENCRYPTED PRIVATE KEY-----", "").replace("-----END ENCRYPTED PRIVATE KEY-----", "").strip()
+                # Insert a newline every 64 characters
+                formatted_content = '\n'.join([base64_content[i:i+64] for i in range(0, len(base64_content), 64)])
+                private_key = header + formatted_content + footer
+
         # Create JWT config
         jwt_config = JWTConfig(
             client_id=client_id,
@@ -35,6 +54,13 @@ def get_box_client():
         return client
     except Exception as e:
         print(f"Error authenticating with Box: {str(e)}")
+        # Provide more detailed error information for debugging
+        if "Could not deserialize key data" in str(e):
+            print("\nPrivate key format issue detected. Please check:")
+            print("1. The private key format (should be PEM format)")
+            print("2. The passphrase is correct")
+            print("3. The key is not using an unsupported algorithm")
+            print("\nIf storing in an environment variable, ensure proper line breaks are preserved.")
         raise
 
 def download_file(client, file_id, file_name, target_path):

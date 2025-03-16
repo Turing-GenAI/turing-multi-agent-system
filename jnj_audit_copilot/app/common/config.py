@@ -32,6 +32,7 @@ graph_inputs = {
 INPUT_DIR = "./documents"
 OUTPUT_DIR = "../outputs/"
 CHROMADB_DIR = "chromadb"
+CHROMADB_DIR_NEW = "chromadb_new"
 INTERMEDIATE_OUTPUTS_DIR = f"{OUTPUT_DIR}/intermediate"
 
 # Agent Scratchpads Path

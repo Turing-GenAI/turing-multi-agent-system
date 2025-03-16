@@ -8,26 +8,11 @@ from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_embedding_openai_client
 from ..common.descriptions import ref_dict
+from .create_vector_store import CHROMA_DB_FOLDER
 
 # from ..utils.create_summaries_db import summary_persist_directory
 # Get logger instance
 logger = get_logger()
-# PostgreSQL connection
-db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
-
-def get_project_root():
-    """Get the absolute path to the project root directory."""
-    # Path to this file
-    current_file = os.path.abspath(__file__)
-    # Path to utils directory
-    utils_dir = os.path.dirname(current_file)
-    # Path to app directory
-    app_dir = os.path.dirname(utils_dir)
-    # Path to jnj_audit_copilot directory
-    jnj_dir = os.path.dirname(app_dir)
-    # Path to project root
-    project_root = os.path.dirname(jnj_dir)
-    return project_root
 
 class SummaryRetriever:
     def __init__(self, site_area: str):
@@ -39,15 +24,15 @@ class SummaryRetriever:
         self.site_area = site_area
         self.engine = create_engine(db_url)
         
-        # Initialize ChromaDB for this site area
-        project_root = get_project_root()
+        # Adjusting the names for PD and AE_SAE
         if site_area == "PD":
             site_area_ = 'pd'
         elif site_area == 'AE_SAE':
             site_area_ = 'ae_sae'
         else:
             site_area_ = site_area
-        summary_persist_directory = os.path.join(project_root, "jnj_audit_copilot", "chromadb2", site_area_, "summary")
+
+        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area_, "summary")
         logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
         if not os.path.exists(summary_persist_directory):
@@ -126,49 +111,22 @@ class SummaryRetriever:
             logger.error(f"Error retrieving site documents: {str(e)}")
             return []
 
-def test_retriever(site_area):
-    """
-    Test the retriever functionality.
-    """
-    try:
-        # Initialize retriever for protocol deviations
-        retriever = SummaryRetriever(site_area=site_area)
-
-        # Test query
-        query = "Show me protocol deviations related to medication"
-        results = retriever.retrieve_relevant_documents(
-            query=query,
-            site_id="P73-PL10007",
-            trial_id="CNTO1275PUC3001",
-            k=1
-        )
-        print(results)
-        logger.info(f"\nQuery: {query}")
-        for i, result in enumerate(results, 1):
-            logger.info(f"\nResult {i}:")
-            logger.info(f"Relevance Score: {result['relevance_score']}")
-            logger.info(f"Summary: {result['summary'][:200]}...")
-            logger.info(f"Metadata: {result['metadata']}")
-            if result['original_data']:
-                logger.info(f"Original Data: {result['original_data']}")
-    except Exception as e:
-        logger.error(f"Error testing retriever: {e}")
-
 
 class GuidelinesRetriever:
     def __init__(self, site_area: str) -> None:
         self.site_area = site_area
         # Initialize ChromaDB for this site area
         project_root = get_project_root()
-        guidelines_persist_directory = os.path.join(project_root, "jnj_audit_copilot", "chromadb2", site_area, "guidelines") 
+        guidelines_persist_directory = os.path.join(project_root, "jnj_audit_copilot", CHROMADB_DIR_NEW, site_area, "guidelines") 
         if not os.path.exists(guidelines_persist_directory):
             raise ValueError(f"No ChromaDB found for site area: {site_area}")
         self.vectorstore = Chroma(
             persist_directory=guidelines_persist_directory,
             embedding_function=azure_embedding_openai_client,
-            # collection_name=CHROMADB_INDEX_DOCS
+            collection_name=CHROMADB_INDEX_DOCS
         )
         logger.debug(f"guidelines_vectorstore: {self.vectorstore}")
+
     def retrieve_relevant_documents(
         self,
         query: str,
