@@ -8,6 +8,8 @@ from langchain_community.document_loaders import (
     PyPDFLoader,
     Docx2txtLoader,
 )
+import pandas as pd
+from sqlalchemy import create_engine, inspect
 
 from ..scripts.box_copy_files import get_box_client, process_folder_contents
 from .langchain_azure_openai import azure_embedding_openai_client
@@ -32,8 +34,12 @@ def get_project_root():
     return project_root
 
 BOX_ROOT_FOLDER_ID = os.getenv("BOX_ROOT_FOLDER_ID", "0")
-BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), 'box_download')
-CHROMA_DB_FOLDER = os.path.join(get_project_root(), 'chroma_db_new')
+BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'box_download')
+CHROMA_DB_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'chroma_db_new')
+
+os.makedirs(CHROMA_DB_FOLDER, exist_ok=True)
+os.makedirs(BOX_DOWNLOAD_FOLDER, exist_ok=True)
+
 # PostgreSQL connection
 db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
 
@@ -47,7 +53,6 @@ class DataProcessor:
         self.base_chromadb_dir = CHROMA_DB_FOLDER
         self.site_area_exclusions = ['Demo', 'Risk_Scores', 'SGR']
         
-    @staticmethod
     def setup_chromadb_folders(self, site_area: str) -> str:
         """
         Create the required folder structure for a site area
@@ -66,7 +71,12 @@ class DataProcessor:
         return summary_persist_directory, guidelines_persist_directory
 
     class GuidelinesProcessor:
-        def __init__(self):
+        def __init__(self, parent):
+            self.parent = parent
+            self.base_documents_dir = parent.base_documents_dir
+            self.base_chromadb_dir = parent.base_chromadb_dir
+            self.site_area_exclusions = parent.site_area_exclusions
+            self.setup_chromadb_folders = parent.setup_chromadb_folders
             self.supported_extensions = {
             '.txt': TextLoader,
             '.pdf': PyPDFLoader,
@@ -74,7 +84,6 @@ class DataProcessor:
             '.doc': Docx2txtLoader  # Note: might need additional handling for .doc files
         }
         
-        @staticmethod
         def download_box_files(self) -> bool:
             """
             Download files from Box using the existing box_copy_files script
@@ -210,7 +219,12 @@ class DataProcessor:
                 return results
 
     class SiteDataProcessor:
-        def __init__(self):
+        def __init__(self, parent):
+            self.parent = parent
+            self.base_documents_dir = parent.base_documents_dir
+            self.base_chromadb_dir = parent.base_chromadb_dir
+            self.site_area_exclusions = parent.site_area_exclusions
+            self.setup_chromadb_folders = parent.setup_chromadb_folders
             self.db_url = db_url
             
         def get_all_tables_from_summaries_schema(self, site_area: str):
@@ -233,7 +247,7 @@ class DataProcessor:
                 logger.error(f"Error getting tables from summaries schema: {e}")
                 return None
 
-        def process_summary_data_by_site_area(site_area: str):
+        def process_summary_data_by_site_area(self,site_area: str):
             """
             Create a new ChromaDB collection for summaries and store embeddings.
             Each site area gets its own folder structure with document_persist, guidelines, and summary folders.
@@ -244,7 +258,7 @@ class DataProcessor:
             try:
                 # Get the data for this site area
                 logger.info(f"Fetching data from PostgreSQL for {site_area}...")
-                df = get_all_tables_from_summaries_schema(site_area)
+                df = self.get_all_tables_from_summaries_schema(site_area)
 
                 if df is None or df.empty:
                     logger.error(f"No data found for site area: {site_area}")
@@ -257,7 +271,7 @@ class DataProcessor:
                 # Store embeddings in ChromaDB with site-specific collection name
                 logger.info(f"Storing summaries in ChromaDB for {site_area}...")
                 
-                summary_persist_directory, _ =  self.setup_chromadb_folders(site_area)
+                self.summary_persist_directory, _ =  self.setup_chromadb_folders(site_area)
 
                 summary_vectorstore = Chroma.from_texts(
                     texts=summaries,
@@ -269,7 +283,7 @@ class DataProcessor:
                         "schema_name": row.get("schema_name"),
                         "table_name": row.get("table_name")
                     } for _, row in df.iterrows()],
-                    persist_directory = summary_persist_directory
+                    persist_directory = self.summary_persist_directory
                 )
 
                 logger.info(f"Successfully stored {len(summaries)} embeddings in ChromaDB for {site_area}")
@@ -279,7 +293,7 @@ class DataProcessor:
                 logger.error(f"Error details: {str(e)}")
                 return None
 
-        def process_all_summary_data():
+        def process_all_summary_data(self):
             """
             Process all available site areas and create their respective ChromaDB collections.
             """
@@ -297,15 +311,15 @@ class DataProcessor:
                 # Process each site area
                 for site_area in site_areas:
                     logger.info(f"Processing site area: {site_area}")
-                    process_summary_data_by_site_area(site_area)
+                    self.process_summary_data_by_site_area(site_area)
                     
             except Exception as e:
                 logger.error(f"Error processing site areas: {e}")
 
 if __name__ == "__main__":
     data_processor = DataProcessor()
-    guidelines_processor = data_processor.GuidelinesProcessor()
+    guidelines_processor = data_processor.GuidelinesProcessor(data_processor)
     guidelines_processor.process_all_documents()
 
-    site_data_processor = data_processor.SiteDataProcessor()
+    site_data_processor = data_processor.SiteDataProcessor(data_processor)
     site_data_processor.process_all_summary_data()
