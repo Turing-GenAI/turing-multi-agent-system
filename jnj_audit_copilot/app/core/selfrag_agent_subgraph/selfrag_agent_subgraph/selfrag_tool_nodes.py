@@ -41,7 +41,7 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
     data_retriever = SummaryRetriever(site_area=site_area)
     retriever_response = data_retriever.retrieve_relevant_documents(query=sub_activity, k = 1, site_id=site_id, trial_id=trial_id)
     
-    logger.debug(f"Retriever response: {retriever_response}")
+    # logger.debug(f"Retriever response: {retriever_response}")
 
     if retriever_response is not None:
         # retrieved_docs = data_retriever.invoke(sub_activity, n_results=1)

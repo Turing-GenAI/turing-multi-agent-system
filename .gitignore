@@ -166,6 +166,7 @@ reference/
 **/intermediate_outputs/
 **/outputs/
 **/chromadb/
+**/chromadb_new/
 
 **/.DS_Store
 **/__pycache__/
