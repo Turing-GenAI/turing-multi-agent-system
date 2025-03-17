@@ -25,14 +25,14 @@ class SummaryRetriever:
         self.engine = create_engine(db_url)
         
         # Adjusting the names for PD and AE_SAE
-        if site_area == "PD":
-            site_area_ = 'pd'
-        elif site_area == 'AE_SAE':
-            site_area_ = 'ae_sae'
-        else:
-            site_area_ = site_area
+        # if site_area == "PD":
+        #     site_area_ = 'pd'
+        # elif site_area == 'AE_SAE':
+        #     site_area_ = 'ae_sae'
+        # else:
+        #     site_area_ = site_area
 
-        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area_, "summary")
+        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "summary")
         # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
         if not os.path.exists(summary_persist_directory):
@@ -103,14 +103,52 @@ class SummaryRetriever:
                 'relevance_score': score,
                 'summary': doc.page_content,
                 'metadata': metadata,
-                # 'original_data': result_table.to_dict('records') if not result_table.empty else None
-                'original_data': result_table.to_html(index=False)
+                'original_data': generate_formatted_html_table(result_table) if not result_table.empty else None
                 })
             return retrieved_docs
         except Exception as e:
             logger.error(f"Error retrieving site documents: {str(e)}")
             return []
 
+def generate_formatted_html_table(df):
+    """
+    Generate a properly formatted HTML table from a pandas DataFrame.
+    This ensures the table has the correct structure for frontend styling.
+    
+    Args:
+        df (pandas.DataFrame): The DataFrame to convert to HTML
+        
+    Returns:
+        str: HTML table with proper structure
+    """
+    if df.empty:
+        return ""
+    
+    # Generate the table header
+    header = "<thead><tr>"
+    for col in df.columns:
+        header += f'<th>{col}</th>'
+    header += "</tr></thead>"
+    
+    # Generate the table body
+    body = "<tbody>"
+    for _, row in df.iterrows():
+        body += "<tr>"
+        for val in row:
+            # Handle different data types
+            if pd.isna(val):
+                cell_content = ""
+            elif isinstance(val, (int, float)):
+                cell_content = str(val)
+            else:
+                cell_content = str(val)
+            body += f"<td>{cell_content}</td>"
+        body += "</tr>"
+    body += "</tbody>"
+    
+    # Combine into a complete table
+    table = f'<table class="min-w-full text-sm border-collapse">{header}{body}</table>'
+    return table
 
 class GuidelinesRetriever:
     def __init__(self, site_area: str) -> None:

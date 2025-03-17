@@ -47,21 +47,23 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   const [findings, setFindings] = useState<any>(null);
   const [loadingFindings, setLoadingFindings] = useState<boolean>(false);
   const [findingsError, setFindingsError] = useState<string | null>(null);
-  const [retrievedContext, setRetrievedContext] = useState<any>(null);
+  const [retrievedContext, setRetrievedContext] = useState<{
+    pd: any[];
+    ae: any[];
+    chunks: any[]
+  }>({ pd: [], ae: [], chunks: [] });
   const [loadingContext, setLoadingContext] = useState<boolean>(false);
   const [contextError, setContextError] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
   const [showPDFindings, setShowPDFindings] = useState<boolean>(false);
   const [showAEFindings, setShowAEFindings] = useState<boolean>(false);
   const [showContext, setShowContext] = useState<boolean>(false);
   const [showAgentMessages, setShowAgentMessages] = useState<boolean>(true);
   const [pdExpanded, setPdExpanded] = useState(false);
   const [aeExpanded, setAeExpanded] = useState(false);
-  const [otherExpanded, setOtherExpanded] = useState(false);
   
   // Cache for job data to prevent refetching
   const [jobCache, setJobCache] = useState<Record<string, JobCache>>({});
-  // State to track which IDs have been copied
-  const [copiedIds, setCopiedIds] = useState<{[key: string]: boolean}>({});
 
   useEffect(() => {
     initialFetchJobs();
@@ -318,7 +320,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
         setRetrievedContext(contextData);
         return contextData;
       } else {
-        setRetrievedContext(null);
+        setRetrievedContext({ pd: [], ae: [], chunks: [] });
         return null;
       }
     } catch (err) {
@@ -413,23 +415,17 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   };
 
   // Helper function to clean subactivity values
-  const cleanSubactivityValue = (value: string | undefined) => {
-    if (!value) return '';
-    
-    // Extract activity ID if present
-    const activityIdMatch = value.match(/<activity_id#([^>]+)>/);
-    const activityId = activityIdMatch ? activityIdMatch[1] : '';
-    
-    // Remove the activity ID tag, hash marks, and trim
-    const cleanedText = value
-      .replace(/<activity_id#[^>]+>/, '')
-      .replace(/###/, '')
-      .trim()
-      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_")
-      .replace(/^(sub[-_\s]?activity|activity)[:;]?\s*/i, ''); // Remove activity/subactivity prefix
-    
-    // Return formatted string with activity ID if available
-    return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
+  const cleanSubactivityValue = (value: string): string => {
+    return value
+      .replace(/<activity_id#/g, '')
+      .replace(/>/g, '')
+      .replace(/^\d+_/g, '');
+  };
+
+  // Helper function to format relevance scores
+  const formatRelevanceScore = (score?: number): string => {
+    if (score === undefined) return 'N/A';
+    return `${(score * 100).toFixed(1)}%`;
   };
 
   // Function to clean up text content from the backend
@@ -442,6 +438,15 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       .replace(/�/g, 'i'); // Another common encoding issue
   };
 
+  // Get timezone string in format UTC+/-XX:XX
+  const getTimeZoneString = () => {
+    const offset = new Date().getTimezoneOffset();
+    const hours = Math.abs(Math.floor(offset / 60));
+    const minutes = Math.abs(offset % 60);
+    const sign = offset <= 0 ? '+' : '-';
+    return `UTC${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
   // Format date to a more readable format
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -449,26 +454,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     const date = new Date(dateString);
     
     // Format: Jan 15, 2025, 10:30 AM (UTC+5:30)
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
+    return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
       hour12: true
-    };
-    
-    // Get formatted date
-    const formattedDate = date.toLocaleDateString('en-US', options);
-    
-    // Get timezone offset
-    const offset = date.getTimezoneOffset();
-    const hours = Math.abs(Math.floor(offset / 60));
-    const minutes = Math.abs(offset % 60);
-    const sign = offset <= 0 ? '+' : '-';
-    const timezone = `UTC${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    
-    return `${formattedDate} (${timezone})`;
+    }).format(date) + ' (' + getTimeZoneString() + ')';
   };
 
   // Format date range to a more readable format
@@ -631,27 +624,40 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
 
   const htmlTableStyles = `
     .html-table-container table {
-      width: 100%;
       border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 1rem;
       font-size: 0.875rem;
+      table-layout: auto;
+    }
+    .html-table-container th,
+    .html-table-container td {
+      border: 1px solid #e2e8f0;
+      padding: 0.75rem 0.5rem;
+      text-align: left;
+      vertical-align: top;
+      word-break: normal;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .html-table-container th {
-      padding: 0.75rem;
-      text-align: left;
+      background-color: var(--header-bg-color, #f8fafc);
       font-weight: 600;
-      background-color: var(--header-bg-color, #f3f4f6);
-      color: var(--header-text-color, #374151);
-      border: 1px solid #e5e7eb;
-    }
-    .html-table-container td {
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #e5e7eb;
+      color: var(--header-text-color, #334155);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      white-space: nowrap;
     }
     .html-table-container tr:nth-child(even) {
-      background-color: #f9fafb;
+      background-color: #f8fafc;
     }
     .html-table-container tr:hover {
-      background-color: #f3f4f6;
+      background-color: #f1f5f9;
+    }
+    .html-table-container tbody tr:hover td {
+      background-color: rgba(236, 253, 245, 0.4);
     }
   `;
 
@@ -753,7 +759,6 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   const processRetrievedContext = (contextData: any) => {
     const pdChunks: any[] = [];
     const aeChunks: any[] = [];
-    const otherChunks: any[] = [];
     
     // Navigate through the deeply nested structure to extract context
     Object.keys(contextData).forEach(key1 => {
@@ -781,12 +786,17 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         
                         // Check if there's HTML table content
                         let htmlTable = null;
+                        const sourceStr = contextItem.metadata.source ? contextItem.metadata.source.toLowerCase() : '';
+                        
+                        // First check for pre-rendered HTML table in metadata
                         if (contextItem.metadata.text_as_html) {
                           htmlTable = contextItem.metadata.text_as_html;
-                        } else if (contextItem.metadata.source && 
-                                  (contextItem.metadata.source.toLowerCase().includes('.xlsx') || 
-                                   contextItem.metadata.source.toLowerCase().includes('.xls') || 
-                                   contextItem.metadata.source.toLowerCase().includes('.csv'))) {
+                        } 
+                        // For spreadsheet files, try to generate an HTML table if one doesn't exist
+                        else if (sourceStr && 
+                               (sourceStr.endsWith('.xlsx') || 
+                                sourceStr.endsWith('.xls') || 
+                                sourceStr.endsWith('.csv'))) {
                           // Try to detect if content might be tabular
                           const lines = contextItem.page_content.split('\n');
                           const potentialHeaders = lines[0]?.split(',') || [];
@@ -808,11 +818,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                             </table>`;
                           }
                         }
+                        // For PDF files, we'll show raw content (htmlTable remains null)
                         
                         // Try to extract activity and subActivity info
                         let activity = '';
                         let subActivity = '';
                         let question = '';
+                        let relevanceScore = undefined;
+                        let summary = null;
                         
                         // Try to extract activity from the context key or path
                         if (contextKey.includes('PD') || key1.includes('PD') || key2.includes('PD') || key3.includes('PD')) {
@@ -849,38 +862,51 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                           }
                         }
                         
+                        // Extract relevance score if available
+                        if (contextItem.metadata.relevance_score !== undefined) {
+                          relevanceScore = parseFloat(contextItem.metadata.relevance_score);
+                        }
+                        
+                        // Extract summary if available
+                        if (contextItem.metadata.summary) {
+                          summary = contextItem.metadata.summary;
+                        }
+                        
                         const chunk = {
                           source: contextItem.metadata.source || 'Unknown',
                           content: contextItem.page_content,
                           metadata: contextItem.metadata,
                           htmlTable: htmlTable,
-                          category: 'Other',
+                          category: 'Unknown',
                           activity,
                           subActivity,
-                          question
+                          question,
+                          relevanceScore,
+                          summary
                         };
                         
                         // Debug: Log the final chunk with extracted fields
                         console.log('Final chunk:', {
                           activity: chunk.activity,
                           subActivity: chunk.subActivity,
-                          question: chunk.question
+                          question: chunk.question,
+                          relevanceScore: chunk.relevanceScore,
+                          summary: chunk.summary,
+                          hasHtmlTable: !!chunk.htmlTable,
+                          source: chunk.source
                         });
                         
                         // Categorize chunks based on their source or content
-                        const source = chunk.source.toLowerCase();
-                        const content = chunk.content.toLowerCase();
+                        const contentStr = chunk.content.toLowerCase();
                         
-                        if (source.includes('pd') || content.includes('protocol deviation') || 
-                            content.includes('pd_') || content.match(/pd\s+\d+/)) {
+                        if (sourceStr.includes('pd') || contentStr.includes('protocol deviation') || 
+                            contentStr.includes('pd_') || contentStr.match(/pd\s+\d+/) || activity === 'PD') {
                           chunk.category = 'PD';
                           pdChunks.push(chunk);
-                        } else if (source.includes('ae') || content.includes('adverse event') || 
-                                  content.includes('ae_') || content.match(/ae\s+\d+/)) {
+                        } else if (sourceStr.includes('ae') || contentStr.includes('adverse event') || 
+                                  contentStr.includes('ae_') || contentStr.match(/ae\s+\d+/) || activity === 'AE_SAE') {
                           chunk.category = 'AE';
                           aeChunks.push(chunk);
-                        } else {
-                          otherChunks.push(chunk);
                         }
                       }
                     });
@@ -893,25 +919,20 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       }
     });
     
-    console.log('Extracted context chunks:', { pd: pdChunks.length, ae: aeChunks.length, other: otherChunks.length });
     return {
       pd: pdChunks,
       ae: aeChunks,
-      other: otherChunks,
-      chunks: [...pdChunks, ...aeChunks, ...otherChunks] // Keep the original format for backward compatibility
+      chunks: [...pdChunks, ...aeChunks] // Keep the original format for backward compatibility
     };
   };
 
-  // Copy text to clipboard and show success feedback
-  const copyToClipboard = (text: string, idType: string) => {
+  // Function to copy text to clipboard
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      // Set the specific ID as copied
-      setCopiedIds(prev => ({ ...prev, [idType + text]: true }));
-      
-      // Reset after delay
+      setCopiedText(text);
       setTimeout(() => {
-        setCopiedIds(prev => ({ ...prev, [idType + text]: false }));
-      }, 1500);
+        setCopiedText(null);
+      }, 2000);
     });
   };
 
@@ -1034,10 +1055,10 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         title="Copy Job ID"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent job click
-                          copyToClipboard(job.id, 'job_');
+                          copyToClipboard(job.id);
                         }}
                       >
-                        {copiedIds['job_' + job.id] ? 
+                        {copiedText === job.id ? 
                           <CheckCircle className="w-3 h-3 text-green-500" /> : 
                           <Copy className="w-3 h-3 text-blue-600/70" />
                         }
@@ -1065,10 +1086,10 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                               title="Copy Trial ID"
                               onClick={(e) => {
                                 e.stopPropagation(); // Prevent job click
-                                copyToClipboard(job.trial_id, 'trial_');
+                                copyToClipboard(job.trial_id);
                               }}
                             >
-                              {copiedIds['trial_' + job.trial_id] ? 
+                              {copiedText === job.trial_id ? 
                                 <CheckCircle className="w-3 h-3 text-green-500" /> : 
                                 <Copy className="w-3 h-3 text-blue-600/70" />
                               }
@@ -1087,10 +1108,10 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                               title="Copy Site ID"
                               onClick={(e) => {
                                 e.stopPropagation(); // Prevent job click
-                                copyToClipboard(job.site_id, 'site_');
+                                copyToClipboard(job.site_id);
                               }}
                             >
-                              {copiedIds['site_' + job.site_id] ? 
+                              {copiedText === job.site_id ? 
                                 <CheckCircle className="w-3 h-3 text-green-500" /> : 
                                 <Copy className="w-3 h-3 text-blue-600/70" />
                               }
@@ -1150,7 +1171,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               setSelectedJob(null);
               setAiMessages([]);
               setFindings(null);
-              setRetrievedContext(null);
+              setRetrievedContext({ pd: [], ae: [], chunks: [] });
               setShowPDFindings(false);
               setShowAEFindings(false);
               setShowContext(false);
@@ -1167,10 +1188,10 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                   className="ml-1 inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
                   title="Copy Job ID"
                   onClick={() => {
-                    copyToClipboard(selectedJob || '', 'selected_');
+                    copyToClipboard(selectedJob || '');
                   }}
                 >
-                  {copiedIds['selected_' + selectedJob] ? 
+                  {copiedText === selectedJob ? 
                     <CheckCircle className="w-3 h-3 text-green-500" /> : 
                     <Copy className="w-3 h-3 text-blue-600/70" />
                   }
@@ -1181,7 +1202,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                   setSelectedJob(null);
                   setAiMessages([]);
                   setFindings(null);
-                  setRetrievedContext(null);
+                  setRetrievedContext({ pd: [], ae: [], chunks: [] });
                   setShowPDFindings(false);
                   setShowAEFindings(false);
                   setShowContext(false);
@@ -1352,7 +1373,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
                       <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors">
                         <div className="flex items-center">
-                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-3">
                             <AlertTriangle size={14} className="text-yellow-500" />
                           </div>
                           <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
@@ -1421,50 +1442,59 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                      <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors">
+                      <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
+                           onClick={() => setAeExpanded(!aeExpanded)}>
                         <div className="flex items-center">
-                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                            <AlertCircle size={14} className="text-orange-500" />
+                          {aeExpanded ? 
+                            <ChevronDown className="w-4 h-4 text-gray-700" /> : 
+                            <ChevronRight className="w-4 h-4 text-gray-700" />
+                          }
+                          <div className="flex items-center">
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                              <AlertCircle size={14} className="text-orange-500" />
+                            </div>
+                            <h4 className="font-medium text-orange-600">Adverse Events / Serious Adverse Events</h4>
+                            <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
+                              {findings.ae.length} {findings.ae.length === 1 ? 'item' : 'items'}
+                            </span>
                           </div>
-                          <h4 className="font-medium text-orange-600">Adverse Events / Serious Adverse Events</h4>
-                          <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
-                            {findings.ae.length} {findings.ae.length === 1 ? 'item' : 'items'}
-                          </span>
                         </div>
                       </div>
                       
-                      <div className="divide-y divide-gray-100">
-                        {findings.ae.map((finding, index) => (
-                          <div key={`ae-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
-                            {/* Item Number */}
-                            <div className="mb-2">
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
-                                {index + 1}
-                              </span>
-                              <span className="text-sm text-gray-500">Finding {index + 1} of {findings.ae.length}</span>
-                            </div>
-                            
-                            {/* Content */}
-                            <div className="relative">
-                              <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
-                                <div className="whitespace-pre-line text-gray-800">
-                                  <ReactMarkdown>
-                                    {cleanTextContent(finding.content).replace(/Adverse Event|AE:|SAE:|Subject:|Site:|Event:|Grade:|Start Date:|End Date:|Seriousness:|Treatment:/gi, match => `**${match}**`)}
-                                  </ReactMarkdown>
+                      {aeExpanded && (
+                        <div className="divide-y divide-gray-100 animate-slideDown">
+                          {findings.ae.map((finding, index) => (
+                            <div key={`ae-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
+                              {/* Item Number */}
+                              <div className="mb-2">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
+                                  {index + 1}
+                                </span>
+                                <span className="text-sm text-gray-500">Finding {index + 1} of {findings.ae.length}</span>
+                              </div>
+                              
+                              {/* Content */}
+                              <div className="relative">
+                                <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
+                                  <div className="whitespace-pre-line text-gray-800">
+                                    <ReactMarkdown>
+                                      {cleanTextContent(finding.content).replace(/Adverse Event|AE:|SAE:|Subject:|Site:|Event:|Grade:|Start Date:|End Date:|Seriousness:|Treatment:/gi, match => `**${match}**`)}
+                                    </ReactMarkdown>
+                                  </div>
                                 </div>
                               </div>
+                              
+                              {/* Table data if available */}
+                              {finding.table && finding.table.length > 0 && (
+                                <div className="mt-4">
+                                  <h5 className="font-medium text-gray-700 mb-2">Tabular Data:</h5>
+                                  {renderAETable(finding)}
+                                </div>
+                              )}
                             </div>
-                            
-                            {/* Table data if available */}
-                            {finding.table && finding.table.length > 0 && (
-                              <div className="mt-4">
-                                <h5 className="font-medium text-gray-700 mb-2">Tabular Data:</h5>
-                                {renderAETable(finding)}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1528,66 +1558,96 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                   
                                   {/* Metadata */}
                                   <div className="mb-3 overflow-x-auto">
-                                    <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
+                                    <table className="min-w-full text-xs border-collapse">
                                       <thead>
                                         <tr className="bg-gray-50">
-                                          <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
-                                          <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-600 border border-gray-200">Property</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-600 border border-gray-200">Value</th>
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {/* Display subActivity as Activity - always show even if empty */}
-                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            <strong>Activity</strong>
-                                          </td>
-                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                            {chunk.subActivity ? cleanSubactivityValue(chunk.subActivity) : (chunk.activity || 'Unknown')}
-                                          </td>
-                                        </tr>
+                                        {/* Display subActivity as Activity */}
+                                        {chunk.subActivity && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Activity
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              {cleanSubactivityValue(chunk.subActivity)}
+                                            </td>
+                                          </tr>
+                                        )}
                                         
-                                        {/* Display question as Sub-activity - always show even if empty */}
-                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            <strong>Sub-activity</strong>
-                                          </td>
-                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                            {chunk.question || 'Unknown'}
-                                          </td>
-                                        </tr>
+                                        {/* Display question as Sub-activity */}
+                                        {chunk.question && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Sub-activity
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              {chunk.question}
+                                            </td>
+                                          </tr>
+                                        )}
+                                        
+                                        {/* Display relevance score if available */}
+                                        {chunk.relevanceScore !== undefined && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Relevance Score
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              <span className={`px-2 py-0.5 rounded-full text-xs ${chunk.relevanceScore > 0.7 ? 'bg-green-100 text-green-800' : chunk.relevanceScore > 0.4 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                {formatRelevanceScore(chunk.relevanceScore)}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        )}
+                                        
+                                        {/* Display summary if available */}
+                                        {chunk.summary && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Summary
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              {chunk.summary}
+                                            </td>
+                                          </tr>
+                                        )}
                                         
                                         {/* Display other metadata fields */}
                                         {Object.entries(chunk.metadata)
-                                          .filter(([metaKey]) => metaKey !== 'text_as_html') // Exclude text_as_html from metadata table
-                                          .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata))
+                                          .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields
+                                          .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata)) // Apply our custom filter
                                           .map(([metaKey, metaValue]) => (
-                                          <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              {metaKey}
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              {metaKey === 'source' ? (
-                                                <a 
-                                                  href={mapSourceUrl(metaValue as string, chunk.metadata)} 
-                                                  target="_blank" 
-                                                  rel="noopener noreferrer"
-                                                  className="text-blue-600 hover:underline flex items-center"
-                                                  onClick={(e) => {
-                                                    if (!handleSourceLinkClick(metaValue as string, chunk.metadata)) {
-                                                      e.preventDefault();
-                                                    }
-                                                  }}
-                                                >
-                                                  {String(metaValue).substring(0, 50)}
-                                                  {String(metaValue).length > 50 ? '...' : ''}
-                                                  <ExternalLink className="w-3 h-3 ml-1 inline" />
-                                                </a>
-                                              ) : (
-                                                String(metaValue)
-                                              )}
-                                            </td>
-                                          </tr>
-                                        ))}
+                                            <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                              <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                                {metaKey}
+                                              </td>
+                                              <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                                {metaKey === 'source' ? (
+                                                  <a 
+                                                    href={mapSourceUrl(metaValue as string, chunk.metadata)} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 hover:underline flex items-center"
+                                                    onClick={(e) => {
+                                                      if (!handleSourceLinkClick(metaValue as string, chunk.metadata)) {
+                                                        e.preventDefault();
+                                                      }
+                                                    }}
+                                                  >
+                                                    {String(metaValue).substring(0, 50)}
+                                                    {String(metaValue).length > 50 ? '...' : ''}
+                                                    <ExternalLink className="w-3 h-3 ml-1 inline" />
+                                                  </a>
+                                                ) : (
+                                                  String(metaValue)
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
                                       </tbody>
                                     </table>
                                   </div>
@@ -1598,13 +1658,13 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                     {chunk.htmlTable && (
                                       <div className="mb-4">
                                         <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                                        <div className="overflow-x-auto border rounded max-h-96">
+                                        <div className="overflow-x-auto border rounded shadow-sm">
                                           <style dangerouslySetInnerHTML={{ __html: htmlTableStyles }} />
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
-                                              '--header-bg-color': '#f3f4f6',
-                                              '--header-text-color': '#374151'
+                                              '--header-bg-color': '#f7f7f7',
+                                              '--header-text-color': '#333'
                                             } as React.CSSProperties}
                                             dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
                                           />
@@ -1614,14 +1674,28 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                     
                                     {/* Raw Content */}
                                     {!chunk.htmlTable && (
-                                      <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
-                                        <div className="font-medium text-gray-700 mb-2">Content:</div>
-                                        <div className="whitespace-pre-line text-gray-800">
-                                          {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
-                                            <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                                              {paragraph}
-                                            </p>
-                                          ))}
+                                      <div className="relative">
+                                        <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
+                                          <div className="font-medium text-gray-700 mb-2 flex items-center justify-between">
+                                            <span>Raw Content:</span>
+                                            <button
+                                              className="inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                                              title="Copy raw content"
+                                              onClick={() => copyToClipboard(chunk.content)}
+                                            >
+                                              {copiedText === chunk.content ? 
+                                                <CheckCircle className="w-3 h-3 text-green-500" /> : 
+                                                <Copy className="w-3 h-3 text-blue-600/70" />
+                                              }
+                                            </button>
+                                          </div>
+                                          <div className="whitespace-pre-line text-gray-800">
+                                            {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
+                                              <p key={i} className={i > 0 ? 'mt-2' : ''}>
+                                                {paragraph}
+                                              </p>
+                                            ))}
+                                          </div>
                                         </div>
                                       </div>
                                     )}
@@ -1632,7 +1706,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                           )}
                         </div>
                       )}
-
+                      
                       {/* AE Section */}
                       {retrievedContext.ae && retrievedContext.ae.length > 0 && (
                         <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
@@ -1669,66 +1743,96 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                   
                                   {/* Metadata */}
                                   <div className="mb-3 overflow-x-auto">
-                                    <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
+                                    <table className="min-w-full text-xs border-collapse">
                                       <thead>
                                         <tr className="bg-gray-50">
-                                          <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
-                                          <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-600 border border-gray-200">Property</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-600 border border-gray-200">Value</th>
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {/* Display subActivity as Activity - always show even if empty */}
-                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            <strong>Activity</strong>
-                                          </td>
-                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                            {chunk.subActivity ? cleanSubactivityValue(chunk.subActivity) : (chunk.activity || 'Unknown')}
-                                          </td>
-                                        </tr>
+                                        {/* Display subActivity as Activity */}
+                                        {chunk.subActivity && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Activity
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              {cleanSubactivityValue(chunk.subActivity)}
+                                            </td>
+                                          </tr>
+                                        )}
                                         
-                                        {/* Display question as Sub-activity - always show even if empty */}
-                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            <strong>Sub-activity</strong>
-                                          </td>
-                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                            {chunk.question || 'Unknown'}
-                                          </td>
-                                        </tr>
+                                        {/* Display question as Sub-activity */}
+                                        {chunk.question && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Sub-activity
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              {chunk.question}
+                                            </td>
+                                          </tr>
+                                        )}
+                                        
+                                        {/* Display relevance score if available */}
+                                        {chunk.relevanceScore !== undefined && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Relevance Score
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              <span className={`px-2 py-0.5 rounded-full text-xs ${chunk.relevanceScore > 0.7 ? 'bg-green-100 text-green-800' : chunk.relevanceScore > 0.4 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                {formatRelevanceScore(chunk.relevanceScore)}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        )}
+                                        
+                                        {/* Display summary if available */}
+                                        {chunk.summary && (
+                                          <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                            <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                              Summary
+                                            </td>
+                                            <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                              {chunk.summary}
+                                            </td>
+                                          </tr>
+                                        )}
                                         
                                         {/* Display other metadata fields */}
                                         {Object.entries(chunk.metadata)
-                                          .filter(([metaKey]) => metaKey !== 'text_as_html') // Exclude text_as_html from metadata table
-                                          .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata))
+                                          .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields
+                                          .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata)) // Apply our custom filter
                                           .map(([metaKey, metaValue]) => (
-                                          <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              {metaKey}
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              {metaKey === 'source' ? (
-                                                <a 
-                                                  href={mapSourceUrl(metaValue as string, chunk.metadata)} 
-                                                  target="_blank" 
-                                                  rel="noopener noreferrer"
-                                                  className="text-blue-600 hover:underline flex items-center"
-                                                  onClick={(e) => {
-                                                    if (!handleSourceLinkClick(metaValue as string, chunk.metadata)) {
-                                                      e.preventDefault();
-                                                    }
-                                                  }}
-                                                >
-                                                  {String(metaValue).substring(0, 50)}
-                                                  {String(metaValue).length > 50 ? '...' : ''}
-                                                  <ExternalLink className="w-3 h-3 ml-1 inline" />
-                                                </a>
-                                              ) : (
-                                                String(metaValue)
-                                              )}
-                                            </td>
-                                          </tr>
-                                        ))}
+                                            <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                              <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                                {metaKey}
+                                              </td>
+                                              <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
+                                                {metaKey === 'source' ? (
+                                                  <a 
+                                                    href={mapSourceUrl(metaValue as string, chunk.metadata)} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 hover:underline flex items-center"
+                                                    onClick={(e) => {
+                                                      if (!handleSourceLinkClick(metaValue as string, chunk.metadata)) {
+                                                        e.preventDefault();
+                                                      }
+                                                    }}
+                                                  >
+                                                    {String(metaValue).substring(0, 50)}
+                                                    {String(metaValue).length > 50 ? '...' : ''}
+                                                    <ExternalLink className="w-3 h-3 ml-1 inline" />
+                                                  </a>
+                                                ) : (
+                                                  String(metaValue)
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
                                       </tbody>
                                     </table>
                                   </div>
@@ -1739,13 +1843,13 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                     {chunk.htmlTable && (
                                       <div className="mb-4">
                                         <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                                        <div className="overflow-x-auto border rounded max-h-96">
+                                        <div className="overflow-x-auto border rounded shadow-sm">
                                           <style dangerouslySetInnerHTML={{ __html: htmlTableStyles }} />
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
-                                              '--header-bg-color': '#f3f4f6',
-                                              '--header-text-color': '#374151'
+                                              '--header-bg-color': '#f7f7f7',
+                                              '--header-text-color': '#333'
                                             } as React.CSSProperties}
                                             dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
                                           />
@@ -1755,14 +1859,28 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                     
                                     {/* Raw Content */}
                                     {!chunk.htmlTable && (
-                                      <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
-                                        <div className="font-medium text-gray-700 mb-2">Content:</div>
-                                        <div className="whitespace-pre-line text-gray-800">
-                                          {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
-                                            <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                                              {paragraph}
-                                            </p>
-                                          ))}
+                                      <div className="relative">
+                                        <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
+                                          <div className="font-medium text-gray-700 mb-2 flex items-center justify-between">
+                                            <span>Raw Content:</span>
+                                            <button
+                                              className="inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                                              title="Copy raw content"
+                                              onClick={() => copyToClipboard(chunk.content)}
+                                            >
+                                              {copiedText === chunk.content ? 
+                                                <CheckCircle className="w-3 h-3 text-green-500" /> : 
+                                                <Copy className="w-3 h-3 text-blue-600/70" />
+                                              }
+                                            </button>
+                                          </div>
+                                          <div className="whitespace-pre-line text-gray-800">
+                                            {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
+                                              <p key={i} className={i > 0 ? 'mt-2' : ''}>
+                                                {paragraph}
+                                              </p>
+                                            ))}
+                                          </div>
                                         </div>
                                       </div>
                                     )}
@@ -1773,152 +1891,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                           )}
                         </div>
                       )}
-
-                      {/* Other Section */}
-                      {retrievedContext.other && retrievedContext.other.length > 0 && (
-                        <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                          <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
-                               onClick={() => setOtherExpanded(!otherExpanded)}>
-                            <div className="flex items-center">
-                              {otherExpanded ? 
-                                <ChevronDown className="w-4 h-4 text-gray-700" /> : 
-                                <ChevronRight className="w-4 h-4 text-gray-700" />
-                              }
-                              <div className="flex items-center">
-                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                                  <Database size={14} className="text-gray-700" />
-                                </div>
-                                <h4 className="font-medium text-gray-700">Other Retrieved Context</h4>
-                                <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
-                                  {retrievedContext.other.length} {retrievedContext.other.length === 1 ? 'item' : 'items'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {otherExpanded && (
-                            <div className="divide-y divide-gray-100 animate-slideDown">
-                              {retrievedContext.other.map((chunk, index) => (
-                                <div key={`other-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
-                                  {/* Item Number */}
-                                  <div className="mb-2">
-                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
-                                      {index + 1}
-                                    </span>
-                                    <span className="text-sm text-gray-500">Item {index + 1} of {retrievedContext.other.length}</span>
-                                  </div>
-                                  
-                                  {/* Metadata */}
-                                  <div className="mb-3 overflow-x-auto">
-                                    <table className="min-w-full text-xs border-collapse shadow-sm rounded-lg overflow-hidden">
-                                      <thead>
-                                        <tr className="bg-gray-50">
-                                          <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Property</th>
-                                          <th className="px-4 py-3 text-left font-bold text-gray-700 border border-gray-200">Value</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {/* Display subActivity as Activity - always show even if empty */}
-                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            <strong>Activity</strong>
-                                          </td>
-                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                            {chunk.subActivity ? cleanSubactivityValue(chunk.subActivity) : (chunk.activity || 'Unknown')}
-                                          </td>
-                                        </tr>
-                                        
-                                        {/* Display question as Sub-activity - always show even if empty */}
-                                        <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                          <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            <strong>Sub-activity</strong>
-                                          </td>
-                                          <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                            {chunk.question || 'Unknown'}
-                                          </td>
-                                        </tr>
-                                        
-                                        {/* Display other metadata fields */}
-                                        {Object.entries(chunk.metadata)
-                                          .filter(([metaKey]) => metaKey !== 'text_as_html') // Exclude text_as_html from metadata table
-                                          .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata))
-                                          .map(([metaKey, metaValue]) => (
-                                          <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
-                                            <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                              {metaKey}
-                                            </td>
-                                            <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                              {metaKey === 'source' ? (
-                                                <a 
-                                                  href={mapSourceUrl(metaValue as string, chunk.metadata)} 
-                                                  target="_blank" 
-                                                  rel="noopener noreferrer"
-                                                  className="text-blue-600 hover:underline flex items-center"
-                                                  onClick={(e) => {
-                                                    if (!handleSourceLinkClick(metaValue as string, chunk.metadata)) {
-                                                      e.preventDefault();
-                                                    }
-                                                  }}
-                                                >
-                                                  {String(metaValue).substring(0, 50)}
-                                                  {String(metaValue).length > 50 ? '...' : ''}
-                                                  <ExternalLink className="w-3 h-3 ml-1 inline" />
-                                                </a>
-                                              ) : (
-                                                String(metaValue)
-                                              )}
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                  
-                                  {/* Content */}
-                                  <div className="relative">
-                                    {/* HTML Table Section */}
-                                    {chunk.htmlTable && (
-                                      <div className="mb-4">
-                                        <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                                        <div className="overflow-x-auto border rounded max-h-96">
-                                          <style dangerouslySetInnerHTML={{ __html: htmlTableStyles }} />
-                                          <div 
-                                            className="p-2 text-sm html-table-container" 
-                                            style={{
-                                              '--header-bg-color': '#f3f4f6',
-                                              '--header-text-color': '#374151'
-                                            } as React.CSSProperties}
-                                            dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {/* Raw Content */}
-                                    {!chunk.htmlTable && (
-                                      <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
-                                        <div className="font-medium text-gray-700 mb-2">Content:</div>
-                                        <div className="whitespace-pre-line text-gray-800">
-                                          {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
-                                            <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                                              {paragraph}
-                                            </p>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
                       {/* No chunks at all fallback */}
                       {(!retrievedContext.pd || retrievedContext.pd.length === 0) &&
-                       (!retrievedContext.ae || retrievedContext.ae.length === 0) &&
-                       (!retrievedContext.other || retrievedContext.other.length === 0) && (
+                       (!retrievedContext.ae || retrievedContext.ae.length === 0) && (
                         <div className="text-center py-8 text-gray-500">
                           <p>No retrieved context available for this job</p>
                         </div>
@@ -1928,14 +1903,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                 </div>
               )}
             </div>
-            
+  
             <div className="border-t p-4">
               <button
                 onClick={() => {
                   setSelectedJob(null);
                   setAiMessages([]);
                   setFindings(null);
-                  setRetrievedContext(null);
+                  setRetrievedContext({ pd: [], ae: [], chunks: [] });
                   setShowPDFindings(false);
                   setShowAEFindings(false);
                   setShowContext(false);
