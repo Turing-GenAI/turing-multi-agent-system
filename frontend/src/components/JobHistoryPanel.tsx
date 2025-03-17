@@ -415,17 +415,23 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   };
 
   // Helper function to clean subactivity values
-  const cleanSubactivityValue = (value: string): string => {
-    return value
-      .replace(/<activity_id#/g, '')
-      .replace(/>/g, '')
-      .replace(/^\d+_/g, '');
-  };
-
-  // Helper function to format relevance scores
-  const formatRelevanceScore = (score?: number): string => {
-    if (score === undefined) return 'N/A';
-    return `${(score * 100).toFixed(1)}%`;
+  const cleanSubactivityValue = (value: string | undefined) => {
+    if (!value) return '';
+    
+    // Extract activity ID if present
+    const activityIdMatch = value.match(/<activity_id#([^>]+)>/);
+    const activityId = activityIdMatch ? activityIdMatch[1] : '';
+    
+    // Remove the activity ID tag, hash marks, and trim
+    const cleanedText = value
+      .replace(/<activity_id#[^>]+>/, '')
+      .replace(/###/, '')
+      .trim()
+      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_")
+      .replace(/^(sub[-_\s]?activity|activity)[:;]?\s*/i, ''); // Remove activity/subactivity prefix
+    
+    // Return formatted string with activity ID if available
+    return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
   };
 
   // Function to clean up text content from the backend
