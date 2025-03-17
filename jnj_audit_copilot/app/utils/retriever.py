@@ -95,6 +95,7 @@ class SummaryRetriever:
                 'relevance_score': score,
                 'summary': doc.page_content,
                 'metadata': metadata,
+                'sql_query': sql_query,
                 # 'original_data': result_table.to_dict('records') if not result_table.empty else None
                 'original_data': result_table.to_html(index=False)
                 })
