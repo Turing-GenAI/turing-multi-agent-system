@@ -558,7 +558,7 @@ class inspectionNodes:
             ),
         }
 
-    def interrupt_for_planner_feedback(self, state: InspectionAgentState) -> Command[Literal["selfrag_subgraph"]]:
+    def interrupt_for_planner_feedback(self, state: InspectionAgentState):
         # logger.debug("Calling function : interrupt_for_planner_feedback...")
         # if FEEDBACK_FOR_PLANNER:
         #     feedback = state["human_feedback"]
