@@ -74,15 +74,16 @@ class inspectionSubgraph:
 
         # builder.add_edge("planner_user_validation", "add_human_in_the_loop")
 
-        builder.add_conditional_edges(
-            "planner_user_validation",
-            self.inspection_conditional_functions.should_continue_from_human_feedback_findings,
-            {
-                "selfrag_subgraph": "selfrag_subgraph",
-                "feedback_agent": "feedback_agent",
-            },
-        )
+        # builder.add_conditional_edges(
+        #     "planner_user_validation",
+        #     self.inspection_conditional_functions.should_continue_from_human_feedback_findings,
+        #     {
+        #         "selfrag_subgraph": "selfrag_subgraph",
+        #         "feedback_agent": "feedback_agent",
+        #     },
+        # )
 
+        builder.add_edge("planner_user_validation", "selfrag_subgraph")
         builder.add_edge("selfrag_subgraph", "generate_findings_agent")
         builder.add_edge("generate_findings_agent", "user_agent_validator")
         builder.add_conditional_edges(
@@ -95,7 +96,7 @@ class inspectionSubgraph:
         )
         builder.add_edge("discrepancy_data_generator", "site_area_router")
         inspection_subgraph = builder.compile(
-            interrupt_before=["planner_user_validation"],
+            # interrupt_before=["planner_user_validation"],
             interrupt_after=["generate_findings_agent"],
         )
 
