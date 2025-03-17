@@ -136,11 +136,30 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   // Helper function to determine if a metadata field should be shown
   const shouldShowMetadataField = (key: string, metadata: any): boolean => {
     const fieldsToHide = ['file_directory', 'page_name', 'page_number', 'languages', 'filetype', 'category', 'element_id', 'last_modified'];
+    
+    // Always hide site_area regardless of document type
+    if (key === 'site_area') {
+      return false;
+    }
+    
     const isSpreadsheetDoc = metadata.filename && (metadata.filename.endsWith('.xlsx') || metadata.filename.endsWith('.xls'));
     if (isSpreadsheetDoc && fieldsToHide.includes(key)) {
       return false;
     }
     return true;
+  };
+  
+  // Helper function to map metadata keys to user-friendly display names
+  const getMetadataDisplayName = (key: string): string => {
+    const displayNameMap: Record<string, string> = {
+      'source': 'Source',
+      'chunk_index': 'Page Number',
+      'file_name': 'File Name',
+      'relative_path': 'Relative Path',
+      'sql_query': 'SQL Query'
+    };
+    
+    return displayNameMap[key] || key;
   };
   
   // Helper function to map source URLs for external links
@@ -572,7 +591,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                   .map(([metaKey, metaValue]) => (
                                   <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                     <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                      {metaKey}
+                                      {getMetadataDisplayName(metaKey)}
                                     </td>
                                     <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
                                       {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
@@ -605,12 +624,13 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                           {item.htmlTable && (
                             <div className="mb-4">
                               <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                              <div className="overflow-x-auto border rounded shadow-sm">
+                              <div className="border rounded shadow-sm">
                                 <div 
-                                  className="p-2 text-sm html-table-container" 
+                                  className="p-2 text-sm html-table-container overflow-x-auto overflow-y-auto" 
                                   style={{
                                     '--header-bg-color': '#f7f7f7',
-                                    '--header-text-color': '#333'
+                                    '--header-text-color': '#333',
+                                    maxHeight: '350px'
                                   } as React.CSSProperties}
                                   dangerouslySetInnerHTML={{ __html: item.htmlTable }}
                                 />

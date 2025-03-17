@@ -354,6 +354,11 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     const value = metadata[key];
     if (value === undefined || value === null || value === '') return false;
     
+    // Always hide site_area regardless of document type
+    if (key === 'site_area') {
+      return false;
+    }
+    
     // List of fields to hide for spreadsheet-type documents
     const fieldsToHide = [
       'file_directory',
@@ -384,6 +389,20 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     return true;
   };
   
+  // Helper function to map metadata keys to user-friendly display names
+  const getMetadataDisplayName = (key: string): string => {
+    const displayNameMap: Record<string, string> = {
+      'source': 'Source',
+      'chunk_index': 'Page Number',
+      'file_name': 'File Name',
+      'relative_path': 'Relative Path',
+      'sql_query': 'SQL Query',
+      'source': 'Source'
+    };
+    
+    return displayNameMap[key] || key;
+  };
+
   // Helper function to map source URLs for external links
   const mapSourceUrl = (url: string, metadata: any): string => {
     // For debugging
@@ -748,7 +767,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
-      <div className="overflow-x-auto mt-4">
+      <div className="overflow-x-auto overflow-y-auto mt-4" style={{ maxHeight: '350px' }}>
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -790,7 +809,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
-      <div className="overflow-x-auto mt-4">
+      <div className="overflow-x-auto overflow-y-auto mt-4" style={{ maxHeight: '350px' }}>
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -1704,7 +1723,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                           .map(([metaKey, metaValue]) => (
                                             <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                               <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                                {metaKey}
+                                                {getMetadataDisplayName(metaKey)}
                                               </td>
                                               <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
                                                 {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
@@ -1889,7 +1908,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                           .map(([metaKey, metaValue]) => (
                                             <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                               <td className="px-3 py-2 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                                {metaKey}
+                                                {getMetadataDisplayName(metaKey)}
                                               </td>
                                               <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
                                                 {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
