@@ -397,7 +397,6 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       'file_name': 'File Name',
       'relative_path': 'Relative Path',
       'sql_query': 'SQL Query',
-      'source': 'Source'
     };
     
     return displayNameMap[key] || key;
