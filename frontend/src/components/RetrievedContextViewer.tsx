@@ -79,15 +79,22 @@ export const RetrievedContextViewer: React.FC<RetrievedContextViewerProps> = ({ 
   };
 
   // Helper function to clean sub-activity values
-  const cleanSubactivityValue = (value: string): string => {
+  const cleanSubactivityValue = (value: string | undefined) => {
+    if (!value) return '';
+    
     // Extract activity ID if present
     const activityIdMatch = value.match(/<activity_id#([^>]+)>/);
     const activityId = activityIdMatch ? activityIdMatch[1] : '';
+    
     // Remove the activity ID tag, hash marks, and trim
     const cleanedText = value
       .replace(/<activity_id#[^>]+>/, '')
       .replace(/###/, '')
-      .trim();
+      .trim()
+      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_")
+      .replace(/^(sub[-_\s]?activity|activity)[:;]?\s*/i, ''); // Remove activity/subactivity prefix
+    
+    // Return formatted string with activity ID if available
     return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
   };
 
@@ -128,19 +135,6 @@ export const RetrievedContextViewer: React.FC<RetrievedContextViewerProps> = ({ 
       return path.replace(/^\d+_/, '');
     };
 
-    // Helper function to clean sub-activity value
-    const cleanSubactivityValue = (value: string): string => {
-      // Extract activity ID if present
-      const activityIdMatch = value.match(/<activity_id#([^>]+)>/);
-      const activityId = activityIdMatch ? activityIdMatch[1] : '';
-      // Remove the activity ID tag, hash marks, and trim
-      const cleanedText = value
-        .replace(/<activity_id#[^>]+>/, '')
-        .replace(/###/, '')
-        .trim();
-      return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
-    };
-
     // Function to traverse nested data structure
     const traverse = (obj: any, path: string[] = []) => {
       // Handle PostgreSQL format data
@@ -168,60 +162,62 @@ export const RetrievedContextViewer: React.FC<RetrievedContextViewerProps> = ({ 
 
           // Find the question after the sub-activity
           const subActivityIndex = path.findIndex(p => p.includes('<activity_id#'));
-          if (subActivityIndex === -1) return false;
+          
+          // Fix: Properly find the question path
+          const questionPath = path.find((p, index) => {
+            if (subActivityIndex === -1) return false;
+            return index > subActivityIndex && p.match(/^\d+_[A-Za-z]/);
+          });
 
-          const index = path.indexOf(p);
-          return index > subActivityIndex && p.match(/^\d+_[A-Za-z]/);
+          if (questionPath) {
+            question = removeNumPrefix(questionPath);
+          }
+
+          // Extract relevance score and summary if available
+          if (obj.metadata.relevance_score !== undefined) {
+            relevanceScore = parseFloat(obj.metadata.relevance_score);
+          }
+
+          if (obj.metadata.summary) {
+            summary = obj.metadata.summary;
+          }
+
+          // Extract HTML table if available
+          if (obj.metadata.original_data && typeof obj.metadata.original_data === 'string' && 
+              obj.metadata.original_data.includes('<table')) {
+            htmlTable = obj.metadata.original_data;
+          } else if (obj.metadata.text_as_html && typeof obj.metadata.text_as_html === 'string' && 
+                    obj.metadata.text_as_html.includes('<table')) {
+            htmlTable = obj.metadata.text_as_html;
+          } else if (obj.page_content && typeof obj.page_content === 'string' && 
+                    obj.page_content.includes('<table')) {
+            // Sometimes the table might be in the page_content
+            htmlTable = obj.page_content;
+          }
+
+          results.push({
+            content: obj.page_content,
+            metadata: obj.metadata,
+            htmlTable,
+            activity,
+            subActivity,
+            question,
+            relevanceScore,
+            summary
+          });
         }
 
-        if (questionPath) {
-          question = removeNumPrefix(questionPath);
+        // If this is an array, process each item
+        if (Array.isArray(obj)) {
+          obj.forEach(item => traverse(item, path));
+          return;
         }
 
-        // Extract relevance score and summary if available
-        if (obj.metadata.relevance_score !== undefined) {
-          relevanceScore = parseFloat(obj.metadata.relevance_score);
-        }
-
-        if (obj.metadata.summary) {
-          summary = obj.metadata.summary;
-        }
-
-        // Extract HTML table if available
-        if (obj.metadata.original_data && typeof obj.metadata.original_data === 'string' && 
-            obj.metadata.original_data.includes('<table')) {
-          htmlTable = obj.metadata.original_data;
-        } else if (obj.metadata.text_as_html && typeof obj.metadata.text_as_html === 'string' && 
-                  obj.metadata.text_as_html.includes('<table')) {
-          htmlTable = obj.metadata.text_as_html;
-        } else if (obj.page_content && typeof obj.page_content === 'string' && 
-                  obj.page_content.includes('<table')) {
-          // Sometimes the table might be in the page_content
-          htmlTable = obj.page_content;
-        }
-
-        results.push({
-          content: obj.page_content,
-          metadata: obj.metadata,
-          htmlTable,
-          activity,
-          subActivity,
-          question,
-          relevanceScore,
-          summary
+        // Otherwise, recursively process all properties
+        Object.entries(obj).forEach(([key, value]) => {
+          traverse(value, [...path, key]);
         });
       }
-
-      // If this is an array, process each item
-      if (Array.isArray(obj)) {
-        obj.forEach(item => traverse(item, path));
-        return;
-      }
-
-      // Otherwise, recursively process all properties
-      Object.entries(obj).forEach(([key, value]) => {
-        traverse(value, [...path, key]);
-      });
     };
 
     // Start processing from the top level

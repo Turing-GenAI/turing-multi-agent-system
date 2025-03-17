@@ -24,14 +24,6 @@ class SummaryRetriever:
         self.site_area = site_area
         self.engine = create_engine(db_url)
         
-        # Adjusting the names for PD and AE_SAE
-        # if site_area == "PD":
-        #     site_area_ = 'pd'
-        # elif site_area == 'AE_SAE':
-        #     site_area_ = 'ae_sae'
-        # else:
-        #     site_area_ = site_area
-
         summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "summary")
         # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
@@ -103,6 +95,7 @@ class SummaryRetriever:
                 'relevance_score': score,
                 'summary': doc.page_content,
                 'metadata': metadata,
+                'sql_query': sql_query,
                 'original_data': generate_formatted_html_table(result_table) if not result_table.empty else None
                 })
             return retrieved_docs

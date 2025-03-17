@@ -384,34 +384,100 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     return true;
   };
   
-  // Helper function to map source URLs
-  const mapSourceUrl = (url: string, metadata?: any): string => {
+  // Helper function to map source URLs for external links
+  const mapSourceUrl = (url: string, metadata: any): string => {
     // For debugging
-    console.log('Source URL mapping:', { url, metadata });
+    console.log('Mapping source URL:', { url, metadata });
+    
+    // If URL is already a valid URL, return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
     
     let mappedUrl = url;
     
-    // Map for known URLs
+    // Map specific sources to Box URLs
+    if (url === 'rag_db.ae_sae.adverse_events') {
+      mappedUrl = 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+    } else if (url === 'rag_db.pd.protocol_deviation') {
+      mappedUrl = 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+    }
+    
+    // Check for specific file names in metadata
+    if (metadata) {
+      // Check both filename and file_name fields
+      const fileName = metadata.filename || metadata.file_name;
+      
+      if (fileName) {
+        console.log('Found filename in metadata:', fileName);
+        
+        // Handle specific filenames
+        if (fileName === 'Inspection Readiness Guidance V4.0.pdf' || url === 'Inspection Readiness Guidance V4.0.pdf') {
+          mappedUrl = 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
+        }
+        
+        // Handle Excel files related to adverse events
+        if (fileName.includes('Adverse Events.xlsx') || fileName.toLowerCase().includes('adverse_events')) {
+          mappedUrl = 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+        }
+        
+        // Handle Excel files related to protocol deviations
+        if (fileName.includes('protocol_deviation.xlsx') || fileName.toLowerCase().includes('protocol_deviation')) {
+          mappedUrl = 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+        }
+      }
+    }
+    
+    // Legacy mappings for backward compatibility
     if (url.includes('protocol_deviation.xlsx')) {
       mappedUrl = 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
     } else if (url.includes('AE_SAE/data/filtered_RaveReport_example') && url.includes('Adverse Events.xlsx')) {
       mappedUrl = 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
     } else if (url.includes('Inspection Readiness Guidance V4.0.pdf')) {
-      // For PDF documents in Box, use the base URL
       mappedUrl = 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
     }
     
     return mappedUrl;
   };
 
+  // Format relevance score as percentage
+  const formatRelevanceScore = (score?: number): string => {
+    if (score === undefined) return 'N/A';
+    return `${(score * 100).toFixed(1)}%`;
+  };
+
   // Function to handle source link click
-  const handleSourceLinkClick = (url: string, metadata?: any) => {
-    const mappedUrl = mapSourceUrl(url, metadata);
-    console.log('Handling source link click:', { url, mappedUrl, metadata });
+  const handleSourceLinkClick = (url: string, metadata?: any): boolean => {
+    console.log('Handling source link click:', { url, metadata });
     
-    // Open the URL in a new window
-    window.open(mappedUrl, '_blank');
-    return false; // Prevent default link behavior
+    // If source is already a URL, allow default behavior
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return true;
+    }
+    
+    // Check for specific file names in metadata
+    if (metadata) {
+      const fileName = metadata.filename || metadata.file_name;
+      
+      // Handle specific file types
+      if (fileName) {
+        // Check if it's an Excel file or other supported file type
+        const isExcelFile = fileName.toLowerCase().endsWith('.xlsx') || 
+                           fileName.toLowerCase().endsWith('.xls') ||
+                           fileName.toLowerCase().includes('adverse_events') ||
+                           fileName.toLowerCase().includes('protocol_deviation');
+                           
+        const isPdfFile = fileName.toLowerCase().endsWith('.pdf');
+        
+        // For Excel files and PDFs, allow default behavior to open Box URL
+        if (isExcelFile || isPdfFile) {
+          return true;
+        }
+      }
+    }
+    
+    // For other file paths, allow default behavior
+    return true;
   };
 
   // Helper function to clean subactivity values
@@ -427,7 +493,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       .replace(/<activity_id#[^>]+>/, '')
       .replace(/###/, '')
       .trim()
-      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_")
+      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_", "2_", etc.)
       .replace(/^(sub[-_\s]?activity|activity)[:;]?\s*/i, ''); // Remove activity/subactivity prefix
     
     // Return formatted string with activity ID if available
@@ -1377,50 +1443,59 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
-                      <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors">
+                      <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
+                           onClick={() => setPdExpanded(!pdExpanded)}>
                         <div className="flex items-center">
-                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                            <AlertTriangle size={14} className="text-yellow-500" />
+                          {pdExpanded ? 
+                            <ChevronDown className="w-4 h-4 text-gray-700" /> : 
+                            <ChevronRight className="w-4 h-4 text-gray-700" />
+                          }
+                          <div className="flex items-center">
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                              <AlertTriangle size={14} className="text-yellow-500" />
+                            </div>
+                            <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
+                            <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
+                              {findings.pd.length} {findings.pd.length === 1 ? 'item' : 'items'}
+                            </span>
                           </div>
-                          <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
-                          <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
-                            {findings.pd.length} {findings.pd.length === 1 ? 'item' : 'items'}
-                          </span>
                         </div>
                       </div>
                       
-                      <div className="divide-y divide-gray-100">
-                        {findings.pd.map((finding, index) => (
-                          <div key={`pd-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
-                            {/* Item Number */}
-                            <div className="mb-2">
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
-                                {index + 1}
-                              </span>
-                              <span className="text-sm text-gray-500">Finding {index + 1} of {findings.pd.length}</span>
-                            </div>
-                            
-                            {/* Content */}
-                            <div className="relative">
-                              <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
-                                <div className="whitespace-pre-line text-gray-800">
-                                  <ReactMarkdown>
-                                    {cleanTextContent(finding.content).replace(/Protocol Deviation|PD:|Subject:|Site:|Category:|Description:/gi, match => `**${match}**`)}
-                                  </ReactMarkdown>
+                      {pdExpanded && (
+                        <div className="divide-y divide-gray-100 animate-slideDown">
+                          {findings.pd.map((finding, index) => (
+                            <div key={`pd-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
+                              {/* Item Number */}
+                              <div className="mb-2">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-sm mr-2 shadow-sm">
+                                  {index + 1}
+                                </span>
+                                <span className="text-sm text-gray-500">Finding {index + 1} of {findings.pd.length}</span>
+                              </div>
+                              
+                              {/* Content */}
+                              <div className="relative">
+                                <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
+                                  <div className="whitespace-pre-line text-gray-800">
+                                    <ReactMarkdown>
+                                      {cleanTextContent(finding.content).replace(/Protocol Deviation|PD:|Subject:|Site:|Category:|Description:/gi, match => `**${match}**`)}
+                                    </ReactMarkdown>
+                                  </div>
                                 </div>
                               </div>
+                              
+                              {/* Table data if available */}
+                              {finding.table && finding.table.length > 0 && (
+                                <div className="mt-4">
+                                  <h5 className="font-medium text-gray-700 mb-2">Tabular Data:</h5>
+                                  {renderPDTable(finding)}
+                                </div>
+                              )}
                             </div>
-                            
-                            {/* Table data if available */}
-                            {finding.table && finding.table.length > 0 && (
-                              <div className="mt-4">
-                                <h5 className="font-medium text-gray-700 mb-2">Tabular Data:</h5>
-                                {renderPDTable(finding)}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1632,7 +1707,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                                 {metaKey}
                                               </td>
                                               <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
-                                                {metaKey === 'source' ? (
+                                                {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
                                                   <a 
                                                     href={mapSourceUrl(metaValue as string, chunk.metadata)} 
                                                     target="_blank" 
@@ -1817,7 +1892,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                                 {metaKey}
                                               </td>
                                               <td className="px-3 py-2 align-top text-gray-800 border border-gray-200">
-                                                {metaKey === 'source' ? (
+                                                {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
                                                   <a 
                                                     href={mapSourceUrl(metaValue as string, chunk.metadata)} 
                                                     target="_blank" 

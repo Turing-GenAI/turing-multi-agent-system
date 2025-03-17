@@ -105,20 +105,31 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   
   // Helper function to clean text content for display
   const cleanTextContent = (text: string): string => {
-    // Remove any HTML tags
-    return text.replace(/<[^>]*>/g, '');
+    if (!text) return '';
+    
+    // Only fix common encoding issues without changing formatting
+    return text
+      .replace(/�/g, 'ti') // Fix common encoding issues like "Inspec�on" -> "Inspection"
+      .replace(/�/g, 'i'); // Another common encoding issue
   };
   
   // Helper function to clean sub-activity values
-  const cleanSubactivityValue = (value: string): string => {
+  const cleanSubactivityValue = (value: string | undefined) => {
+    if (!value) return '';
+    
     // Extract activity ID if present
     const activityIdMatch = value.match(/<activity_id#([^>]+)>/);
     const activityId = activityIdMatch ? activityIdMatch[1] : '';
+    
     // Remove the activity ID tag, hash marks, and trim
     const cleanedText = value
       .replace(/<activity_id#[^>]+>/, '')
       .replace(/###/, '')
-      .trim();
+      .trim()
+      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_", "2_", etc.)
+      .replace(/^(sub[-_\s]?activity|activity)[:;]?\s*/i, ''); // Remove activity/subactivity prefix
+    
+    // Return formatted string with activity ID if available
     return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
   };
   
@@ -134,26 +145,91 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   
   // Helper function to map source URLs for external links
   const mapSourceUrl = (source: string, metadata: any): string => {
+    // For debugging
+    console.log('Mapping source URL:', { source, metadata });
+    
     // If source is already a URL, return it
     if (source.startsWith('http://') || source.startsWith('https://')) {
       return source;
     }
     
-    // For file paths, just return as is for now
+    // Map specific sources to Box URLs
+    if (source === 'rag_db.ae_sae.adverse_events') {
+      return 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+    } else if (source === 'rag_db.pd.protocol_deviation') {
+      return 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+    }
+    
+    // Check for specific file names in metadata
+    if (metadata) {
+      // Check both filename and file_name fields
+      const fileName = metadata.filename || metadata.file_name;
+      
+      if (fileName) {
+        console.log('Found filename in metadata:', fileName);
+        
+        // Handle specific filenames
+        if (fileName === 'Inspection Readiness Guidance V4.0.pdf' || source === 'Inspection Readiness Guidance V4.0.pdf') {
+          return 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
+        }
+        
+        // Handle Excel files related to adverse events
+        if (fileName.includes('Adverse Events.xlsx') || fileName.toLowerCase().includes('adverse_events')) {
+          return 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+        }
+        
+        // Handle Excel files related to protocol deviations
+        if (fileName.includes('protocol_deviation.xlsx') || fileName.toLowerCase().includes('protocol_deviation')) {
+          return 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+        }
+      }
+    }
+    
+    // Legacy mappings for backward compatibility
+    if (source.includes('protocol_deviation.xlsx')) {
+      return 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+    } else if (source.includes('AE_SAE/data/filtered_RaveReport_example') && source.includes('Adverse Events.xlsx')) {
+      return 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+    } else if (source.includes('Inspection Readiness Guidance V4.0.pdf')) {
+      return 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
+    }
+    
+    // For other file paths, just return as is
     return source;
   };
   
   // Helper function to handle source link clicks
   const handleSourceLinkClick = (source: string, metadata: any): boolean => {
-    // If source is a URL, allow default behavior
+    console.log('Handling source link click:', { source, metadata });
+    
+    // If source is already a URL, allow default behavior
     if (source.startsWith('http://') || source.startsWith('https://')) {
       return true;
     }
     
-    // For file paths, we can't open them directly from the browser
-    console.log('Cannot open local file:', source);
-    alert('Cannot open local file: ' + source);
-    return false;
+    // Check for specific file names in metadata
+    if (metadata) {
+      const fileName = metadata.filename || metadata.file_name;
+      
+      // Handle specific file types
+      if (fileName) {
+        // Check if it's an Excel file or other supported file type
+        const isExcelFile = fileName.toLowerCase().endsWith('.xlsx') || 
+                           fileName.toLowerCase().endsWith('.xls') ||
+                           fileName.toLowerCase().includes('adverse_events') ||
+                           fileName.toLowerCase().includes('protocol_deviation');
+                           
+        const isPdfFile = fileName.toLowerCase().endsWith('.pdf');
+        
+        // For Excel files and PDFs, allow default behavior to open Box URL
+        if (isExcelFile || isPdfFile) {
+          return true;
+        }
+      }
+    }
+    
+    // For other file paths, allow default behavior
+    return true;
   };
   
   const handleRefresh = async () => {
@@ -499,7 +575,7 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                       {metaKey}
                                     </td>
                                     <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                      {metaKey === 'source' ? (
+                                      {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
                                         <a 
                                           href={mapSourceUrl(metaValue as string, item.metadata)} 
                                           target="_blank" 

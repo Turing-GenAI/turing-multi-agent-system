@@ -47,15 +47,18 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
         # retrieved_docs = data_retriever.invoke(sub_activity, n_results=1)
         # retrieved_doc_filename = retrieved_docs[0].metadata["filename"]
         retrieved_docs = [{'page_content': doc['original_data'], 
-                            'metadata': {'source': f"{doc['metadata']['database_name']}.{doc['metadata']['schema_name']}.{doc['metadata']['table_name']}"},
+                            'metadata': {'source': f"{doc['metadata']['database_name']}.{doc['metadata']['schema_name']}.{doc['metadata']['table_name']}",
+                            'sql_query': doc['sql_query']},
                             'summary': doc['summary']} for doc in retriever_response]
         
         logger.debug(f"Retrieved data from table: {retriever_response[0]['metadata']['table_name']}")
         
         site_data_context_dict = {}
         i = 0
+        sql_query_msg = "Executed the following SQL query for fetching the data:"
         for doc in retrieved_docs:
             site_data_context_dict[i] = {"metadata": doc['metadata'], "page_content": doc['page_content']}
+            sql_query_msg += "\n" + doc['metadata']['sql_query'] + "\n"
             i += 1
         
 
@@ -66,7 +69,7 @@ def site_data_retriever_tool(sub_activity: str, site_id: str, trial_id: str, sit
         # )
         summary_df = retrieved_docs[0]['summary']
         add_ai_msg = "\nExecuted Tool: site_data_retriever_tool. Retrieved site data"
-        
+        add_ai_msg += "\n" + sql_query_msg
         # metadata_list = [doc.metadata for doc in retrieved_docs]
 
         # Build the output text
