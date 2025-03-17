@@ -24,15 +24,7 @@ class SummaryRetriever:
         self.site_area = site_area
         self.engine = create_engine(db_url)
         
-        # Adjusting the names for PD and AE_SAE
-        if site_area == "PD":
-            site_area_ = 'pd'
-        elif site_area == 'AE_SAE':
-            site_area_ = 'ae_sae'
-        else:
-            site_area_ = site_area
-
-        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area_, "summary")
+        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "summary")
         # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
         if not os.path.exists(summary_persist_directory):
