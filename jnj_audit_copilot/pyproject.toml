@@ -7,9 +7,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-langgraph = "0.2.16"
-langsmith = "0.1.106"
-langchain = "0.2.16"
+langgraph = "0.2.57"
+langsmith = ">=0.1.106"
+langchain = ">=0.2.16"
 langchain-openai = "0.1.7"
 jupyter = "^1.1.1"
 pandas = "^2.2.3"

@@ -22,7 +22,7 @@ from app.core.trial_supervisor_graph.create_trial_supervisor_graph import (
 from datetime import datetime
 from app.utils.helpers import clean_graph_inputs
 import os
-
+from langchain_core.runnables.graph import MermaidDrawMethod
 setup_logger()
 logger = get_logger()
 
@@ -105,6 +105,15 @@ def get_human_feedback(feedback_node):
     else:
         return human_feedback, process_human_feedback_chain.invoke({"input": human_feedback}).content
 
+def save_image(graph):
+    image_path = "graph_image.png"
+    graph_image = graph.get_graph(xray=4).draw_mermaid_png(
+        # draw_method=MermaidDrawMethod.API,
+        )
+    # Save the image as a file
+    with open(image_path, 'wb') as f:
+        f.write(graph_image)
+
 def run_graph(inputs, config, scratchpad_filename=None):
     """
     Executes the trial supervisor graph and processes events in a loop until completion or interruption.
@@ -121,6 +130,7 @@ def run_graph(inputs, config, scratchpad_filename=None):
     """
     trial_supervisor_graph = trialSupervisorGraph()
     graph = trial_supervisor_graph.create_trial_supervisor_graph()
+    save_image(graph)
     _printed = set()
     first_run = True
     while True:
