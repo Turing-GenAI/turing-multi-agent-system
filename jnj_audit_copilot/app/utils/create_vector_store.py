@@ -2,7 +2,6 @@ import os
 from typing import Dict, List, Optional
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
-from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import (
     TextLoader,
     PyPDFLoader,
@@ -10,13 +9,16 @@ from langchain_community.document_loaders import (
 )
 import pandas as pd
 from sqlalchemy import create_engine, inspect
+from dotenv import load_dotenv
 
 from ..scripts.box_copy_files import get_box_client, process_folder_contents
 from .langchain_azure_openai import azure_embedding_openai_client
 from .log_setup import get_logger
 from ..common.constants import CHUNK_SIZE, CHUNK_OVERLAP
-from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
-from ..common.config import CHROMADB_DIR_NEW
+from .mongo_vcore_vector_client import MongoVCoreVectorClient
+
+# Load environment variables
+load_dotenv()
 
 def get_project_root():
     """
@@ -35,9 +37,7 @@ def get_project_root():
     return project_root
 
 BOX_ROOT_FOLDER_ID = os.getenv("BOX_ROOT_FOLDER_ID", "0")
-# BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'box_download')
 BOX_DOWNLOAD_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", 'documents')
-CHROMA_DB_FOLDER = os.path.join(get_project_root(), "jnj_audit_copilot", CHROMADB_DIR_NEW)
 
 # PostgreSQL connection
 db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
@@ -49,34 +49,57 @@ class DataProcessor:
     def __init__(self):
         self.box_root_folder_id = BOX_ROOT_FOLDER_ID
         self.base_documents_dir = BOX_DOWNLOAD_FOLDER
-        self.base_chromadb_dir = CHROMA_DB_FOLDER
         self.site_area_exclusions = ['Demo', 'Risk_Scores', 'SGR']
         
-    def setup_chromadb_folders(self, site_area: str) -> str:
-        """
-        Create the required folder structure for a site area
-        """
-        base_dir = os.path.join(self.base_chromadb_dir, site_area)
-        folders = ["guidelines", "summary"]
+        # Get embedding model name from environment
+        self.embedding_model_name = os.getenv("AZURE_OPENAI_EMBEDDING_API_MODEL_NAME", "")
         
-        for folder in folders:
-            folder_path = os.path.join(base_dir, folder)
-            os.makedirs(folder_path, exist_ok=True)
-            logger.info(f"Created/verified folder: {folder_path}")
-
-        summary_persist_directory = os.path.join(base_dir, "summary")
-        guidelines_persist_directory = os.path.join(base_dir, "guidelines")
-
-        return summary_persist_directory, guidelines_persist_directory
-
+        # Get vector dimension from environment with proper error handling
+        try:
+            env_dimension = os.getenv("VECTOR_DIMENSION")
+            if env_dimension and env_dimension.strip():
+                self.vector_dimension = int(env_dimension)
+                logger.info(f"Using vector dimension from environment: {self.vector_dimension}")
+            else:
+                # Use dimension based on model
+                if "small" in self.embedding_model_name.lower():
+                    self.vector_dimension = 1536  # Dimension for text-embedding-3-small
+                elif "large" in self.embedding_model_name.lower():
+                    # Limit to 2000 dimensions for Azure Cosmos DB compatibility 
+                    self.vector_dimension = 2000
+                else:
+                    self.vector_dimension = 1536  # Safe default
+                
+                logger.info(f"Using default dimension for model {self.embedding_model_name}: {self.vector_dimension}")
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error parsing VECTOR_DIMENSION environment variable: {e}")
+            # Fallback to safe default
+            self.vector_dimension = 1536
+            logger.warning(f"Falling back to safe default dimension: {self.vector_dimension}")
+        
+        # Set the vector index type (can be overridden from environment)
+        self.vector_index_type = os.getenv("VECTOR_INDEX_TYPE", "vector-ivf")
+        
+        # Get vector index creation flag (can be overridden from environment)
+        create_vector_index_env = os.getenv("CREATE_VECTOR_INDEX", "true").lower()
+        self.create_vector_index = create_vector_index_env not in ("false", "0", "no", "n")
+        
+        # Log configuration
+        logger.info(f"Vector DB Configuration:")
+        logger.info(f"  - Embedding Model: {self.embedding_model_name}")
+        logger.info(f"  - Vector Dimension: {self.vector_dimension}")
+        logger.info(f"  - Vector Index Type: {self.vector_index_type}")
+        logger.info(f"  - Vector Index Creation: {'Enabled' if self.create_vector_index else 'Disabled'}")
+    
     class SiteDataProcessor:
         def __init__(self, parent):
             self.parent = parent
             self.base_documents_dir = parent.base_documents_dir
-            self.base_chromadb_dir = parent.base_chromadb_dir
             self.site_area_exclusions = parent.site_area_exclusions
-            self.setup_chromadb_folders = parent.setup_chromadb_folders
             self.db_url = db_url
+            self.vector_dimension = parent.vector_dimension
+            self.vector_index_type = parent.vector_index_type
+            self.create_vector_index = parent.create_vector_index
             
         def get_all_tables_from_summaries_schema(self, site_area: str):
             """
@@ -86,7 +109,6 @@ class DataProcessor:
             postgres_table_name = site_area.lower()
             try:
                 engine = create_engine(self.db_url)
-                # inspector = inspect(engine)
 
                 query = f'SELECT * FROM summaries."{postgres_table_name}"'
                 df = pd.read_sql(query, engine)
@@ -98,10 +120,10 @@ class DataProcessor:
                 logger.error(f"Error getting tables from summaries schema: {e}")
                 return None
 
-        def process_summary_data_by_site_area(self,site_area: str):
+        def process_summary_data_by_site_area(self, site_area: str):
             """
-            Create a new ChromaDB collection for summaries and store embeddings.
-            Each site area gets its own folder structure with document_persist, guidelines, and summary folders.
+            Create a new MongoDB vCore collection for summaries and store embeddings.
+            Each site area gets its own collection.
             
             Args:
                 site_area (str): Name of the site area (e.g., 'PD', 'AE_SAE')
@@ -119,34 +141,45 @@ class DataProcessor:
                 logger.info("Generating embeddings...")
                 summaries = df["Summary"].tolist()
                 
-                # Store embeddings in ChromaDB with site-specific collection name
-                logger.info(f"Storing summaries in ChromaDB for {site_area}...")
+                # Store embeddings in MongoDB with site-specific collection name
+                logger.info(f"Storing summaries in MongoDB vCore for {site_area}...")
                 
-                self.summary_persist_directory, _ =  self.setup_chromadb_folders(site_area)
+                collection_name = f"summaries_{site_area.lower()}"
+                
+                # Create documents with metadata
+                documents = []
+                for _, row in df.iterrows():
+                    doc = Document(
+                        page_content=row["Summary"],
+                        metadata={
+                            "site_area": site_area,
+                            "database_name": row.get("database_name"),
+                            "schema_name": row.get("schema_name"),
+                            "table_name": row.get("table_name")
+                        }
+                    )
+                    documents.append(doc)
 
-                summary_vectorstore = Chroma.from_texts(
-                    texts=summaries,
+                # Store in MongoDB using the vCore client
+                vectorstore = MongoVCoreVectorClient.from_documents(
+                    documents=documents,
                     embedding=azure_embedding_openai_client,
-                    collection_name=CHROMADB_INDEX_SUMMARIES,  # Unique collection name for each site area
-                    metadatas=[{
-                        "site_area": site_area,
-                        "database_name": row.get("database_name"),
-                        "schema_name": row.get("schema_name"),
-                        "table_name": row.get("table_name")
-                    } for _, row in df.iterrows()],
-                    persist_directory = self.summary_persist_directory
+                    collection_name=collection_name,
+                    vector_dimension=self.vector_dimension,
+                    index_type=self.vector_index_type,
+                    create_vector_index=self.create_vector_index
                 )
 
-                logger.info(f"Successfully stored {len(summaries)} embeddings in ChromaDB for {site_area}")
-                return summary_vectorstore
+                logger.info(f"Successfully stored {len(summaries)} embeddings in MongoDB vCore for {site_area}")
+                return vectorstore
             except Exception as e:
-                logger.error(f"Error storing summaries in ChromaDB for {site_area}: {e}")
+                logger.error(f"Error storing summaries in MongoDB vCore: {e}")
                 logger.error(f"Error details: {str(e)}")
                 return None
 
         def process_all_summary_data(self):
             """
-            Process all available site areas and create their respective ChromaDB collections.
+            Process all available site areas and create their respective MongoDB vCore collections.
             """
             try:
                 # Get list of all tables (site areas) from PostgreSQL
@@ -172,16 +205,17 @@ class DataProcessor:
         def __init__(self, parent):
             self.parent = parent
             self.base_documents_dir = parent.base_documents_dir
-            self.base_chromadb_dir = parent.base_chromadb_dir
             self.site_area_exclusions = parent.site_area_exclusions
-            self.setup_chromadb_folders = parent.setup_chromadb_folders
             self.box_root_folder_id = parent.box_root_folder_id
+            self.vector_dimension = parent.vector_dimension
+            self.vector_index_type = parent.vector_index_type
+            self.create_vector_index = parent.create_vector_index
             self.supported_extensions = {
-            '.txt': TextLoader,
-            '.pdf': PyPDFLoader,
-            '.docx': Docx2txtLoader,
-            '.doc': Docx2txtLoader  # Note: might need additional handling for .doc files
-        }
+                '.txt': TextLoader,
+                '.pdf': PyPDFLoader,
+                '.docx': Docx2txtLoader,
+                '.doc': Docx2txtLoader  # Note: might need additional handling for .doc files
+            }
         
         def download_box_files(self) -> bool:
             """
@@ -220,15 +254,12 @@ class DataProcessor:
                 # Create Documents directory if it doesn't exist
                 os.makedirs(self.base_documents_dir, exist_ok=True)
                 
-                # # Get the root folder ID from environment
-                # box_folder_id = BOX_ROOT_FOLDER_ID
-                
                 logger.info("Starting download of files from Box...")
                 stats = process_folder_contents(
                     client,
                     folder_id=self.box_root_folder_id,
                     local_base_path=self.base_documents_dir,
-                    download_mode="smart"  # Use smart mode to only download changed files, Else "overwrite" can also be used
+                    download_mode="smart"  # Use smart mode to only download changed files
                 )
                 print(f"Download complete. Stats: {stats}")
                 logger.info(f"Download complete. Stats: {stats}")
@@ -270,9 +301,9 @@ class DataProcessor:
                 logger.error(f"Error processing file {file_path}: {e}")
                 return None
 
-        def process_documents_by_site_area(self, site_area: str) -> Optional[Chroma]:
+        def process_documents_by_site_area(self, site_area: str) -> Optional[MongoVCoreVectorClient]:
             """
-            Process all documents in a site area and create ChromaDB
+            Process all documents in a site area and store in MongoDB vCore
             """
             try:
                 site_area_path = os.path.join(self.base_documents_dir, site_area)
@@ -281,9 +312,6 @@ class DataProcessor:
                     return None
 
                 all_splits = []
-                metadata_list = []
-
-                _, guidelines_persist_directory = self.setup_chromadb_folders(site_area)
                 
                 # Walk through all files in the site area
                 for root, _, files in os.walk(site_area_path):
@@ -293,30 +321,35 @@ class DataProcessor:
                         
                         splits = self.load_and_split_document(file_path)
                         if splits:
-                            all_splits.extend([doc.page_content for doc in splits])
+                            all_splits.extend(splits)
                             rel_path = os.path.relpath(file_path, site_area_path)
-                            metadata_list.extend([{
-                                "site_area": site_area,
-                                "file_name": file,
-                                "relative_path": rel_path,
-                                "chunk_index": i
-                            } for i in range(len(splits))])
+                            
+                            # Add metadata information to existing metadata
+                            for i, doc in enumerate(splits):
+                                doc.metadata.update({
+                                    "site_area": site_area,
+                                    "file_name": file,
+                                    "relative_path": rel_path,
+                                    "chunk_index": i
+                                })
 
                 if not all_splits:
                     logger.warning(f"No documents processed for site area: {site_area}")
                     return None
 
-                # Create and persist ChromaDB
-                guidelines_vectorstore = Chroma.from_texts(
-                    texts=all_splits,
+                # Create and store in MongoDB vCore
+                collection_name = f"guidelines_{site_area.lower()}"
+                vectorstore = MongoVCoreVectorClient.from_documents(
+                    documents=all_splits,
                     embedding=azure_embedding_openai_client,
-                    metadatas=metadata_list,
-                    persist_directory=guidelines_persist_directory,
-                    collection_name=CHROMADB_INDEX_DOCS
+                    collection_name=collection_name,
+                    vector_dimension=self.vector_dimension,
+                    index_type=self.vector_index_type,
+                    create_vector_index=self.create_vector_index
                 )
                 
-                logger.info(f"Successfully created ChromaDB for {site_area} with {len(all_splits)} chunks")
-                return guidelines_vectorstore
+                logger.info(f"Successfully created MongoDB vCore vector store for {site_area} with {len(all_splits)} chunks")
+                return vectorstore
                 
             except Exception as e:
                 logger.error(f"Error processing site area {site_area}: {e}")
@@ -354,5 +387,6 @@ if __name__ == "__main__":
     # guidelines_processor.download_box_files()
     guidelines_processor.process_all_documents()
 
+    # Uncomment to process summaries as well
     site_data_processor = data_processor.SiteDataProcessor(data_processor)
     site_data_processor.process_all_summary_data()

@@ -32,20 +32,43 @@ azure_chat_openai_client = AzureChatOpenAI(
     # other params...
 )
 
+# Clear variable documentation for embedding model configuration
+embedding_model_name = os.environ.get("AZURE_OPENAI_EMBEDDING_API_MODEL_NAME")
+embedding_deployment_name = os.environ.get("AZURE_OPENAI_EMBEDDING_API_DEPLOYMENT_NAME")
+
+# Get embedding dimensions from environment
+embedding_dimensions = None
+try:
+    env_dimension = os.environ.get("VECTOR_DIMENSION")
+    if env_dimension:
+        embedding_dimensions = int(env_dimension)
+        logger.info(f"Using custom embedding dimension from environment: {embedding_dimensions}")
+    else:
+        # Default dimensions based on model
+        if embedding_model_name and "small" in embedding_model_name.lower():
+            embedding_dimensions = 1536  # Default for text-embedding-3-small
+        else:
+            embedding_dimensions = 2000  # Safe default for text-embedding-3-large (Azure Cosmos DB limit)
+        logger.info(f"Using default embedding dimension for model {embedding_model_name}: {embedding_dimensions}")
+except (ValueError, TypeError) as e:
+    logger.error(f"Error parsing VECTOR_DIMENSION environment variable: {e}")
+    # Fallback to safe default
+    embedding_dimensions = 1536
+    logger.warning(f"Falling back to safe default dimension: {embedding_dimensions}")
+
+# Log embedding configuration
+logger.info(f"Embedding Configuration:")
+logger.info(f"  - Model: {embedding_model_name}")
+logger.info(f"  - Deployment: {embedding_deployment_name}")
+logger.info(f"  - Dimensions: {embedding_dimensions}")
 
 azure_embedding_openai_client = AzureOpenAIEmbeddings(
-    model=os.environ.get("AZURE_OPENAI_EMBEDDING_API_MODEL_NAME"),
+    model=embedding_model_name,
     azure_endpoint=os.environ.get("AZURE_OPENAI_API_ENDPOINT"),
     api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
     openai_api_version=os.environ.get("AZURE_OPENAI_API_MODEL_VERSION"),
-    azure_deployment=os.environ.get("AZURE_OPENAI_EMBEDDING_API_DEPLOYMENT_NAME"),
-    # model="text-embedding-3-large",
-    # dimensions: Optional[int] = None, # Can specify dimensions with new text-embedding-3 models
-    # azure_endpoint="https://<your-endpoint>.openai.azure.com/", If not provided,
-    # will read env variable AZURE_OPENAI_ENDPOINT
-    # api_key=... # Can provide an API key directly. If missing read env variable AZURE_OPENAI_API_KEY
-    # openai_api_version=..., # If not provided, will read env variable
-    # AZURE_OPENAI_API_VERSION
+    azure_deployment=embedding_deployment_name,
+    dimensions=embedding_dimensions,  # Explicitly set dimensions from environment
 )
 
 model_with_sub_activity_structured_output = azure_chat_openai_client.with_structured_output(SubActivityResponse)
