@@ -16,6 +16,9 @@ from ....utils.langchain_azure_openai import model_with_required_column_structur
 from ....utils.log_setup import get_logger
 from ....utils.state_definitions import SelfRAGState
 from .selfrag_tool_nodes import retrieval_agent_runnable, retrieval_tool_executor
+from .selfrag_conditional_edges import selfragNodesConditionalFunctions
+from langgraph.types import Command
+from typing import Literal
 
 # Get the same logger instance set up earlier
 logger = get_logger()
@@ -206,7 +209,7 @@ class selfragNodes:
             "tool_call_count": tool_call_count,
         }
 
-    def document_grading_agent(self, state: SelfRAGState):
+    def document_grading_agent(self, state: SelfRAGState) -> Command[Literal["reflection_agent", "generate_response_agent"]]:
         logger.debug("Calling function : document_grading_agent...")
         """
         Decides whether the model should generate a response or rewrite the sub-activity
@@ -215,11 +218,22 @@ class selfragNodes:
         Returns:
             dict: The updated state with the agent response appended to messages
         """
+        ai_msg = f"Checking relevance of fetched data for sub-activity: \"{state['sub_activity']}\""
+        selfrag_conditional_functions = selfragNodesConditionalFunctions()
+        # Call the relevant conditional function based on the state
+        response = selfrag_conditional_functions.grade_documents(state)
+        if response == "reflection_agent":
+            ai_msg += "\n\nFetched documents not relevant. Redirecting to Reflection Agent"
+            goto = "reflection_agent"
+        elif response == "generate_response_agent":
+            ai_msg += "\n\nFetched documents relevant. Redirecting to Response Agent"
+            goto = "generate_response_agent"
         return {
             "selfrag_messages": AIMessage(
                 name=f"{bold_start} SelfRAG - document_grading_agent{bold_end}",
-                content="Checking relevance of fetched data ...",
-            )
+                content=ai_msg
+            ),
+            "goto": goto
         }
 
     def rewrite(self, state: SelfRAGState):
