@@ -313,24 +313,45 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
                     findings[j.replace(".json", "")] = json_data
 
-    try:
-        # Parse and process the latest AI message
-        message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
-        processed_messages = filter_parsed_messages_by_name(message_parser)
+    # try:
+    #     # Parse and process the latest AI message
+    #     message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
+    #     processed_messages = filter_parsed_messages_by_name(message_parser)
         
+    #     # Add content and summarize
+    #     compressed_data = add_content(processed_messages) if processed_messages else []
+    #     summarized_data = summarize_content(compressed_data) if compressed_data else []
+        
+    #     # Filter down to essential keys
+    #     filtered_data = filter_json_keys(summarized_data) if summarized_data else []
+    # except Exception as e:
+    #     logger.error(f"Error processing AI messages: {str(e)}")
+    #     filtered_data = []
+
+    try:
+        # Parse the latest AI message
+        message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
+
+        # **Merge SelfRAG nodes BEFORE filtering**
+        merged_messages = merge_selfrag_nodes(message_parser)  # <== NEW STEP ADDED
+
+        # Filter messages AFTER merging
+        processed_messages = filter_parsed_messages_by_name(merged_messages)
+
         # Add content and summarize
         compressed_data = add_content(processed_messages) if processed_messages else []
         summarized_data = summarize_content(compressed_data) if compressed_data else []
-        
+
         # Filter down to essential keys
         filtered_data = filter_json_keys(summarized_data) if summarized_data else []
+
     except Exception as e:
         logger.error(f"Error processing AI messages: {str(e)}")
         filtered_data = []
 
+
     res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}
     return res
-
 
 
 # Route to view a specific job status
