@@ -189,8 +189,8 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           
           addAgentMessage(
             `📋 Compliance Preparedness Assessment Parameters:\n\n` +
-            `🔹 Clinical Trial ID:    ${selectedTrial}\n` +
-            // `🔹 Clinical Site ID:     ${selectedSite}\n` +
+            `🔹 Trial ID:    ${selectedTrial}\n` +
+            // `🔹 Site ID:     ${selectedSite}\n` +
             `🔹 Review Period:     ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
             `Please confirm to initiate the compliance preparedness review.`,
             'button',
