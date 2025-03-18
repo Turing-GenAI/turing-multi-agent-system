@@ -76,17 +76,17 @@ export const Inputs: React.FC = () => {
                   <Database className="w-5 h-5 min-w-5" />
                   {!isSidebarCollapsed && <span className="ml-3">Data Sources</span>}
                 </button>
-                
+
                 <button
-                  onClick={() => setSelectedTab('system_architecture')}
-                  className={getTabClasses('system_architecture')}
-                  title="System Architecture"
+                  onClick={() => setSelectedTab('user_inputs')}
+                  className={getTabClasses('user_inputs')}
+                  title="User Inputs"
                 >
-                  <div className={getIndicatorClasses('system_architecture')}></div>
-                  <Activity className="w-5 h-5 min-w-5" />
-                  {!isSidebarCollapsed && <span className="ml-3">System Architecture</span>}
+                  <div className={getIndicatorClasses('user_inputs')}></div>
+                  <Users className="w-5 h-5 min-w-5" />
+                  {!isSidebarCollapsed && <span className="ml-3">User Inputs</span>}
                 </button>
-                
+
                 <button
                   onClick={() => setSelectedTab('multi_agent_architecture')}
                   className={getTabClasses('multi_agent_architecture')}
@@ -96,15 +96,15 @@ export const Inputs: React.FC = () => {
                   <Layers className="w-5 h-5 min-w-5" />
                   {!isSidebarCollapsed && <span className="ml-3">Multi Agent Architecture</span>}
                 </button>
-                
+
                 <button
-                  onClick={() => setSelectedTab('user_inputs')}
-                  className={getTabClasses('user_inputs')}
-                  title="User Inputs"
+                  onClick={() => setSelectedTab('system_architecture')}
+                  className={getTabClasses('system_architecture')}
+                  title="System Architecture"
                 >
-                  <div className={getIndicatorClasses('user_inputs')}></div>
-                  <Users className="w-5 h-5 min-w-5" />
-                  {!isSidebarCollapsed && <span className="ml-3">User Inputs</span>}
+                  <div className={getIndicatorClasses('system_architecture')}></div>
+                  <Activity className="w-5 h-5 min-w-5" />
+                  {!isSidebarCollapsed && <span className="ml-3">System Architecture</span>}
                 </button>
               </div>
             </nav>

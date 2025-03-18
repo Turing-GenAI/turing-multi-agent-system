@@ -14,7 +14,7 @@ interface Activity {
 type InputSection = 'prompts' | 'history' | 'activities' | 'schedule';
 
 const UserInputs: React.FC = () => {
-  const [activeSection, setActiveSection] = useState<InputSection>('prompts');
+  const [activeSection, setActiveSection] = useState<InputSection>('activities');
   const [savedActivities, setSavedActivities] = useState<Activity[]>([]);
 
   // Load saved activities from localStorage on component mount
@@ -42,6 +42,24 @@ const UserInputs: React.FC = () => {
         <div className="px-4 py-3">
           <nav className="flex space-x-2 overflow-x-auto">
             <button
+              onClick={() => setActiveSection('activities')}
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeSection === 'activities'
+                  ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Domain & Activities
+              {savedActivities.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full shadow-sm border border-green-200 flex items-center justify-center min-w-[1.5rem]">
+                  {savedActivities.length}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveSection('prompts')}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeSection === 'prompts'
@@ -55,24 +73,6 @@ const UserInputs: React.FC = () => {
               Agent Prompts
             </button>
             <button
-              onClick={() => setActiveSection('activities')}
-              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeSection === 'activities'
-                  ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-              </svg>
-              Configure Activities
-              {savedActivities.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full shadow-sm border border-green-200 flex items-center justify-center min-w-[1.5rem]">
-                  {savedActivities.length}
-                </span>
-              )}
-            </button>
-            <button
               onClick={() => setActiveSection('schedule')}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeSection === 'schedule'
@@ -83,7 +83,7 @@ const UserInputs: React.FC = () => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Configure Schedule
+              Schedule
             </button>
             <button
               onClick={() => setActiveSection('history')}

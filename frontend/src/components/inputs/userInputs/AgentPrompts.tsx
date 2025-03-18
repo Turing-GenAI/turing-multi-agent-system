@@ -105,7 +105,7 @@ If sub-queries are fine (i.e., no need to modify), mark Feedback_Status as \`Fal
     },
     {
       id: 'prompt3',
-      name: 'RAG Agent',
+      name: 'Self-RAG Agent',
       description: 'Retrieves and analyzes relevant information from knowledge base',
       template: `You are an intelligent robot which can decide if a question requires analytical data for answering,
 or if it needs information from relevant guidelines or SOPs. If you think a question is best
@@ -172,7 +172,7 @@ You also dont need to provide any analysis as that will be done in later steps o
     },
     {
       id: 'prompt4',
-      name: 'Self-Reflection Agent',
+      name: 'Reflection Agent',
       description: 'Evaluates the quality and completeness of its own responses',
       template: `You are a grader assessing the relevance of a retrieved document to a user's question.
 
@@ -195,7 +195,7 @@ You also dont need to provide any analysis as that will be done in later steps o
     },
     {
       id: 'prompt5',
-      name: 'Generate Findings Agent',
+      name: 'Findings Tool',
       description: 'Synthesizes information and generates comprehensive findings',
       template: `Provide a concise analytical conclusion based on the findings from the main question and sub-questions.
 Prioritize special instructions, if applicable, in the conclusion.
