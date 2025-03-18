@@ -23,7 +23,7 @@ class SummaryRetriever:
         """
         self.site_area = site_area
         self.engine = create_engine(db_url)
-
+        
         summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "summary")
         # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
 
@@ -95,6 +95,7 @@ class SummaryRetriever:
                 'relevance_score': score,
                 'summary': doc.page_content,
                 'metadata': metadata,
+                'sql_query': sql_query,
                 # 'original_data': result_table.to_dict('records') if not result_table.empty else None
                 'original_data': result_table.to_html(index=False)
                 })
