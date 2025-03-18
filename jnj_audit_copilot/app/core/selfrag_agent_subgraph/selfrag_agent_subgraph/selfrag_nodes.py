@@ -194,7 +194,11 @@ class selfragNodes:
         
         return {
             "intermediate_steps": [(agent_action, tool_message)],
-            "selfrag_messages": tool_message,
+            # "selfrag_messages": tool_message,
+            "selfrag_messages": AIMessage(
+                name=f"{bold_start} SelfRAG - execute_retrieval_tools{bold_end}",
+                content=tool_message.content
+            ),
             "context": context,
             "retrieved_context_dict": [retrieved_context_dict] if retrieved_context_dict else [],
             "file_summary": file_summary,

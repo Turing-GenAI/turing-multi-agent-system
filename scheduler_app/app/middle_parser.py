@@ -181,6 +181,68 @@ def summarize_content(data):
         return [process_single_item(item) for item in data]
     else:
         return process_single_item(data)
+def merge_selfrag_nodes(data):
+    """
+    Merges consecutive occurrences of "SelfRAG - retrieval_agent",
+    "SelfRAG - execute_retrieval_tools", and "SelfRAG - document_grading_agent"
+    into a single node named "SelfRAG - Retrieval tool".
+    
+    If a different node appears between them, it prevents merging across that node.
+    
+    Args:
+        data (list): List of parsed and processed messages.
+        
+    Returns:
+        list: Modified list with merged nodes.
+    """
+    merged_data = []
+    temp_group = []
+    
+    # Define target node names to be merged
+    target_nodes = {
+        "SelfRAG - retrieval_agent",
+        "SelfRAG - execute_retrieval_tools",
+        "SelfRAG - document_grading_agent"
+    }
+    
+    for message in data:
+        if message["name"] in target_nodes:
+            # Add to temporary group if it's a target node
+            temp_group.append(message)
+        else:
+            # If a different node appears, process and reset temp_group
+            if temp_group:
+                merged_data.append(_merge_group(temp_group))
+                temp_group = []
+            
+            # Add the non-matching message as is
+            merged_data.append(message)
+    
+    # Process any remaining grouped nodes at the end
+    if temp_group:
+        merged_data.append(_merge_group(temp_group))
+    
+    return merged_data
+
+
+def _merge_group(messages):
+    """
+    Merges a group of SelfRAG nodes into a single node with combined content.
+    
+    Args:
+        messages (list): List of SelfRAG-related messages to merge.
+    
+    Returns:
+        dict: A single merged message object.
+    """
+    merged_content = "\n".join(msg["content"] for msg in messages)
+    
+    return {
+        "id": messages[0]["id"],  # Keep the ID of the first occurrence
+        "name": "SelfRAG - Retrieval tool",
+        "content": merged_content,
+        "summary": "Merged retrieval operations: " + " ".join(msg["summary"] for msg in messages if "summary" in msg)
+    }
 
 def filter_parsed_messages_by_name(parsed_messages):
     """
@@ -195,22 +257,24 @@ def filter_parsed_messages_by_name(parsed_messages):
         "inspection - feedback_agent node",
         "Unknown",
         "SelfRAG - self_rag_agent",
+        "SelfRAG - Retrieval tool",  # New merged SelfRAG node
         "SelfRAG - generate_response_agent",
         "inspection - generate_findings_agent",
-        "SelfRAG - retrieval_agent",
+        
     }
     
 
     compressed_data = []
     for message in parsed_messages:
         if message["name"] in unique_name:
-            if message.get("name") == "SelfRAG - retrieval_agent":
-                # 2. Check if 'fields' has 'Name': 'SelfRAG - guidelines_retriever tool'
+            if message["name"] == "SelfRAG - Retrieval tool":
+                # If this was previously "SelfRAG - retrieval_agent", check its fields
                 fields = message.get("fields", {})
-                if fields.get("Name"):
+                if fields.get("Name") == "SelfRAG - guidelines_retriever tool":
                     continue
             
             compressed_data.append(message)
+    
     return compressed_data
 
 def filter_json_keys(data):
