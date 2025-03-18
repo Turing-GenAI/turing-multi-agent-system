@@ -2,12 +2,15 @@ from enum import unique
 import re
 import os
 import json
+import logging
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage
 
 load_dotenv()
 
+# Set up logger
+logger = logging.getLogger(__name__)
 
 def parse_ai_messages(full_text: str):
     """
@@ -115,11 +118,11 @@ def add_content(data):
         
         # Add subActivity if present and not empty
         if 'subActivity' in item and item['subActivity']:
-            content_parts.append(item['subActivity'])
+            content_parts.append(f"Sub-Activity: {item['subActivity']}")
         
         # Add subActivityOutcome if present and not empty
         if 'subActivityOutcome' in item and item['subActivityOutcome']:
-            content_parts.append(item['subActivityOutcome'])
+            content_parts.append(f"Sub-Activity Outcome: {item['subActivityOutcome']}")
         
         # Add otherLines if present
         if 'otherLines' in item and item['otherLines']:
@@ -127,6 +130,7 @@ def add_content(data):
         
         # Join all parts with newlines and add to the data
         item['content'] = '\n'.join(content_parts)
+        logger.debug(f"Generated content length for {item.get('name', 'unknown')}: {len(item['content'])}")
         return item
 
     # Handle both single dictionary and list of dictionaries
@@ -147,13 +151,16 @@ def summarize_content(data):
         dict or list: The input object(s) with additional 'summary' field
     """
     def get_summary(content):
-        azure_chat_openai_client = AzureChatOpenAI(
-            model=os.environ.get("AZURE_OPENAI_API_MODEL_NAME"),
-            azure_deployment=os.environ.get("AZURE_OPENAI_API_DEPLOYMENT_NAME"),
-            api_version=os.environ.get("AZURE_OPENAI_API_MODEL_VERSION"),
-            azure_endpoint=os.environ.get("AZURE_OPENAI_API_ENDPOINT"),
-            temperature=0
-        )
+        try:
+            azure_chat_openai_client = AzureChatOpenAI(
+                model=os.environ.get("AZURE_OPENAI_API_MODEL_NAME"),
+                azure_deployment=os.environ.get("AZURE_OPENAI_API_DEPLOYMENT_NAME"),
+                api_version=os.environ.get("AZURE_OPENAI_API_MODEL_VERSION"),
+                azure_endpoint=os.environ.get("AZURE_OPENAI_API_ENDPOINT"),
+                temperature=0
+            )
+        except Exception as e:
+            return f"Error initializing Azure OpenAI client: {str(e)}"
         
         if not content:
             return "No content available to summarize."
@@ -166,7 +173,13 @@ def summarize_content(data):
             response = azure_chat_openai_client.invoke(messages)
             return response.content.strip()
         except Exception as e:
-            return f"Error generating summary: {str(e)}"
+            error_msg = str(e)
+            if "rate limit" in error_msg.lower():
+                return "Error: API rate limit exceeded. Please try again later."
+            elif "invalid api key" in error_msg.lower():
+                return "Error: Invalid API key or authentication issue."
+            else:
+                return f"Error generating summary: {error_msg}"
     
     def process_single_item(item):
         if 'content' not in item:
@@ -181,11 +194,11 @@ def summarize_content(data):
         return [process_single_item(item) for item in data]
     else:
         return process_single_item(data)
+
 def merge_selfrag_nodes(data):
     """
-    Merges consecutive occurrences of "SelfRAG - retrieval_agent",
-    "SelfRAG - execute_retrieval_tools", and "SelfRAG - document_grading_agent"
-    into a single node named "SelfRAG - Retrieval tool".
+    Merges consecutive occurrences of "SelfRAG - retrieval_agent" and "SelfRAG - execute_retrieval_tools"
+    into a single node named "SelfRAG - Retrieval Tool".
     
     If a different node appears between them, it prevents merging across that node.
     
@@ -195,6 +208,9 @@ def merge_selfrag_nodes(data):
     Returns:
         list: Modified list with merged nodes.
     """
+    if not data:
+        return []
+        
     merged_data = []
     temp_group = []
     
@@ -202,8 +218,12 @@ def merge_selfrag_nodes(data):
     target_nodes = {
         "SelfRAG - retrieval_agent",
         "SelfRAG - execute_retrieval_tools",
-        "SelfRAG - document_grading_agent"
     }
+    
+    # Debug message contents
+    logger.debug(f"Input data to merge_selfrag_nodes: {len(data)} items")
+    for idx, msg in enumerate(data):
+        logger.debug(f"Item {idx}, name: {msg.get('name', 'UNNAMED')}, has fields: {bool(msg.get('fields'))}, has otherLines: {bool(msg.get('otherLines'))}")
     
     for message in data:
         if message["name"] in target_nodes:
@@ -235,14 +255,70 @@ def _merge_group(messages):
     Returns:
         dict: A single merged message object.
     """
-    merged_content = "\n".join(msg["content"] for msg in messages)
+    logger.debug(f"Merging {len(messages)} messages")
+    for idx, msg in enumerate(messages):
+        logger.debug(f"Before add_content: Message {idx}, name: {msg.get('name')}, fields: {len(msg.get('fields', {}))}, otherLines: {len(msg.get('otherLines', []))}")
     
-    return {
+    # First ensure we have content for each message by running add_content individually
+    for idx, msg in enumerate(messages):
+        # Create a baseline structure if fields or otherLines are missing
+        if 'fields' not in msg:
+            msg['fields'] = {}
+        if 'otherLines' not in msg:
+            msg['otherLines'] = []
+        
+        # Add subActivity and subActivityOutcome if missing
+        if 'subActivity' not in msg:
+            msg['subActivity'] = ""
+        if 'subActivityOutcome' not in msg:
+            msg['subActivityOutcome'] = ""
+            
+    # Now apply add_content to each message individually
+    messages_with_content = []
+    for msg in messages:
+        processed = add_content(msg)
+        logger.debug(f"After add_content: Message for {msg.get('name')}, has content: {bool(processed.get('content'))}, content length: {len(processed.get('content', ''))}")
+        messages_with_content.append(processed)
+    
+    # Now merge the content
+    merged_content_parts = []
+    for msg in messages_with_content:
+        content = msg.get("content", "")
+        if content:
+            merged_content_parts.append(content)
+            
+    merged_content = "\n".join(merged_content_parts)
+    logger.debug(f"Final merged content length: {len(merged_content)}")
+    
+    # Create base merged message
+    merged_message = {
         "id": messages[0]["id"],  # Keep the ID of the first occurrence
-        "name": "SelfRAG - Retrieval tool",
+        "name": "SelfRAG - Retrieval Tool",
         "content": merged_content,
-        "summary": "Merged retrieval operations: " + " ".join(msg["summary"] for msg in messages if "summary" in msg)
+        # Keep the original fields and otherLines for reference
+        "fields": {},
+        "otherLines": [],
+        "subActivity": "",
+        "subActivityOutcome": ""
     }
+    
+    # Combine fields from all messages
+    for msg in messages:
+        merged_message["fields"].update(msg.get("fields", {}))
+        merged_message["otherLines"].extend(msg.get("otherLines", []))
+        
+        # Take the last non-empty subActivity and subActivityOutcome
+        if msg.get("subActivity"):
+            merged_message["subActivity"] = msg["subActivity"]
+        if msg.get("subActivityOutcome"):
+            merged_message["subActivityOutcome"] = msg["subActivityOutcome"]
+    
+    # Add summary if available
+    summaries = [msg.get("summary", "") for msg in messages_with_content if msg.get("summary")]
+    if summaries:
+        merged_message["summary"] = "Merged retrieval operations: " + " ".join(summaries)
+    
+    return merged_message
 
 def filter_parsed_messages_by_name(parsed_messages):
     """
@@ -257,24 +333,31 @@ def filter_parsed_messages_by_name(parsed_messages):
         "inspection - feedback_agent node",
         "Unknown",
         "SelfRAG - self_rag_agent",
-        "SelfRAG - Retrieval tool",  # New merged SelfRAG node
+        "SelfRAG - Retrieval Tool",  # Newly merged SelfRAG node
         "SelfRAG - generate_response_agent",
         "inspection - generate_findings_agent",
-        
+        "SelfRAG - document_grading_agent"
     }
     
+    logger.debug(f"Processing {len(parsed_messages)} messages")
+    for idx, msg in enumerate(parsed_messages):
+        logger.debug(f"Message {idx}, name: {msg.get('name', 'UNNAMED')}, has content: {bool(msg.get('content'))}")
 
     compressed_data = []
     for message in parsed_messages:
-        if message["name"] in unique_name:
-            if message["name"] == "SelfRAG - Retrieval tool":
+        if message.get("name") in unique_name:
+            if message.get("name") == "SelfRAG - Retrieval Tool":
                 # If this was previously "SelfRAG - retrieval_agent", check its fields
                 fields = message.get("fields", {})
                 if fields.get("Name") == "SelfRAG - guidelines_retriever tool":
+                    logger.debug("Skipping SelfRAG - guidelines_retriever tool")
                     continue
+                
+                logger.debug(f"Keeping SelfRAG - Retrieval Tool with content length: {len(message.get('content', ''))}")
             
             compressed_data.append(message)
     
+    logger.debug(f"After filtering, kept {len(compressed_data)} messages")
     return compressed_data
 
 def filter_json_keys(data):
