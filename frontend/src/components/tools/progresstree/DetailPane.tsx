@@ -178,8 +178,8 @@ const DetailPane: React.FC<DetailPaneProps> = ({
           {getAgentDisplayNameByNode(selectedNode.name)}
         </Typography>
 
-        {/* Retrieved Context button only for Self RAG nodes */}
-        {getAgentDisplayNameByNode(selectedNode.name) === "Self RAG" && onRetrievedContextClick && (
+        {/* Retrieved Context button only for Retrieval Tool nodes */}
+        {getAgentDisplayNameByNode(selectedNode.name) === "Retrieval Tool" && onRetrievedContextClick && (
           <Button
             variant="contained"
             size="small"

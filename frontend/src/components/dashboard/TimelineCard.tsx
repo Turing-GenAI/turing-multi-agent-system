@@ -169,10 +169,10 @@ export const TimelineCard: React.FC = () => {
         // If we have fewer than 10 in-progress trials, add a new one
         if (inProgressCount < 10) {
           // Create a new trial with the next number (up to ~31,000)
-          const newTrialNumber = Math.min(highestTrialNumber + 1, 31000);
+          const newTrialNumber = Math.min(highestTrialNumber + 1, 31015);
           
           // Only add a new trial if we haven't reached 31,000 yet
-          if (newTrialNumber < 31000) {
+          if (newTrialNumber < 31015) {
             const newTrial = {
               id: `trial-${newTrialNumber}`,
               name: generateTrialId(newTrialNumber),
@@ -292,10 +292,10 @@ export const TimelineCard: React.FC = () => {
     },
     {
       quarter: 'Q1 2025 (Till Date)',
-      ongoingTrials: 31000,
+      ongoingTrials: 31015,
       trialsAudited: q4TrialsAudited,
       openAlerts: q4OpenAlerts,
-      completedAlerts: 20000,
+      completedAlerts: 0,
       isLive: true
     }
   ];

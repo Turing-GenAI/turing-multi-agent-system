@@ -799,6 +799,8 @@ export const AuditPage: React.FC = () => {
           
           addAgentMessage("**Compliance checking is completed successfully! Please review the findings generated.**");
           
+          // Comment out the final progress tree display
+          /*
           if(allActivitiesRef.current && allActivitiesRef.current.length > 0) {
             console.log("Final summary of All Agents activities : ", allActivitiesRef.current);
             await delay(2000);
@@ -830,7 +832,7 @@ export const AuditPage: React.FC = () => {
               { messageId: `final-progress-tree-${Date.now()}` }
             );
           }
-          
+          */
         } catch (error) {
           console.error("Error fetching findings:", error);
           addAgentMessage("Failed to fetch findings. Please try refreshing the page.", undefined, { agentPrefix: '', nodeName: '' });

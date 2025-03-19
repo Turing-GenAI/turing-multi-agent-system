@@ -21,12 +21,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T15:45:00',
     user: 'John Doe',
     inputType: 'Agent Prompt',
-    content: 'Updated Planner Agent prompt to include detailed domain guidelines',
+    content: 'Updated Planner Agent prompt to include detailed Protocol Deviation assessment guidelines',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Planner Agent', 'Clinical Trial Domain']
+      relatedItems: ['Planner Agent', 'Domain 1 -> Protocol Deviations']
     }
   },
   {
@@ -34,12 +34,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T14:30:00',
     user: 'Sarah Chen',
     inputType: 'Agent Prompt',
-    content: 'Modified Critique Agent prompt to enhance feedback on domain questions',
+    content: 'Modified Critique Agent prompt to enhance feedback on adverse event categorization',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Critique Agent', 'Domain Area 1']
+      relatedItems: ['Critique Agent', 'Domain 2 -> Adverse and Serious Adverse Events']
     }
   },
   {
@@ -47,12 +47,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-09T11:20:00',
     user: 'Michael Brown',
     inputType: 'Agent Prompt',
-    content: 'Updated Self-RAG Agent prompt to prioritize regulatory guidelines for domains',
+    content: 'Updated Self-RAG Agent prompt to prioritize regulatory guidelines for informed consent',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Self-RAG Agent', 'Domain Area 2', 'Regulatory Guidelines']
+      relatedItems: ['Self-RAG Agent', 'Domain 3 -> Informed Consent', 'Regulatory Guidelines']
     }
   },
   {
@@ -88,12 +88,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T16:30:00',
     user: 'Jane Smith',
     inputType: 'Activity',
-    content: 'Added new Domain Area 1 activities for informed consent verification',
+    content: 'Added new activities for protocol deviation documentation verification',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Create',
-      relatedItems: ['Domain Area 1', 'Informed Consent', 'Documentation Review']
+      relatedItems: ['Domain 1 -> Protocol Deviations', 'Documentation Review']
     }
   },
   {
@@ -101,12 +101,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-09T13:45:00',
     user: 'Michael Brown',
     inputType: 'Activity',
-    content: 'Created Domain Area 2 activities for source data verification',
+    content: 'Created activities for adverse event classification and reporting',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Create',
-      relatedItems: ['Domain Area 2', 'Source Data', 'CRF Verification']
+      relatedItems: ['Domain 2 -> Adverse and Serious Adverse Events', 'Safety Reporting']
     }
   },
   {
@@ -114,12 +114,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-08T10:15:00',
     user: 'Sarah Chen',
     inputType: 'Activity',
-    content: 'Added Domain Area 3 activities for adverse event reporting review',
+    content: 'Added activities for informed consent documentation review',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Create',
-      relatedItems: ['Domain Area 3', 'Adverse Events', 'Safety Monitoring']
+      relatedItems: ['Domain 3 -> Informed Consent', 'Documentation Verification']
     }
   },
   {
@@ -127,12 +127,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-07T14:20:00',
     user: 'Robert Johnson',
     inputType: 'Activity',
-    content: 'Modified Domain Area 1 activities for protocol deviation documentation',
+    content: 'Modified activities for protocol deviation impact assessment',
     status: 'pending',
     details: {
       section: 'Configure Activities',
       actionType: 'Update',
-      relatedItems: ['Domain Area 1', 'Protocol Deviations', 'Documentation']
+      relatedItems: ['Domain 1 -> Protocol Deviations', 'Impact Analysis']
     }
   },
   {
@@ -140,12 +140,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-06T11:30:00',
     user: 'John Doe',
     inputType: 'Activity',
-    content: 'Updated Domain Area 2 activities for electronic data capture system auditing',
+    content: 'Updated activities for serious adverse event reporting timelines',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Update',
-      relatedItems: ['Domain Area 2', 'EDC System', 'Access Controls']
+      relatedItems: ['Domain 2 -> Adverse and Serious Adverse Events', 'Reporting Timelines']
     }
   },
   
@@ -155,12 +155,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T17:00:00',
     user: 'Robert Johnson',
     inputType: 'Schedule',
-    content: 'Set up monthly Domain Area 1 review schedule',
+    content: 'Set up monthly Protocol Deviations review schedule',
     status: 'completed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Create',
-      relatedItems: ['Monthly', 'Domain Area 1', 'Day 15', '09:00 AM']
+      relatedItems: ['Monthly', 'Domain 1 -> Protocol Deviations', 'Day 15', '09:00 AM']
     }
   },
   {
@@ -168,12 +168,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-09T15:30:00',
     user: 'Sarah Chen',
     inputType: 'Schedule',
-    content: 'Created weekly Domain Area 2 verification schedule',
+    content: 'Created weekly Adverse Events verification schedule',
     status: 'completed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Create',
-      relatedItems: ['Weekly', 'Domain Area 2', 'Friday', '14:00 PM']
+      relatedItems: ['Weekly', 'Domain 2 -> Adverse and Serious Adverse Events', 'Friday', '14:00 PM']
     }
   },
   {
@@ -181,12 +181,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-08T12:45:00',
     user: 'Jane Smith',
     inputType: 'Schedule',
-    content: 'Set up daily Domain Area 3 monitoring schedule',
+    content: 'Set up daily Informed Consent monitoring schedule',
     status: 'pending',
     details: {
       section: 'Configure Schedule',
       actionType: 'Create',
-      relatedItems: ['Daily', 'Domain Area 3', '08:00 AM']
+      relatedItems: ['Daily', 'Domain 3 -> Informed Consent', '08:00 AM']
     }
   },
   {
@@ -194,12 +194,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-07T10:00:00',
     user: 'Michael Brown',
     inputType: 'Schedule',
-    content: 'Modified monthly Domain Area 1 schedule to include additional sites',
+    content: 'Modified monthly Protocol Deviations schedule to include additional sites',
     status: 'completed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Update',
-      relatedItems: ['Monthly', 'Domain Area 1', 'Multiple Sites']
+      relatedItems: ['Monthly', 'Domain 1 -> Protocol Deviations', 'Multiple Sites']
     }
   },
   {
@@ -207,12 +207,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-06T09:15:00',
     user: 'John Doe',
     inputType: 'Schedule',
-    content: 'Updated weekly Domain Area 2 schedule to include audit trail review',
+    content: 'Updated weekly Adverse Events schedule to include audit trail review',
     status: 'failed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Update',
-      relatedItems: ['Weekly', 'Domain Area 2', 'Audit Trail Review']
+      relatedItems: ['Weekly', 'Domain 2 -> Adverse and Serious Adverse Events', 'Audit Trail Review']
     }
   }
 ];

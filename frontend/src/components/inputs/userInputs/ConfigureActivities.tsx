@@ -9,95 +9,125 @@ interface Site {
 const mockInspectionAreas: Site[] = [
   {
     id: 'area1',
-    name: 'Domain Area 1'
+    name: 'Domain 1 -> Protocol Deviations'
   },
   {
     id: 'area2',
-    name: 'Domain Area 2'
+    name: 'Domain 2 -> Adverse and Serious Adverse Events'
   },
   {
     id: 'area3',
-    name: 'Domain Area 3'
+    name: 'Domain 3 -> Informed Consent'
   }
 ];
 
 // Mock activities for each domain area
 const mockActivities: Activity[] = [
-  // Protocol Compliance activities
+  // Protocol Deviations activities (Domain 1)
   {
-    id: 'activity-pc-1',
+    id: 'activity-pd-1',
     inspectionAreaId: 'area1',
-    description: 'Verify informed consent documentation is complete and properly executed',
+    description: 'Ensure PD criteria (i.e., severity, etc.) at site match agreed Protocol Deviations Assessment Plan.',
     enabled: true
   },
   {
-    id: 'activity-pc-2',
+    id: 'activity-pd-2',
     inspectionAreaId: 'area1',
-    description: 'Audit protocol deviation documentation and reporting',
+    description: 'Check the management of the PDs reported, have they been resolved/closed in an acceptable time frame?',
     enabled: true
   },
   {
-    id: 'activity-pc-3',
+    id: 'activity-pd-3',
     inspectionAreaId: 'area1',
-    description: 'Review investigator qualifications and training records',
+    description: 'Do site and sponsor PD listings match?',
     enabled: true
   },
   {
-    id: 'activity-pc-4',
+    id: 'activity-pd-4',
     inspectionAreaId: 'area1',
-    description: 'Assess adherence to inclusion/exclusion criteria',
+    description: 'Does the site need a copy of PDs to reconcile?',
+    enabled: true
+  },
+  {
+    id: 'activity-pd-5',
+    inspectionAreaId: 'area1',
+    description: 'Has the site submitted all applicable PDs to their EC/IRB?',
+    enabled: true
+  },
+  {
+    id: 'activity-pd-6',
+    inspectionAreaId: 'area1',
+    description: 'Was there any site PD trending? What actions were taken? Is this documented at the site?',
     enabled: true
   },
   
-  // Data Integrity activities
+  // Adverse and Serious Adverse Events activities (Domain 2)
   {
-    id: 'activity-di-1',
+    id: 'activity-ae-1',
     inspectionAreaId: 'area2',
-    description: 'Verify source data against CRF entries for accuracy',
+    description: 'What SAEs or events caused delays of infusion, IP dispensing and/or administration?',
     enabled: true
   },
   {
-    id: 'activity-di-2',
+    id: 'activity-ae-2',
     inspectionAreaId: 'area2',
-    description: 'Review data correction procedures and audit trails',
+    description: 'Were there any subject early terminations or fatalities due to AEs/SAEs?',
     enabled: true
   },
   {
-    id: 'activity-di-3',
+    id: 'activity-ae-3',
     inspectionAreaId: 'area2',
-    description: 'Audit electronic data capture system access controls',
+    description: 'What actions were taken, and what were the outcomes?',
     enabled: true
   },
   {
-    id: 'activity-di-4',
+    id: 'activity-ae-4',
     inspectionAreaId: 'area2',
-    description: 'Evaluate data query resolution process and timelines',
+    description: 'Are all AEs/SAEs in final disposition in RAVE, i.e., end dates?',
+    enabled: true
+  },
+  {
+    id: 'activity-ae-5',
+    inspectionAreaId: 'area2',
+    description: 'Are all SAE-related documents filed in ISF?',
+    enabled: true
+  },
+  {
+    id: 'activity-ae-6',
+    inspectionAreaId: 'area2',
+    description: 'Were any SAEs reported with delay (later than 24 hours)?',
     enabled: true
   },
   
-  // Subject Safety activities
+  // Informed Consent activities (Domain 3)
   {
-    id: 'activity-ss-1',
+    id: 'activity-ic-1',
     inspectionAreaId: 'area3',
-    description: 'Review adverse event reporting procedures and timelines',
+    description: 'Does the site have all applicable approvals in place for all applicable ICF versions?',
     enabled: true
   },
   {
-    id: 'activity-ss-2',
+    id: 'activity-ic-2',
     inspectionAreaId: 'area3',
-    description: 'Audit safety monitoring documentation and follow-up',
+    description: 'Were all local ICF versions submitted and approved in an acceptable time after release of the ICF version?',
     enabled: true
   },
   {
-    id: 'activity-ss-3',
+    id: 'activity-ic-3',
     inspectionAreaId: 'area3',
-    description: 'Verify proper documentation of concomitant medications',
+    description: 'Have patients consented to the correct initial ICF versions at screening (no older versions used)?',
     enabled: true
   },
   {
-    id: 'activity-ss-4',
+    id: 'activity-ic-4',
     inspectionAreaId: 'area3',
-    description: 'Assess protocol-specific safety parameter monitoring compliance',
+    description: 'Have all applicable patients re-consented (when applicable) to all types of new ICF versions?',
+    enabled: true
+  },
+  {
+    id: 'activity-ic-5',
+    inspectionAreaId: 'area3',
+    description: 'Indicate if re-consenting is not applicable to any patient?',
     enabled: true
   }
 ];
