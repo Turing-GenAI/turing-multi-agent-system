@@ -14,6 +14,7 @@ services:
     volumes:
       - ./jnj_outputs:/app/outputs
       - ./chromadb:/app/chromadb
+      - ./chromadb_new:/app/chromadb_new
 
   redis:
     image: "redis:alpine"

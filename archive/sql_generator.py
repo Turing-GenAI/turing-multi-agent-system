@@ -13,13 +13,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_chat_openai_client, azure_embedding_openai_client
 from ..common.config import CHROMADB_DIR
-from ..common.constants import CHROMADB_SUMMARY_FOLDER_NAME
+from ..common.constants import CHROMADB_SUMMARY_FOLDER_NAME, db_url
 
 # Get logger instance
 logger = get_logger()
-
-# PostgreSQL connection
-db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
 
 class SQLGenerator:
     def __init__(self):
