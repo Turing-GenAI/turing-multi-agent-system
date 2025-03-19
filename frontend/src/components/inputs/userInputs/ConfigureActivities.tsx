@@ -9,95 +9,95 @@ interface Site {
 const mockInspectionAreas: Site[] = [
   {
     id: 'area1',
-    name: 'Domain Area 1'
+    name: 'Domain 1 -> Protocol Deviations'
   },
   {
     id: 'area2',
-    name: 'Domain Area 2'
+    name: 'Domain 2 -> Adverse and Serious Adverse Events'
   },
   {
     id: 'area3',
-    name: 'Domain Area 3'
+    name: 'Domain 3 -> Informed Consent'
   }
 ];
 
 // Mock activities for each domain area
 const mockActivities: Activity[] = [
-  // Protocol Compliance activities
+  // Protocol Deviations activities (Domain 1)
   {
     id: 'activity-pc-1',
     inspectionAreaId: 'area1',
-    description: 'Verify informed consent documentation is complete and properly executed',
+    description: 'Verify protocol deviation documentation is complete and properly executed',
     enabled: true
   },
   {
     id: 'activity-pc-2',
     inspectionAreaId: 'area1',
-    description: 'Audit protocol deviation documentation and reporting',
+    description: 'Audit protocol deviation identification and categorization',
     enabled: true
   },
   {
     id: 'activity-pc-3',
     inspectionAreaId: 'area1',
-    description: 'Review investigator qualifications and training records',
+    description: 'Review protocol deviation reporting timeliness and accuracy',
     enabled: true
   },
   {
     id: 'activity-pc-4',
     inspectionAreaId: 'area1',
-    description: 'Assess adherence to inclusion/exclusion criteria',
+    description: 'Assess impact analysis of protocol deviations on patient safety',
     enabled: true
   },
   
-  // Data Integrity activities
+  // Adverse and Serious Adverse Events activities (Domain 2)
   {
     id: 'activity-di-1',
     inspectionAreaId: 'area2',
-    description: 'Verify source data against CRF entries for accuracy',
+    description: 'Verify adverse event documentation and classification',
     enabled: true
   },
   {
     id: 'activity-di-2',
     inspectionAreaId: 'area2',
-    description: 'Review data correction procedures and audit trails',
+    description: 'Review serious adverse event reporting procedures and timelines',
     enabled: true
   },
   {
     id: 'activity-di-3',
     inspectionAreaId: 'area2',
-    description: 'Audit electronic data capture system access controls',
+    description: 'Audit adverse event follow-up and resolution documentation',
     enabled: true
   },
   {
     id: 'activity-di-4',
     inspectionAreaId: 'area2',
-    description: 'Evaluate data query resolution process and timelines',
+    description: 'Evaluate adverse event causality assessment process',
     enabled: true
   },
   
-  // Subject Safety activities
+  // Informed Consent activities (Domain 3)
   {
     id: 'activity-ss-1',
     inspectionAreaId: 'area3',
-    description: 'Review adverse event reporting procedures and timelines',
+    description: 'Review informed consent form completeness and signatures',
     enabled: true
   },
   {
     id: 'activity-ss-2',
     inspectionAreaId: 'area3',
-    description: 'Audit safety monitoring documentation and follow-up',
+    description: 'Audit informed consent version control and updates',
     enabled: true
   },
   {
     id: 'activity-ss-3',
     inspectionAreaId: 'area3',
-    description: 'Verify proper documentation of concomitant medications',
+    description: 'Verify proper documentation of re-consent procedures',
     enabled: true
   },
   {
     id: 'activity-ss-4',
     inspectionAreaId: 'area3',
-    description: 'Assess protocol-specific safety parameter monitoring compliance',
+    description: 'Assess informed consent comprehension verification process',
     enabled: true
   }
 ];
