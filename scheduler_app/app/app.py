@@ -339,8 +339,6 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
 
     except Exception as e:
         logger.error(f"Error processing AI messages: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
         filtered_data = []    
 
     res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}

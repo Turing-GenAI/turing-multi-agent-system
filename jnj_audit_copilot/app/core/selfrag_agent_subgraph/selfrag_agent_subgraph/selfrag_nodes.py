@@ -194,7 +194,6 @@ class selfragNodes:
         
         return {
             "intermediate_steps": [(agent_action, tool_message)],
-            # "selfrag_messages": tool_message,
             "selfrag_messages": AIMessage(
                 name=f"{bold_start} SelfRAG - execute_retrieval_tools{bold_end}",
                 content=tool_message.content
@@ -218,7 +217,7 @@ class selfragNodes:
         return {
             "selfrag_messages": AIMessage(
                 name=f"{bold_start} SelfRAG - document_grading_agent{bold_end}",
-                content="Checking relevance of fetched data ...",
+                content="Checking relevance of fetched data...",
             )
         }
 

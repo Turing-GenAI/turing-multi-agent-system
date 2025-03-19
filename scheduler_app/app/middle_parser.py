@@ -198,7 +198,7 @@ def summarize_content(data):
 def merge_selfrag_nodes(data):
     """
     Merges consecutive occurrences of "SelfRAG - retrieval_agent" and "SelfRAG - execute_retrieval_tools"
-    into a single node named "SelfRAG - Retrieval Tool".
+    into a single node named "SelfRAG - retrieval_tool".
     
     If a different node appears between them, it prevents merging across that node.
     
@@ -217,7 +217,7 @@ def merge_selfrag_nodes(data):
     # Define target node names to be merged
     target_nodes = {
         "SelfRAG - retrieval_agent",
-        "SelfRAG - execute_retrieval_tools",
+        "SelfRAG - execute_retrieval_tools"
     }
     
     # Debug message contents
@@ -293,7 +293,7 @@ def _merge_group(messages):
     # Create base merged message
     merged_message = {
         "id": messages[0]["id"],  # Keep the ID of the first occurrence
-        "name": "SelfRAG - Retrieval Tool",
+        "name": "SelfRAG - retrieval_tool",
         "content": merged_content,
         # Keep the original fields and otherLines for reference
         "fields": {},
@@ -333,10 +333,10 @@ def filter_parsed_messages_by_name(parsed_messages):
         "inspection - feedback_agent node",
         "Unknown",
         "SelfRAG - self_rag_agent",
-        "SelfRAG - Retrieval Tool",  # Newly merged SelfRAG node
+        "SelfRAG - retrieval_tool",  # Newly merged SelfRAG node
+        "SelfRAG - document_grading_agent",
         "SelfRAG - generate_response_agent",
         "inspection - generate_findings_agent",
-        "SelfRAG - document_grading_agent"
     }
     
     logger.debug(f"Processing {len(parsed_messages)} messages")
@@ -346,14 +346,14 @@ def filter_parsed_messages_by_name(parsed_messages):
     compressed_data = []
     for message in parsed_messages:
         if message.get("name") in unique_name:
-            if message.get("name") == "SelfRAG - Retrieval Tool":
+            if message.get("name") == "SelfRAG - retrieval_tool":
                 # If this was previously "SelfRAG - retrieval_agent", check its fields
                 fields = message.get("fields", {})
                 if fields.get("Name") == "SelfRAG - guidelines_retriever tool":
                     logger.debug("Skipping SelfRAG - guidelines_retriever tool")
                     continue
                 
-                logger.debug(f"Keeping SelfRAG - Retrieval Tool with content length: {len(message.get('content', ''))}")
+                logger.debug(f"Keeping SelfRAG - retrieval_tool with content length: {len(message.get('content', ''))}")
             
             compressed_data.append(message)
     

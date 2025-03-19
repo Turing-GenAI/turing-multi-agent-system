@@ -162,7 +162,7 @@ class RedisAppRunner:
                 if purpose == "get_user_feedback":
                     with open(os.path.join(AGENT_SCRATCHPAD_FOLDER, scratchpad_filename), 'a+') as f:
                         f.writelines("\n" + "=" * 35 + " Ai Message " + "=" * 35)
-                        f.writelines(f"\nName: inspection - user_agent: \n\nInvoking user for validating output from {last_node}.")
+                        f.writelines(f"\nInvoking user for validating output from {last_node}.")
                         f.writelines("\n" + self.feedback_messages.get(last_node, "Feedback: "))
 
                     # get human feedback
