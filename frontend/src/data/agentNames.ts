@@ -18,7 +18,7 @@ export const agentName = {
   "inspection - feedback_agent node": "Feedback Agent",
   "SelfRAG - self_rag_agent": "Self RAG",
   "SelfRAG - retrieval_agent": "Retrieval Agent",
-  "SelfRAG - retrieval_tool": "Self RAG - Retrieval Tool",
+  "SelfRAG - retrieval_tool": "Retrieval Tool",
   "SelfRAG - site_data_retriever tool": "Self RAG - Domain Data Retriever",
   // "SelfRAG - execute_retrieval_tools": "Retrieval Tool",
   "SelfRAG - document_grading_agent": "Reflection Agent",
