@@ -69,6 +69,56 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     initialFetchJobs();
   }, []);
 
+  useEffect(() => {
+    const styleTag = document.createElement('style');
+    styleTag.innerHTML = `
+      .html-table-container table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        table-layout: auto;
+      }
+      .html-table-container th,
+      .html-table-container td {
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem 0.5rem;
+        text-align: left;
+        vertical-align: top;
+        word-break: normal;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .html-table-container th {
+        background-color: var(--header-bg-color, #f8fafc);
+        font-weight: 600;
+        color: var(--header-text-color, #334155);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        white-space: nowrap;
+      }
+      .html-table-container tr:nth-child(even) {
+        background-color: #f8fafc;
+      }
+      .html-table-container tr:hover {
+        background-color: #f1f5f9;
+      }
+      .html-table-container tbody tr:hover td {
+        background-color: rgba(236, 253, 245, 0.4);
+      }
+    `;
+    document.head.appendChild(styleTag);
+    
+    // Clean up when component unmounts
+    return () => {
+      if (styleTag.parentNode) {
+        styleTag.parentNode.removeChild(styleTag);
+      }
+    };
+  }, []);
+
   // Initial fetch jobs with loading state
   const initialFetchJobs = async () => {
     setLoading(true);
@@ -189,15 +239,13 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
           setRetrievedContext(cachedData.retrievedContext);
           
           // Also update the in-memory cache
-          setJobCache(prevCache => ({
-            ...prevCache,
-            [jobId]: {
-              aiMessages: cachedData.aiMessages || [],
-              findings: cachedData.findings,
-              retrievedContext: cachedData.retrievedContext,
-              timestamp: cachedData.timestamp
-            }
-          }));
+          setJobCache(prevCache => {
+            const updatedCache: Record<string, JobCache> = {
+              ...prevCache,
+              [jobId]: cachedData as JobCache
+            };
+            return updatedCache;
+          });
           return;
         } else {
           console.log(`Cached data for job ${jobId} has expired, fetching fresh data`);
@@ -280,18 +328,73 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
         };
         
         // Update in-memory cache
-        setJobCache(prevCache => ({
-          ...prevCache,
-          [jobId]: cacheData
-        }));
+        setJobCache(prevCache => {
+          const updatedCache: Record<string, JobCache> = {
+            ...prevCache,
+            [jobId]: cacheData as JobCache
+          };
+          return updatedCache;
+        });
         
         // Save to localStorage
         try {
           const localStorageKey = `job_cache_${jobId}`;
-          localStorage.setItem(localStorageKey, JSON.stringify(cacheData));
-          console.log(`Saved job ${jobId} data to localStorage`);
+          
+          // Limit the size of data saved to localStorage by extracting
+          // only essential fields to avoid quota errors
+          const essentialCacheData = {
+            aiMessages: cacheData.aiMessages?.map(msg => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content && msg.content.length > 500 ? 
+                msg.content.substring(0, 500) + '...' : msg.content
+            })) || [],
+            
+            // Store simplified findings data
+            findings: {
+              pd: (cacheData.findings?.pd || []).map(item => ({
+                id: item.id,
+                content: item.content && item.content.length > 500 ? 
+                  item.content.substring(0, 500) + '...' : item.content
+              })),
+              ae: (cacheData.findings?.ae || []).map(item => ({
+                id: item.id,
+                content: item.content && item.content.length > 500 ? 
+                  item.content.substring(0, 500) + '...' : item.content
+              }))
+            },
+            
+            // Skip storing large retrieved context in localStorage
+            retrievedContext: null,
+            
+            timestamp: cacheData.timestamp
+          };
+          
+          localStorage.setItem(localStorageKey, JSON.stringify(essentialCacheData));
+          console.log(`Saved job ${jobId} data to localStorage (limited size)`);
         } catch (err) {
           console.error("Error saving to localStorage:", err);
+          // If localStorage fails, try to clear some old entries and try again
+          try {
+            // Clear old entries that might be taking up space
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('job_cache_') && key !== `job_cache_${jobId}`) {
+                keysToRemove.push(key);
+              }
+            }
+            
+            // Remove a few old entries to make space
+            if (keysToRemove.length > 0) {
+              // Remove oldest 5 entries or fewer if we have less
+              const toRemove = keysToRemove.slice(0, Math.min(5, keysToRemove.length));
+              toRemove.forEach(key => localStorage.removeItem(key));
+              console.log(`Cleared ${toRemove.length} old entries from localStorage`);
+            }
+          } catch (clearErr) {
+            console.error("Error clearing localStorage:", clearErr);
+          }
         }
       } else {
         // No data in the response
@@ -388,7 +491,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     
     return true;
   };
-  
+
   // Helper function to map metadata keys to user-friendly display names
   const getMetadataDisplayName = (key: string): string => {
     const displayNameMap: Record<string, string> = {
@@ -403,10 +506,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   };
 
   // Helper function to map source URLs for external links
-  const mapSourceUrl = (url: string, metadata: any): string => {
-    // For debugging
-    console.log('Mapping source URL:', { url, metadata });
-    
+  const mapSourceUrl = (url: string, metadata?: any): string => {
     // If URL is already a valid URL, return it
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
@@ -519,13 +619,65 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   };
 
   // Function to clean up text content from the backend
-  const cleanTextContent = (text: string): string => {
-    if (!text) return '';
+  const cleanTextContent = (text: string, extractTable: boolean = false): { cleanedText: string, extractedTable?: string } => {
+    if (!text) return { cleanedText: '' };
+    
+    // First check if the content has HTML tables
+    if (text.includes('<table') && text.includes('</table>')) {
+      // Extract the table if needed
+      let extractedTable: string | undefined = undefined;
+      
+      if (extractTable) {
+        const tableMatch = text.match(/(<table[\s\S]*?<\/table>)/);
+        if (tableMatch) {
+          let tableHtml = tableMatch[1];
+            
+          // Make sure the table has proper class for styling
+          if (!tableHtml.includes('class=')) {
+            tableHtml = tableHtml.replace('<table', '<table class="table"');
+          }
+            
+          // Ensure thead and tbody are present
+          if (!tableHtml.includes('<thead>')) {
+            tableHtml = tableHtml.replace(/<tr>\s*(<th[\s\S]*?<\/tr>)/, '<thead>$&</thead>');
+          }
+            
+          if (!tableHtml.includes('<tbody>')) {
+            // If there's a thead, add tbody after it
+            if (tableHtml.includes('</thead>')) {
+              tableHtml = tableHtml.replace('</thead>', '</thead><tbody>') + '</tbody>';
+            } 
+            // Otherwise wrap all content except the first row in tbody (assuming first row is header)
+            else {
+              const firstRowEnd = tableHtml.indexOf('</tr>') + 5;
+              tableHtml = 
+                tableHtml.substring(0, firstRowEnd) + 
+                '<tbody>' + 
+                tableHtml.substring(firstRowEnd) + 
+                '</tbody>';
+            }
+          }
+          
+          extractedTable = tableHtml;
+        }
+      }
+      
+      // Remove HTML tables from content to avoid displaying them as raw HTML
+      return {
+        cleanedText: text
+          .replace(/<table[\s\S]*?<\/table>/g, '[TABLE_DATA]')
+          .replace(/�/g, 'ti')
+          .replace(/�/g, 'i'),
+        extractedTable
+      };
+    }
     
     // Only fix common encoding issues without changing formatting
-    return text
-      .replace(/�/g, 'ti') // Fix common encoding issues like "Inspec�on" -> "Inspection"
-      .replace(/�/g, 'i'); // Another common encoding issue
+    return {
+      cleanedText: text
+        .replace(/�/g, 'ti') // Fix common encoding issues like "Inspec�on" -> "Inspection"
+        .replace(/�/g, 'i') // Another common encoding issue
+    };
   };
 
   // Get timezone string in format UTC+/-XX:XX
@@ -664,9 +816,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
         const subActivityMatch = content.match(/Subactivity: ([^\n]+)/i);
         
         // Format activity and subactivity if present
+        let formattedMetadata = '';
         if (activityMatch || subActivityMatch) {
-          let formattedMetadata = '';
-          
           if (activityMatch) {
             const activityValue = cleanSubactivityValue(activityMatch[1]);
             if (activityValue) {
@@ -680,9 +831,49 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               formattedMetadata += `<div class="text-sm font-medium text-blue-600 mb-1">Sub-Activity: ${subActivityValue}</div>`;
             }
           }
-          
-          if (formattedMetadata) {
-            content = `${formattedMetadata}<div class="mt-2">${content}</div>`;
+        }
+        
+        // Check if content contains HTML table
+        const hasHtmlTable = content.includes('<table') && content.includes('</table>');
+        let htmlTableContent = null;
+        
+        // Extract the table element if present and ensure it has proper format
+        if (hasHtmlTable) {
+          const tableMatch = content.match(/(<table[\s\S]*?<\/table>)/);
+          if (tableMatch) {
+            // Process the table to ensure it has proper structure
+            let tableHtml = tableMatch[1];
+            
+            // Make sure the table has proper class for styling
+            if (!tableHtml.includes('class=')) {
+              tableHtml = tableHtml.replace('<table', '<table class="table"');
+            }
+            
+            // Ensure thead and tbody are present
+            if (!tableHtml.includes('<thead>')) {
+              tableHtml = tableHtml.replace(/<tr>\s*(<th[\s\S]*?<\/tr>)/, '<thead>$&</thead>');
+            }
+            
+            if (!tableHtml.includes('<tbody>')) {
+              // If there's a thead, add tbody after it
+              if (tableHtml.includes('</thead>')) {
+                tableHtml = tableHtml.replace('</thead>', '</thead><tbody>') + '</tbody>';
+              } 
+              // Otherwise wrap all content except the first row in tbody (assuming first row is header)
+              else {
+                const firstRowEnd = tableHtml.indexOf('</tr>') + 5;
+                tableHtml = 
+                  tableHtml.substring(0, firstRowEnd) + 
+                  '<tbody>' + 
+                  tableHtml.substring(firstRowEnd) + 
+                  '</tbody>';
+              }
+            }
+            
+            htmlTableContent = tableHtml;
+            
+            // Remove the table from the content to avoid duplication
+            content = content.replace(tableMatch[0], '[TABLE_DATA]');
           }
         }
         
@@ -696,13 +887,90 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
         content = content.replace(/([Ss]ite ID:?)\s+([^,\s]+)/g, '$1 <strong>$2</strong>');
         content = content.replace(/(\d{4}-\d{2}-\d{2}\s*-\s*\d{4}-\d{2}-\d{2})/g, '<strong>$1</strong>');
         
+        // Split the content by the [TABLE_DATA] placeholder
+        const contentParts = hasHtmlTable && content.includes('[TABLE_DATA]') 
+          ? content.split('[TABLE_DATA]') 
+          : [content];
+        
         return (
           <div key={idx} className="rounded-lg shadow-sm bg-white border border-gray-200 mb-3 overflow-hidden transition-all hover:shadow-md">
             <div className="font-medium px-4 py-2 bg-white border-b border-gray-200 flex items-center">
               <MessageSquare className="w-4 h-4 mr-2 text-blue-600" />
               <span className="text-blue-700">{displayName}</span>
             </div>
-            <div className="px-4 py-3 whitespace-pre-wrap text-gray-800" dangerouslySetInnerHTML={{ __html: content }} />
+            <div className="px-4 py-3 text-gray-800">
+              {/* Render metadata */}
+              {formattedMetadata && (
+                <div dangerouslySetInnerHTML={{ __html: formattedMetadata }} />
+              )}
+              
+              {/* Render first part of content */}
+              <div className="whitespace-pre-wrap mb-2" dangerouslySetInnerHTML={{ __html: contentParts[0] }} />
+              
+              {/* Render HTML table if present */}
+              {htmlTableContent && (
+                <div className="mb-4">
+                  <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
+                  <div className="overflow-x-auto border rounded shadow-sm">
+                    <style dangerouslySetInnerHTML={{ __html: `
+                      .html-table-container {
+                        max-height: 400px;
+                        overflow-y: auto;
+                      }
+                      .html-table-container table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin-bottom: 1rem;
+                        font-size: 0.875rem;
+                        table-layout: auto;
+                      }
+                      .html-table-container th,
+                      .html-table-container td {
+                        border: 1px solid #e2e8f0;
+                        padding: 0.75rem 0.5rem;
+                        text-align: left;
+                        vertical-align: top;
+                        word-break: normal;
+                        max-width: 300px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                      }
+                      .html-table-container th {
+                        background-color: var(--header-bg-color, #f8fafc);
+                        font-weight: 600;
+                        color: var(--header-text-color, #334155);
+                        position: sticky;
+                        top: 0;
+                        z-index: 1;
+                        white-space: nowrap;
+                      }
+                      .html-table-container tr:nth-child(even) {
+                        background-color: #f8fafc;
+                      }
+                      .html-table-container tr:hover {
+                        background-color: #f1f5f9;
+                      }
+                      .html-table-container tbody tr:hover td {
+                        background-color: rgba(236, 253, 245, 0.4);
+                      }
+                    ` }} />
+                    <div 
+                      className="p-2 text-sm html-table-container" 
+                      style={{
+                        '--header-bg-color': '#f7f7f7',
+                        '--header-text-color': '#333'
+                      } as React.CSSProperties}
+                      dangerouslySetInnerHTML={{ __html: htmlTableContent }} 
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Render remaining content if split by table */}
+              {contentParts.length > 1 && (
+                <div className="whitespace-pre-wrap mt-2" dangerouslySetInnerHTML={{ __html: contentParts[1] }} />
+              )}
+            </div>
           </div>
         );
       });
@@ -711,45 +979,6 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       return <div className="text-red-500">Error displaying message</div>;
     }
   };
-
-  const htmlTableStyles = `
-    .html-table-container table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
-      table-layout: auto;
-    }
-    .html-table-container th,
-    .html-table-container td {
-      border: 1px solid #e2e8f0;
-      padding: 0.75rem 0.5rem;
-      text-align: left;
-      vertical-align: top;
-      word-break: normal;
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .html-table-container th {
-      background-color: var(--header-bg-color, #f8fafc);
-      font-weight: 600;
-      color: var(--header-text-color, #334155);
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      white-space: nowrap;
-    }
-    .html-table-container tr:nth-child(even) {
-      background-color: #f8fafc;
-    }
-    .html-table-container tr:hover {
-      background-color: #f1f5f9;
-    }
-    .html-table-container tbody tr:hover td {
-      background-color: rgba(236, 253, 245, 0.4);
-    }
-  `;
 
   // Format date for display
   const formatDateForTable = (timestamp: number | string | null) => {
@@ -773,9 +1002,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-24 border border-gray-200">Subject</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Site</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Category</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Severity</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Deviation</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Deviation</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Description</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
             </tr>
@@ -882,6 +1111,18 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         if (contextItem.metadata.text_as_html) {
                           htmlTable = contextItem.metadata.text_as_html;
                         } 
+                        // Check if the content itself contains an HTML table
+                        else if (contextItem.page_content && 
+                                 typeof contextItem.page_content === 'string' && 
+                                 contextItem.page_content.includes('<table') && 
+                                 contextItem.page_content.includes('</table>')) {
+                          
+                          // Extract the table using our cleanTextContent function
+                          const { extractedTable } = cleanTextContent(contextItem.page_content, true);
+                          if (extractedTable) {
+                            htmlTable = extractedTable;
+                          }
+                        }
                         // For spreadsheet files, try to generate an HTML table if one doesn't exist
                         else if (sourceStr && 
                                (sourceStr.endsWith('.xlsx') || 
@@ -893,9 +1134,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                           
                           if (potentialHeaders.length > 2) {
                             // Simple CSV detection heuristic: if first line has commas and we have multiple lines
-                            const tableRows = lines.map(line => {
+                            const tableRows = lines.map((line: string) => {
                               const cells = line.split(',');
-                              return `<tr>${cells.map(cell => `<td>${cell.trim()}</td>`).join('')}</tr>`;
+                              return `<tr>${cells.map((cell: string) => `<td>${cell.trim()}</td>`).join('')}</tr>`;
                             });
                             
                             htmlTable = `<table class="w-full border-collapse">
@@ -963,41 +1204,26 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         }
                         
                         const chunk = {
-                          source: contextItem.metadata.source || 'Unknown',
-                          content: contextItem.page_content,
-                          metadata: contextItem.metadata,
-                          htmlTable: htmlTable,
-                          category: 'Unknown',
+                          source: contextItem.metadata?.source || sourceStr || 'Unknown Source',
+                          sourcePath: contextItem.metadata?.source_path || sourceStr,
                           activity,
                           subActivity,
                           question,
                           relevanceScore,
-                          summary
+                          summary,
+                          content: contextItem.page_content || '',
+                          htmlTable,
+                          metadata: contextItem.metadata || {} // Ensure metadata is always defined
                         };
                         
-                        // Debug: Log the final chunk with extracted fields
-                        console.log('Final chunk:', {
-                          activity: chunk.activity,
-                          subActivity: chunk.subActivity,
-                          question: chunk.question,
-                          relevanceScore: chunk.relevanceScore,
-                          summary: chunk.summary,
-                          hasHtmlTable: !!chunk.htmlTable,
-                          source: chunk.source
-                        });
-                        
-                        // Categorize chunks based on their source or content
-                        const contentStr = chunk.content.toLowerCase();
-                        
-                        if (sourceStr.includes('pd') || contentStr.includes('protocol deviation') || 
-                            contentStr.includes('pd_') || contentStr.match(/pd\s+\d+/) || activity === 'PD') {
-                          chunk.category = 'PD';
+                        // Add to the appropriate list based on activity type
+                        if (activity === 'PD') {
                           pdChunks.push(chunk);
-                        } else if (sourceStr.includes('ae') || contentStr.includes('adverse event') || 
-                                  contentStr.includes('ae_') || contentStr.match(/ae\s+\d+/) || activity === 'AE_SAE') {
-                          chunk.category = 'AE';
+                        } else if (activity === 'AE_SAE') {
                           aeChunks.push(chunk);
                         }
+                        
+                        console.log('Added chunk:', chunk);
                       }
                     });
                   }
@@ -1497,7 +1723,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                 <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
                                   <div className="whitespace-pre-line text-gray-800">
                                     <ReactMarkdown>
-                                      {cleanTextContent(finding.content).replace(/Protocol Deviation|PD:|Subject:|Site:|Category:|Description:/gi, match => `**${match}**`)}
+                                      {cleanTextContent(finding.content, true).cleanedText.replace(/Protocol Deviation|PD:|Subject:|Site:|Category:|Description:/gi, (match: string) => `**${match}**`)}
                                     </ReactMarkdown>
                                   </div>
                                 </div>
@@ -1506,7 +1732,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                               {/* Table data if available */}
                               {finding.table && finding.table.length > 0 && (
                                 <div className="mt-4">
-                                  <h5 className="font-medium text-gray-700 mb-2">Tabular Data:</h5>
+                                  <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
                                   {renderPDTable(finding)}
                                 </div>
                               )}
@@ -1577,7 +1803,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                 <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
                                   <div className="whitespace-pre-line text-gray-800">
                                     <ReactMarkdown>
-                                      {cleanTextContent(finding.content).replace(/Adverse Event|AE:|SAE:|Subject:|Site:|Event:|Grade:|Start Date:|End Date:|Seriousness:|Treatment:/gi, match => `**${match}**`)}
+                                      {cleanTextContent(finding.content, true).cleanedText.replace(/Adverse Event|AE:|SAE:|Subject:|Site:|Event:|Grade:|Start Date:|End Date:|Seriousness:|Treatment:/gi, (match: string) => `**${match}**`)}
                                     </ReactMarkdown>
                                   </div>
                                 </div>
@@ -1586,7 +1812,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                               {/* Table data if available */}
                               {finding.table && finding.table.length > 0 && (
                                 <div className="mt-4">
-                                  <h5 className="font-medium text-gray-700 mb-2">Tabular Data:</h5>
+                                  <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
                                   {renderAETable(finding)}
                                 </div>
                               )}
@@ -1716,8 +1942,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                         )}
                                         
                                         {/* Display other metadata fields */}
-                                        {Object.entries(chunk.metadata)
-                                          .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields
+                                        {chunk.metadata && Object.entries(chunk.metadata)
+                                          .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields 
                                           .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata)) // Apply our custom filter
                                           .map(([metaKey, metaValue]) => (
                                             <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
@@ -1758,14 +1984,55 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                       <div className="mb-4">
                                         <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
                                         <div className="overflow-x-auto border rounded shadow-sm">
-                                          <style dangerouslySetInnerHTML={{ __html: htmlTableStyles }} />
+                                          <style dangerouslySetInnerHTML={{ __html: `
+                                            .html-table-container {
+                                              max-height: 400px;
+                                              overflow-y: auto;
+                                            }
+                                            .html-table-container table {
+                                              border-collapse: collapse;
+                                              width: 100%;
+                                              margin-bottom: 1rem;
+                                              font-size: 0.875rem;
+                                              table-layout: auto;
+                                            }
+                                            .html-table-container th,
+                                            .html-table-container td {
+                                              border: 1px solid #e2e8f0;
+                                              padding: 0.75rem 0.5rem;
+                                              text-align: left;
+                                              vertical-align: top;
+                                              word-break: normal;
+                                              max-width: 300px;
+                                              overflow: hidden;
+                                              text-overflow: ellipsis;
+                                            }
+                                            .html-table-container th {
+                                              background-color: var(--header-bg-color, #f8fafc);
+                                              font-weight: 600;
+                                              color: var(--header-text-color, #334155);
+                                              position: sticky;
+                                              top: 0;
+                                              z-index: 1;
+                                              white-space: nowrap;
+                                            }
+                                            .html-table-container tr:nth-child(even) {
+                                              background-color: #f8fafc;
+                                            }
+                                            .html-table-container tr:hover {
+                                              background-color: #f1f5f9;
+                                            }
+                                            .html-table-container tbody tr:hover td {
+                                              background-color: rgba(236, 253, 245, 0.4);
+                                            }
+                                          ` }} />
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
                                               '--header-bg-color': '#f7f7f7',
                                               '--header-text-color': '#333'
                                             } as React.CSSProperties}
-                                            dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
+                                            dangerouslySetInnerHTML={{ __html: chunk.htmlTable }} 
                                           />
                                         </div>
                                       </div>
@@ -1789,7 +2056,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                             </button>
                                           </div>
                                           <div className="whitespace-pre-line text-gray-800">
-                                            {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
+                                            {cleanTextContent(chunk.content, true).cleanedText.split('\n').map((paragraph: string, i: number) => (
                                               <p key={i} className={i > 0 ? 'mt-2' : ''}>
                                                 {paragraph}
                                               </p>
@@ -1901,8 +2168,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                         )}
                                         
                                         {/* Display other metadata fields */}
-                                        {Object.entries(chunk.metadata)
-                                          .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields
+                                        {chunk.metadata && Object.entries(chunk.metadata)
+                                          .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields 
                                           .filter(([metaKey]) => shouldShowMetadataField(metaKey, chunk.metadata)) // Apply our custom filter
                                           .map(([metaKey, metaValue]) => (
                                             <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
@@ -1943,14 +2210,55 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                       <div className="mb-4">
                                         <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
                                         <div className="overflow-x-auto border rounded shadow-sm">
-                                          <style dangerouslySetInnerHTML={{ __html: htmlTableStyles }} />
+                                          <style dangerouslySetInnerHTML={{ __html: `
+                                            .html-table-container {
+                                              max-height: 400px;
+                                              overflow-y: auto;
+                                            }
+                                            .html-table-container table {
+                                              border-collapse: collapse;
+                                              width: 100%;
+                                              margin-bottom: 1rem;
+                                              font-size: 0.875rem;
+                                              table-layout: auto;
+                                            }
+                                            .html-table-container th,
+                                            .html-table-container td {
+                                              border: 1px solid #e2e8f0;
+                                              padding: 0.75rem 0.5rem;
+                                              text-align: left;
+                                              vertical-align: top;
+                                              word-break: normal;
+                                              max-width: 300px;
+                                              overflow: hidden;
+                                              text-overflow: ellipsis;
+                                            }
+                                            .html-table-container th {
+                                              background-color: var(--header-bg-color, #f8fafc);
+                                              font-weight: 600;
+                                              color: var(--header-text-color, #334155);
+                                              position: sticky;
+                                              top: 0;
+                                              z-index: 1;
+                                              white-space: nowrap;
+                                            }
+                                            .html-table-container tr:nth-child(even) {
+                                              background-color: #f8fafc;
+                                            }
+                                            .html-table-container tr:hover {
+                                              background-color: #f1f5f9;
+                                            }
+                                            .html-table-container tbody tr:hover td {
+                                              background-color: rgba(236, 253, 245, 0.4);
+                                            }
+                                          ` }} />
                                           <div 
                                             className="p-2 text-sm html-table-container" 
                                             style={{
                                               '--header-bg-color': '#f7f7f7',
                                               '--header-text-color': '#333'
                                             } as React.CSSProperties}
-                                            dangerouslySetInnerHTML={{ __html: chunk.htmlTable }}
+                                            dangerouslySetInnerHTML={{ __html: chunk.htmlTable }} 
                                           />
                                         </div>
                                       </div>
@@ -1974,7 +2282,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                             </button>
                                           </div>
                                           <div className="whitespace-pre-line text-gray-800">
-                                            {cleanTextContent(chunk.content).split('\n').map((paragraph, i) => (
+                                            {cleanTextContent(chunk.content, true).cleanedText.split('\n').map((paragraph: string, i: number) => (
                                               <p key={i} className={i > 0 ? 'mt-2' : ''}>
                                                 {paragraph}
                                               </p>
