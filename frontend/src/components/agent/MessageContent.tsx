@@ -149,7 +149,10 @@ export const MessageContent: React.FC<MessageContentProps> = ({
               <span className="animate-pulse ml-0.5">▋</span>
             </>
           ) : (
-            <ReactMarkdown>{content}</ReactMarkdown>
+            <ReactMarkdown components={{
+              // Ensure paragraphs maintain their line breaks
+              p: ({children}) => <p style={{whiteSpace: 'pre-wrap'}}>{children}</p>
+            }}>{content}</ReactMarkdown>
           )}
         </p>
       </div>

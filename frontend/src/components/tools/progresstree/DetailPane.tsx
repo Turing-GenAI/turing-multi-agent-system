@@ -106,6 +106,30 @@ const DetailPane: React.FC<DetailPaneProps> = ({
   const nodeColor = getNodeColor(selectedNode.name);
   const nodeBackground = getNodeBackground(selectedNode.name);
 
+  // Debug log to see the actual content structure
+  if (selectedNode.content) {
+    console.log('DetailPane received content:', selectedNode.content);
+    console.log('DetailPane node name:', selectedNode.name);
+  }
+
+  // Prepare the content for rendering, fixing the reverse order issue
+  // Only apply the reversal to the specific node "trial supervisor - inspection_master_agent"
+  // which has this particular ordering issue
+  const needsReversal = selectedNode.name === "trial supervisor - inspection_master_agent";
+  
+  const contentToRender = selectedNode.content ? 
+    // Split by newlines, reverse the array to fix order, then join back
+    // This only happens for the inspection master agent node
+    (needsReversal && selectedNode.content.split('\n').length > 2) ? 
+      selectedNode.content.split('\n').reverse().join('\n') : 
+      selectedNode.content 
+    : '';
+
+  // NOTE: There's a known issue with paragraphs from multi-paragraph messages 
+  // get reversed during transmission from backend to frontend, but only for
+  // the "trial supervisor - inspection_master_agent" node. We're fixing this 
+  // by selectively reversing the content back to its original order before rendering.
+
   return (
     <Paper
       component={motion.div}
@@ -220,7 +244,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({
         pb: 3,
         overflow: 'auto'
       }}>
-        {selectedNode.content ? (
+        {contentToRender ? (
           <Paper
             elevation={0}
             sx={{
@@ -252,7 +276,7 @@ const DetailPane: React.FC<DetailPaneProps> = ({
                 lineHeight: 1.8,
               }}
             >
-              {selectedNode.content?.split('\n').map((paragraph, index, array) => {
+              {contentToRender.split('\n').map((paragraph, index, array) => {
                 // Decode special characters in the paragraph
                 const decodedParagraph = decodeSpecialChars(paragraph);
                 
