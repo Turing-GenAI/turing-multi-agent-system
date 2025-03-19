@@ -56,15 +56,15 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
           </div>
           <div className="prose prose-blue max-w-none">
             <div className="bg-blue-50 p-4 rounded-lg mb-6 border-l-4 border-blue-500">
-              <h3 className="text-xl font-bold text-blue-800 mb-2">Clinical Trial Audit Assistant Privacy Policy</h3>
-              <p className="text-blue-700 italic">Last Updated: March 6, 2025</p>
+              <h3 className="text-xl font-bold text-blue-800 mb-2">Audit Copilot Privacy Policy</h3>
+              <p className="text-blue-700 italic">Last Updated: March 19, 2025</p>
             </div>
             
             <div className="space-y-6">
               <section>
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">1. Introduction</h4>
                 <p className="text-gray-700 leading-relaxed">
-                  This Privacy Policy describes how we collect, use, and handle your information when you use our Clinical Trial Audit Assistant application. 
+                  This Privacy Policy describes how we collect, use, and handle your information when you use our Audit Copilot platform. 
                   We are committed to protecting your privacy and ensuring the security of your data.
                 </p>
               </section>
@@ -74,7 +74,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                 <p className="text-gray-700 mb-2">We collect information that you provide directly to us, such as:</p>
                 <ul className="list-disc pl-6 space-y-1 text-gray-700">
                   <li>Account information (name, email, organization)</li>
-                  <li>Trial information and audit data</li>
+                  <li>Audit data and documents you upload to the system</li>
                   <li>User queries and interactions with the system</li>
                   <li>System usage statistics and logs</li>
                 </ul>
@@ -105,8 +105,8 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">5. Contact Us</h4>
                 <p className="text-gray-700 leading-relaxed">
                   If you have any questions about this Privacy Policy, please contact us at 
-                  <a href="mailto:privacy@clinicaltrialaudit.com" className="text-blue-600 hover:underline ml-1">
-                    privacy@clinicaltrialaudit.com
+                  <a href="mailto:privacy@auditcopilot.com" className="text-blue-600 hover:underline ml-1">
+                    privacy@auditcopilot.com
                   </a>
                 </p>
               </section>

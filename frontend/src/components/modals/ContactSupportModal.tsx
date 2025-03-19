@@ -77,27 +77,27 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
           </div>
           <div className="prose prose-blue max-w-none">
             <div className="bg-blue-50 p-3 rounded-lg mb-4 border-l-4 border-blue-500">
-              <h3 className="text-lg font-bold text-blue-800 mb-1">Clinical Trial Audit Assistant Support</h3>
+              <h3 className="text-lg font-bold text-blue-800 mb-1">Audit Copilot Support</h3>
               <p className="text-blue-700 text-sm">Our team is ready to assist you</p>
             </div>
             
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 p-2 rounded border border-gray-200">
+                <div className="bg-gray-50 p-3 rounded border border-gray-200 hover:shadow-md transition-shadow duration-200">
                   <h4 className="text-sm font-semibold text-gray-800 border-b pb-1 mb-1">Email Support</h4>
-                  <a href="mailto:support@clinicaltrialaudit.com" className="text-blue-600 hover:underline text-sm">
-                    support@clinicaltrialaudit.com
+                  <a href="mailto:support@auditcopilot.com" className="text-blue-600 hover:underline text-sm">
+                    support@auditcopilot.com
                   </a>
                 </div>
-                <div className="bg-gray-50 p-2 rounded border border-gray-200">
+                <div className="bg-gray-50 p-3 rounded border border-gray-200 hover:shadow-md transition-shadow duration-200">
                   <h4 className="text-sm font-semibold text-gray-800 border-b pb-1 mb-1">Phone Support</h4>
                   <p className="text-gray-700 text-sm">+1 (800) 555-1234</p>
                   <p className="text-xs text-gray-500">Mon-Fri, 9am-5pm EST</p>
                 </div>
               </div>
               
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 border-b pb-1 mb-3">Send us a message</h4>
+              <div className="bg-blue-50 bg-opacity-50 p-4 rounded-lg">
+                <h4 className="text-md font-semibold text-gray-800 border-b pb-1 mb-3">Send us a message</h4>
                 <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -137,7 +137,7 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                   >
                     Submit
                   </button>
