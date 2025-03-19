@@ -2,9 +2,9 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine, text
 from datetime import datetime
+from ..common.constants import db_url
 
 # PostgreSQL connection (using the existing database)
-db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
 engine = create_engine(db_url)
 
 # Base directory where the summaries folder is located

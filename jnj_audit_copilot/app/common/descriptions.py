@@ -197,3 +197,5 @@ site_area_context = {
     "comprehensive information about the study to enable them to make a voluntary, informed "
     "decision about their participation.",
 }
+
+site_area_mapping_dict = {'PD': 'Protocol Deviations', 'AE_SAE': 'Adverse/Serious Adverse Events', 'IC': 'Informed Consent'}

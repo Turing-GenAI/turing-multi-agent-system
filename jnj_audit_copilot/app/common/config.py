@@ -16,8 +16,8 @@ graph_inputs = {
             "trial_id": "CNTO1275PUC3001",  # Trial ID for the clinical study
             "site_areas": [
                 # "SGR",
-                "PD",
                 "AE_SAE",
+                "PD"
             ],  # List of inspection areas for the site
             "date": "2024-10-11",  # Date for the scheduled inspection trigger
             "trigger_type": "immediate",  # Type of trigger indicating urgency or timing

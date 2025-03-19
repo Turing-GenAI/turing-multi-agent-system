@@ -5,6 +5,7 @@ from langchain_core.messages import AIMessage
 
 from ....common.config import ACTIVITY_LIST_FILE
 from ....common.constants import RISK_SCORES_OUTPUT_FOLDER, bold_end, bold_start
+from ....common.descriptions import site_area_mapping_dict
 from ....risk_score.css_risk_score import calculate_css_risk_score
 from ....risk_score.IR_risk_score import calculate_ir_risk_score
 from ....risk_score.ml_risk_score import fetch_ml_risk_score
@@ -95,14 +96,25 @@ class trialSupervisorNodes:
                     site_area_activity_list[trigger_site_area].append(
                         unique_activity_id + activity)
                     activity_count += 1
+        
+        site_areas_list = [f"{site_area_mapping_dict[site_area]}({site_area})" for site_area in list(site_area_activity_list.keys())]
+
+        if len(site_areas_list) == 1:
+            site_areas_str = site_areas_list[0]
+        elif len(site_areas_list) > 1:
+            site_areas_str = ", ".join(site_areas_list[:-1]) + " and " + site_areas_list[-1]
+        else:
+            site_areas_str = ""
 
         inspection_agent_node_ai_message = (
-            "Invoking Inspection Master Agent \n "
+            "Detected Inspection preparedness requirement.\n"
+            "Invoking Master Agent 1 for inspection preparedness.\n "
             # "   -> Detected site review areas for audit inspection: " +
             # str(", ".join(list(site_area_activity_list.keys())))
-            "   -> Detected domain areas for report generation: " + 
-            str(", ".join(list(site_area_activity_list.keys())))
+            f"   -> Further, detected {len(site_area_activity_list.keys())} domain areas for report generation: "
+            f"{site_areas_str}"
         )
+
         return {
             "site_area_activity_list": site_area_activity_list,
             "site_area_activity_list_index": None,

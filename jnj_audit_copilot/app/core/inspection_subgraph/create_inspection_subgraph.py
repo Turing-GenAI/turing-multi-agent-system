@@ -96,7 +96,7 @@ class inspectionSubgraph:
         )
         builder.add_edge("discrepancy_data_generator", "site_area_router")
         inspection_subgraph = builder.compile(
-            # interrupt_before=["planner_user_validation"],
+            interrupt_before=["planner_user_validation"],
             interrupt_after=["generate_findings_agent"],
         )
 

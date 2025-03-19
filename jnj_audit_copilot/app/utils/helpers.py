@@ -20,6 +20,7 @@ from app.common.constants import (
     SGR_OUTPUT_FOLDER,
     site_id,
     trial_id,
+    project_root,
 )
 from app.utils.log_setup import get_logger
 
@@ -375,7 +376,6 @@ input_filepaths_dict = generate_input_filepaths_dict(
     trial_id,
 )
 
-
 def create_ingestion_filepaths_dict(
     activity_list_file,
     chromadb_dir,
@@ -417,3 +417,52 @@ def create_ingestion_filepaths_dict(
         }
 
     return ingestion_filepaths_dict
+
+def create_ingestion_filepaths_dict_new(
+    chromadb_dir,
+    summary_folder,
+    guidelines_folder,
+    ):
+    """
+    Generates a dictionary with ingestion file paths for each site area.
+
+    Args:
+        chromadb_dir (str): The base directory path for the ChromaDB.
+        summary_folder (str): The folder name for storing summary data.
+        guidelines_folder (str): The folder name for storing guidelines data.
+
+    Returns:
+        dict: Dictionary containing structured ingestion paths for each site area.
+    """
+    ingestion_filepaths_dict = {}
+
+    with open(ACTIVITY_LIST_FILE, "r") as f:
+        site_areas = list(json.load(f).keys())
+
+    for area in site_areas:
+        # Define reusable base directory for the current area
+        chromadb_area_dir = os.path.join(project_root, chromadb_dir, area)
+
+        # Construct paths and store in the dictionary
+        ingestion_filepaths_dict[area] = {
+            "summary_persist_directory": os.path.join(chromadb_area_dir, summary_folder),
+            "guidelines_persist_directory": os.path.join(chromadb_area_dir, guidelines_folder)
+        }
+
+    return ingestion_filepaths_dict
+
+def is_folder_empty(folder_path):
+    """
+    Check if a folder is empty.
+    
+    Args:
+        folder_path (str): Path to the folder
+        
+    Returns:
+        bool: True if the folder is empty or doesn't exist, False otherwise
+    """
+    try:
+        return len(os.listdir(folder_path)) == 0
+    except FileNotFoundError:
+        # If the folder doesn't exist, consider it empty
+        return True

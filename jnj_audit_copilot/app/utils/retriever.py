@@ -4,15 +4,15 @@ from sqlalchemy import create_engine, text
 import pandas as pd
 # from langchain_community.vectorstores import Chroma
 from langchain_chroma import Chroma
-from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
+from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_GUIDELINES, db_url
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_embedding_openai_client
 from ..common.descriptions import ref_dict
-from .create_vector_store import CHROMA_DB_FOLDER, db_url
+from .create_vector_store import ingestion_filepaths_dict
 
-# from ..utils.create_summaries_db import summary_persist_directory
 # Get logger instance
 logger = get_logger()
+
 
 class SummaryRetriever:
     def __init__(self, site_area: str):
@@ -23,14 +23,12 @@ class SummaryRetriever:
         """
         self.site_area = site_area
         self.engine = create_engine(db_url)
-        
-        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "summary")
-        # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
+        self.summary_persist_directory = ingestion_filepaths_dict[self.site_area]["summary_persist_directory"]    
 
-        if not os.path.exists(summary_persist_directory):
+        if not os.path.exists(self.summary_persist_directory):
             raise ValueError(f"No ChromaDB found for site area: {site_area}")
         self.vectorstore = Chroma(
-            persist_directory=summary_persist_directory,
+            persist_directory=self.summary_persist_directory,
             embedding_function=azure_embedding_openai_client,
             collection_name=CHROMADB_INDEX_SUMMARIES
         )
@@ -60,22 +58,20 @@ class SummaryRetriever:
                 # Get metadata from ChromaDB result
                 metadata = doc.metadata
                 database = metadata.get('database_name', 'rag_db')
-                schema = metadata.get('schema_name', 'pd')
-                table = metadata.get('table_name', 'protocol_deviation')
+                schema = metadata.get('schema_name')
+                table = metadata.get('table_name')
                 
                 # Build SQL query and parameters list
                 conditions = ["1=1"]
 
-                # logger.debug(f"ref_dict:{ref_dict}")
-                # logger.debug(f"site_area:{self.site_area}")
-                # logger.debug(f"table:{table}")
                 if table == 'adverse_events':
                     table_ = "Adverse Events"
                 else:
                     table_ = table
+
                 site_id_name = ref_dict.get(self.site_area).get(table_)['site_id']
                 trial_id_name = ref_dict.get(self.site_area).get(table_)['trial_id']
-                # logger.info(f"site_id_name: {site_id_name}, trial_id_name: {trial_id_name}")
+                
                 if site_id and site_id_name:
                     conditions.append(f"\"{site_id_name}\" = '{site_id}'")
                 if trial_id and trial_id_name:
@@ -83,13 +79,14 @@ class SummaryRetriever:
 
                 # Construct the final query
                 sql_query = f"""
-                SELECT * FROM {database}.{schema}.{table}
-                WHERE {' AND '.join(conditions)}
-                """
+                            SELECT * FROM {database}.{schema}.{table}
+                            WHERE {' AND '.join(conditions)}
+                            """
 
                 # Execute query using pandas read_sql with params
                 with self.engine.connect() as conn:
                     result_table = pd.read_sql(sql_query, conn)
+              
                 # Combine vector search results with original data
                 retrieved_docs.append({
                 'relevance_score': score,
@@ -108,14 +105,15 @@ class SummaryRetriever:
 class GuidelinesRetriever:
     def __init__(self, site_area: str) -> None:
         self.site_area = site_area
+        self.guidelines_persist_directory = ingestion_filepaths_dict[self.site_area]["guidelines_persist_directory"]
+        
         # Initialize ChromaDB for this site area
-        guidelines_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "guidelines") 
-        if not os.path.exists(guidelines_persist_directory):
+        if not os.path.exists(self.guidelines_persist_directory):
             raise ValueError(f"No ChromaDB found for site area: {site_area}")
         self.vectorstore = Chroma(
-            persist_directory=guidelines_persist_directory,
+            persist_directory=self.guidelines_persist_directory,
             embedding_function=azure_embedding_openai_client,
-            collection_name=CHROMADB_INDEX_DOCS
+            collection_name=CHROMADB_INDEX_GUIDELINES
         )
         # logger.debug(f"guidelines_vectorstore: {self.vectorstore}")
 

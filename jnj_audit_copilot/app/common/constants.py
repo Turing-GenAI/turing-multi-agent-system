@@ -8,6 +8,25 @@ from app.common.config import (
     graph_inputs,
 )
 
+
+def get_project_root():
+    """
+    Get the absolute path to the project root directory.
+    """
+    # Path to this file
+    current_file = os.path.abspath(__file__)
+    # Path to utils directory
+    utils_dir = os.path.dirname(current_file)
+    # Path to app directory
+    app_dir = os.path.dirname(utils_dir)
+    # Path to jnj_audit_copilot directory
+    jnj_dir = os.path.dirname(app_dir)
+    # Path to project root
+    project_root = os.path.dirname(jnj_dir)
+    return project_root
+
+project_root = get_project_root()
+
 # Graph Input Details
 site_id = graph_inputs["trigger_list"][0]["site_id"]
 trial_id = graph_inputs["trigger_list"][0]["trial_id"]
@@ -34,6 +53,15 @@ CHROMADB_GUIDELINES_FOLDER_NAME = "guidelines"  # ChromaDB directory for storing
 CHROMADB_INDEX_SUMMARIES = "summaries"  # ChromaDB index for storing document summaries
 # ChromaDB index for storing guideline document vectors
 CHROMADB_INDEX_DOCS = "guidelines_vectorstore"
+CHROMADB_INDEX_GUIDELINES = "guidelines"
+
+# Box Constants
+BOX_ROOT_FOLDER_ID = os.getenv("BOX_ROOT_FOLDER_ID", "0")
+BOX_DOWNLOAD_FOLDER = os.path.join(project_root, "jnj_audit_copilot", 'documents')
+
+# PostgreSQL connection
+db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"
+
 CHUNK_SIZE = 3500  # Determines the size of each data chunk when processing documents
 # Specifies overlap between chunks to ensure context retention across chunks
 CHUNK_OVERLAP = 250

@@ -133,7 +133,7 @@ class InspectionAgentState(TypedDict):
     next_node: str
     purpose: str = "get_user_feedback"
     feedback_from: str
-
+    interrupt: bool = False
 
 class SelfRAGState(TypedDict):
     trigger_list: Annotated[List[Dict[str, Union[str, List[str]]]], operator.add]
