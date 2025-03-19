@@ -241,7 +241,6 @@ if __name__ == "__main__":
 
     graph_inputs = clean_graph_inputs(graph_inputs.copy())
     graph_inputs["run_id"] = run_id
-    graph_inputs["chat_id"] = run_id
     
     # Run the graph for the first time
     state_before_interruption = run_graph_first_run(
