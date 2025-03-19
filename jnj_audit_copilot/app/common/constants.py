@@ -15,15 +15,20 @@ def get_project_root():
     """
     # Path to this file
     current_file = os.path.abspath(__file__)
-    # Path to utils directory
-    utils_dir = os.path.dirname(current_file)
+    print(f"Current file path: {current_file}")
+    
+    # Path to common directory
+    common_dir = os.path.dirname(current_file)
     # Path to app directory
-    app_dir = os.path.dirname(utils_dir)
+    app_dir = os.path.dirname(common_dir)
     # Path to jnj_audit_copilot directory
     jnj_dir = os.path.dirname(app_dir)
-    # Path to project root
-    project_root = os.path.dirname(jnj_dir)
-    return project_root
+    # Path to turing-multi-agent-system directory
+    turing_dir = os.path.dirname(jnj_dir)
+    
+    print(f"Project root determined as: {turing_dir}")
+    
+    return turing_dir
 
 project_root = get_project_root()
 
