@@ -56,15 +56,15 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
           </div>
           <div className="prose prose-blue max-w-none">
             <div className="bg-blue-50 p-4 rounded-lg mb-6 border-l-4 border-blue-500">
-              <h3 className="text-xl font-bold text-blue-800 mb-2">Clinical Trial Audit Assistant Terms of Service</h3>
-              <p className="text-blue-700 italic">Last Updated: March 6, 2025</p>
+              <h3 className="text-xl font-bold text-blue-800 mb-2">Audit Copilot Terms of Service</h3>
+              <p className="text-blue-700 italic">Last Updated: March 19, 2025</p>
             </div>
             
             <div className="space-y-6">
               <section>
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">1. Acceptance of Terms</h4>
                 <p className="text-gray-700 leading-relaxed">
-                  By accessing or using the Clinical Trial Audit Assistant, you agree to be bound by these Terms of Service. 
+                  By accessing or using the Audit Copilot, you agree to be bound by these Terms of Service. 
                   If you do not agree to these terms, please do not use our service.
                 </p>
               </section>
@@ -72,8 +72,8 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
               <section>
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">2. Description of Service</h4>
                 <p className="text-gray-700 leading-relaxed">
-                  The Clinical Trial Audit Assistant provides AI-powered tools to assist with clinical trial auditing, 
-                  compliance review, and data analysis. The service is provided "as is" and may be updated or modified at any time.
+                  The Audit Copilot provides AI-powered tools to assist with auditing, compliance verification, 
+                  and data analysis. The service is provided "as is" and may be updated or modified at any time.
                 </p>
               </section>
               
@@ -88,7 +88,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
               <section>
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">4. Data Usage and Privacy</h4>
                 <p className="text-gray-700 leading-relaxed">
-                  Your use of the service is also governed by our Privacy Policy. By using the Clinical Trial Audit Assistant, 
+                  Your use of the service is also governed by our Privacy Policy. By using the Audit Copilot, 
                   you consent to the collection and use of information as detailed in our Privacy Policy.
                 </p>
               </section>
@@ -96,7 +96,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
               <section>
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">5. Intellectual Property</h4>
                 <p className="text-gray-700 leading-relaxed">
-                  All content, features, and functionality of the Clinical Trial Audit Assistant, including but not limited to text, 
+                  All content, features, and functionality of the Audit Copilot, including but not limited to text, 
                   graphics, logos, and software, are owned by us or our licensors and are protected by copyright, trademark, 
                   and other intellectual property laws.
                 </p>
@@ -123,8 +123,8 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
                 <h4 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">8. Contact</h4>
                 <p className="text-gray-700 leading-relaxed">
                   If you have any questions about these Terms, please contact us at 
-                  <a href="mailto:legal@clinicaltrialaudit.com" className="text-blue-600 hover:underline ml-1">
-                    legal@clinicaltrialaudit.com
+                  <a href="mailto:legal@auditcopilot.com" className="text-blue-600 hover:underline ml-1">
+                    legal@auditcopilot.com
                   </a>
                 </p>
               </section>
