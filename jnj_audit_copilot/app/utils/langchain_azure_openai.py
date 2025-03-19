@@ -48,7 +48,8 @@ try:
         if embedding_model_name and "small" in embedding_model_name.lower():
             embedding_dimensions = 1536  # Default for text-embedding-3-small
         else:
-            embedding_dimensions = 2000  # Safe default for text-embedding-3-large (Azure Cosmos DB limit)
+            # Using full dimensions for text-embedding-3-large with Cosmos DB NoSQL API
+            embedding_dimensions = 3072  # Full dimensions for text-embedding-3-large
         logger.info(f"Using default embedding dimension for model {embedding_model_name}: {embedding_dimensions}")
 except (ValueError, TypeError) as e:
     logger.error(f"Error parsing VECTOR_DIMENSION environment variable: {e}")

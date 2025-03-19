@@ -127,7 +127,7 @@ def guidelines_retriever_tool(sub_activity: str, site_id: str, trial_id: str, si
     # guidelines_vectorstore = ingestor.ingest_guidelines()
     guidelines_vectorstore = GuidelinesRetriever(site_area = site_area)
     guidelines_relevant_docs = guidelines_vectorstore.retrieve_relevant_documents(query=sub_activity, k=3)
-    logger.debug(f"guidelines_relevant_docs: {guidelines_relevant_docs}")
+    # logger.debug(f"guidelines_relevant_docs: {guidelines_relevant_docs}")
     if guidelines_relevant_docs:
         # all_metadata = " ,".join([str(doc.metadata) for doc_ in guidelines_relevant_docs])
         all_metadata_list = []

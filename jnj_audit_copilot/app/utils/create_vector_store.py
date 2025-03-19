@@ -65,7 +65,6 @@ class DataProcessor:
                 if "small" in self.embedding_model_name.lower():
                     self.vector_dimension = 1536  # Dimension for text-embedding-3-small
                 elif "large" in self.embedding_model_name.lower():
-                    # Limit to 2000 dimensions for Azure Cosmos DB compatibility 
                     self.vector_dimension = 2000
                 else:
                     self.vector_dimension = 1536  # Safe default
@@ -90,6 +89,20 @@ class DataProcessor:
         logger.info(f"  - Vector Dimension: {self.vector_dimension}")
         logger.info(f"  - Vector Index Type: {self.vector_index_type}")
         logger.info(f"  - Vector Index Creation: {'Enabled' if self.create_vector_index else 'Disabled'}")
+    
+    def get_vector_client(self, collection_name, **kwargs):
+        """
+        Get the appropriate vector client based on configuration
+        """
+        vector_client = MongoVCoreVectorClient(
+                collection_name=collection_name,
+                embedding_function=azure_embedding_openai_client,
+                vector_dimension=self.vector_dimension,
+                index_type=self.vector_index_type,
+                create_vector_index=self.create_vector_index,
+                **kwargs
+            )
+        return vector_client
     
     class SiteDataProcessor:
         def __init__(self, parent):
@@ -122,7 +135,7 @@ class DataProcessor:
 
         def process_summary_data_by_site_area(self, site_area: str):
             """
-            Create a new MongoDB vCore collection for summaries and store embeddings.
+            Create a new vector store collection for summaries and store embeddings.
             Each site area gets its own collection.
             
             Args:
@@ -141,8 +154,8 @@ class DataProcessor:
                 logger.info("Generating embeddings...")
                 summaries = df["Summary"].tolist()
                 
-                # Store embeddings in MongoDB with site-specific collection name
-                logger.info(f"Storing summaries in MongoDB vCore for {site_area}...")
+                # Store embeddings with site-specific collection name
+                logger.info(f"Storing summaries for {site_area}...")
                 
                 collection_name = f"summaries_{site_area.lower()}"
                 
@@ -160,26 +173,27 @@ class DataProcessor:
                     )
                     documents.append(doc)
 
-                # Store in MongoDB using the vCore client
+                # Get the appropriate vector client based on configuration
+                    
                 vectorstore = MongoVCoreVectorClient.from_documents(
-                    documents=documents,
-                    embedding=azure_embedding_openai_client,
-                    collection_name=collection_name,
-                    vector_dimension=self.vector_dimension,
-                    index_type=self.vector_index_type,
-                    create_vector_index=self.create_vector_index
-                )
-
+                        documents=documents,
+                        embedding=azure_embedding_openai_client,
+                        collection_name=collection_name,
+                        vector_dimension=self.vector_dimension,
+                        index_type=self.vector_index_type,
+                        create_vector_index=self.create_vector_index
+                    )
                 logger.info(f"Successfully stored {len(summaries)} embeddings in MongoDB vCore for {site_area}")
+
                 return vectorstore
             except Exception as e:
-                logger.error(f"Error storing summaries in MongoDB vCore: {e}")
+                logger.error(f"Error storing summaries: {e}")
                 logger.error(f"Error details: {str(e)}")
                 return None
 
         def process_all_summary_data(self):
             """
-            Process all available site areas and create their respective MongoDB vCore collections.
+            Process all available site areas and create their respective vector store collections.
             """
             try:
                 # Get list of all tables (site areas) from PostgreSQL
@@ -233,33 +247,21 @@ class DataProcessor:
                     print("Continuing without Box download. Using existing files if available.")
                     
 
-                    # Check if we have any existing files to work with
-                    if os.path.exists(self.base_documents_dir) and os.listdir(self.base_documents_dir):
-                        logger.info("Using existing documents directory.")
-                        print("Using existing documents directory.")
-                        return True
+                # Check if we have any existing files to work with
+                if os.path.exists(self.base_documents_dir) and os.listdir(self.base_documents_dir):
+                    logger.info("Using existing documents directory.")
 
-                    else:
-                        # Create an empty directory so the rest of the code can continue
-                        os.makedirs(self.base_documents_dir, exist_ok=True)
-                        logger.warning("Created empty documents directory. No Box files will be available.")
-                        print("Created empty documents directory. No Box files will be available.")
-                        return False
-                
-                if os.path.exists(self.base_documents_dir):
-                    logger.info("Documents directory already exists. Skipping download...")
-                    print("Documents directory already exists. Skipping download...")
-                    return True
-
-                # Create Documents directory if it doesn't exist
-                os.makedirs(self.base_documents_dir, exist_ok=True)
+                else:
+                    # Create an empty directory so the rest of the code can continue
+                    os.makedirs(self.base_documents_dir, exist_ok=True)
+                    logger.warning("Created empty documents directory. No Box files will be available.")                
                 
                 logger.info("Starting download of files from Box...")
                 stats = process_folder_contents(
                     client,
                     folder_id=self.box_root_folder_id,
                     local_base_path=self.base_documents_dir,
-                    download_mode="smart"  # Use smart mode to only download changed files
+                    download_mode="overwrite"  # Use smart mode to only download changed files, we can also use "skip" to skip download and "overwrite" to overwrite existing files
                 )
                 print(f"Download complete. Stats: {stats}")
                 logger.info(f"Download complete. Stats: {stats}")
@@ -267,9 +269,7 @@ class DataProcessor:
             except Exception as e:
                 logger.error(f"Error downloading files from Box: {e}")
                 print(f"Error downloading files from Box: {e}")
-                
-                # Create directory if it doesn't exist so the rest of the code can continue
-                os.makedirs(self.base_documents_dir, exist_ok=True)
+
                 return False        
 
         def load_and_split_document(self, file_path: str) -> Optional[List[Document]]:
@@ -301,9 +301,9 @@ class DataProcessor:
                 logger.error(f"Error processing file {file_path}: {e}")
                 return None
 
-        def process_documents_by_site_area(self, site_area: str) -> Optional[MongoVCoreVectorClient]:
+        def process_documents_by_site_area(self, site_area: str):
             """
-            Process all documents in a site area and store in MongoDB vCore
+            Process all documents in a site area and store in vector database
             """
             try:
                 site_area_path = os.path.join(self.base_documents_dir, site_area)
@@ -337,18 +337,19 @@ class DataProcessor:
                     logger.warning(f"No documents processed for site area: {site_area}")
                     return None
 
-                # Create and store in MongoDB vCore
+                # Create and store in vector database
                 collection_name = f"guidelines_{site_area.lower()}"
-                vectorstore = MongoVCoreVectorClient.from_documents(
-                    documents=all_splits,
-                    embedding=azure_embedding_openai_client,
-                    collection_name=collection_name,
-                    vector_dimension=self.vector_dimension,
-                    index_type=self.vector_index_type,
-                    create_vector_index=self.create_vector_index
-                )
                 
+                vectorstore = MongoVCoreVectorClient.from_documents(
+                        documents=all_splits,
+                        embedding=azure_embedding_openai_client,
+                        collection_name=collection_name,
+                        vector_dimension=self.vector_dimension,
+                        index_type=self.vector_index_type,
+                        create_vector_index=self.create_vector_index
+                    )
                 logger.info(f"Successfully created MongoDB vCore vector store for {site_area} with {len(all_splits)} chunks")
+                
                 return vectorstore
                 
             except Exception as e:
@@ -382,11 +383,36 @@ class DataProcessor:
                 return results
 
 if __name__ == "__main__":
+    # Log the vector store being used
+    logger.info("Using MongoDB vCore as vector store")
+    print("Using MongoDB vCore as vector store")
+        
     data_processor = DataProcessor()
     guidelines_processor = data_processor.GuidelinesProcessor(data_processor)
-    # guidelines_processor.download_box_files()
-    guidelines_processor.process_all_documents()
-
-    # Uncomment to process summaries as well
+    
+    # Step 1: Download Box files
+    print("=== Starting Box File Download ===")
+    download_success = guidelines_processor.download_box_files()
+    if download_success:
+        print("✅ Box file download completed successfully or using existing files")
+    else:
+        print("⚠️ Box file download had issues - will use any existing files instead")
+    
+    # Step 2: Process documents and create vector stores
+    print("\n=== Starting Guidelines Processing ===")
+    results = guidelines_processor.process_all_documents()
+    successful_areas = [area for area, success in results.items() if success]
+    failed_areas = [area for area, success in results.items() if not success]
+    
+    print(f"✅ Successfully processed {len(successful_areas)} site areas: {', '.join(successful_areas) if successful_areas else 'None'}")
+    if failed_areas:
+        print(f"❌ Failed to process {len(failed_areas)} site areas: {', '.join(failed_areas)}")
+    
+    # Step 3: Process summary data from PostgreSQL
+    print("\n=== Starting Summary Data Processing ===")
     site_data_processor = data_processor.SiteDataProcessor(data_processor)
     site_data_processor.process_all_summary_data()
+    print("✅ Summary data processing completed")
+    
+    print("\n=== Vector Store Creation Complete ===")
+    print("The data is now ready for querying using the MongoDB vCore vector search")

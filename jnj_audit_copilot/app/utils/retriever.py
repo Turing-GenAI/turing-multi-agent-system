@@ -3,12 +3,13 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy import create_engine, text
 import pandas as pd
 # from langchain_community.vectorstores import Chroma
-from langchain_chroma import Chroma
-from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
+# from langchain_chroma import Chroma
+# from ..common.constants import CHROMADB_INDEX_SUMMARIES, CHROMADB_INDEX_DOCS
 from .log_setup import get_logger
 from .langchain_azure_openai import azure_embedding_openai_client
 from ..common.descriptions import ref_dict
-from .create_vector_store import CHROMA_DB_FOLDER, db_url
+from .create_vector_store import db_url
+from .mongo_vcore_vector_client import MongoVCoreVectorClient
 
 # from ..utils.create_summaries_db import summary_persist_directory
 # Get logger instance
@@ -24,16 +25,18 @@ class SummaryRetriever:
         self.site_area = site_area
         self.engine = create_engine(db_url)
         
-        summary_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "summary")
-        # logger.debug(f"Using ChromaDB directory: {summary_persist_directory}")
-
-        if not os.path.exists(summary_persist_directory):
-            raise ValueError(f"No ChromaDB found for site area: {site_area}")
-        self.vectorstore = Chroma(
-            persist_directory=summary_persist_directory,
-            embedding_function=azure_embedding_openai_client,
-            collection_name=CHROMADB_INDEX_SUMMARIES
+        # Create collection name based on site_area for MongoDB
+        collection_name = f"summaries_{site_area.lower()}"
+        
+        # Using MongoVCoreVectorClient instead of ChromaDB
+        self.vectorstore = MongoVCoreVectorClient(
+            collection_name=collection_name,
+            embedding_function=azure_embedding_openai_client
         )
+        
+        # Filter by site_area to ensure we're only querying relevant documents
+        self.filter = {"site_area": site_area}
+        
     def retrieve_relevant_documents(
         self,
         query: str,
@@ -52,12 +55,17 @@ class SummaryRetriever:
             List of dictionaries containing both vector search results and original data
         """
         try:
-            # Search in ChromaDB
-            results = self.vectorstore.similarity_search_with_relevance_scores(query, k=k)
-            # logger.debug(f"chromadb result: {results}")
+            # Search in MongoDB using the same interface as ChromaDB
+            results = self.vectorstore.similarity_search_with_relevance_scores(
+                query, 
+                k=k, 
+                filter=self.filter
+            )
+            print(f"********************** MongoDB vector search result SummaryRetriever: {results}")
+            
             retrieved_docs = []
             for doc, score in results:
-                # Get metadata from ChromaDB result
+                # Get metadata from search result
                 metadata = doc.metadata
                 database = metadata.get('database_name', 'rag_db')
                 schema = metadata.get('schema_name', 'pd')
@@ -108,17 +116,19 @@ class SummaryRetriever:
 class GuidelinesRetriever:
     def __init__(self, site_area: str) -> None:
         self.site_area = site_area
-        # Initialize ChromaDB for this site area
-        guidelines_persist_directory = os.path.join(CHROMA_DB_FOLDER, site_area, "guidelines") 
-        if not os.path.exists(guidelines_persist_directory):
-            raise ValueError(f"No ChromaDB found for site area: {site_area}")
-        self.vectorstore = Chroma(
-            persist_directory=guidelines_persist_directory,
-            embedding_function=azure_embedding_openai_client,
-            collection_name=CHROMADB_INDEX_DOCS
+        
+        # Create collection name based on site_area for MongoDB
+        collection_name = f"guidelines_{site_area.lower()}"
+        
+        # Using MongoVCoreVectorClient instead of ChromaDB
+        self.vectorstore = MongoVCoreVectorClient(
+            collection_name=collection_name,
+            embedding_function=azure_embedding_openai_client
         )
-        # logger.debug(f"guidelines_vectorstore: {self.vectorstore}")
-
+        
+        # Filter by site_area to ensure we're only querying relevant documents
+        self.filter = {"site_area": site_area}
+        
     def retrieve_relevant_documents(
         self,
         query: str,
@@ -137,9 +147,15 @@ class GuidelinesRetriever:
             List of dictionaries containing both vector search results and original data
         """
         try:
-            # Search in ChromaDB
-            results = self.vectorstore.similarity_search_with_relevance_scores(query, k=k)
-            # logger.debug(f"chromadb result: {results}")
+            # Search in MongoDB using the same interface as ChromaDB
+            results = self.vectorstore.similarity_search_with_relevance_scores(
+                query, 
+                k=k, 
+                filter=self.filter
+            )
+            # logger.debug(f"MongoDB vector search result: {results}")
+            print(f"********************** MongoDB vector search result GuidelinesRetriever: {results}")
             return results
         except Exception as e:
             logger.error(f"Error retrieving relevant documents: {e}")
+            return []
