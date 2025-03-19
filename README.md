@@ -4,7 +4,7 @@
 
 This document provides an overview of the Turing Multi-Agent System, which consists of three main components:
 
-1. **JnJAuditCopilot** - AI-powered backend for audit analysis
+1. **Turing Audit Copilot** - AI-powered backend for audit analysis
 2. **Scheduler API** - Job management and coordination service
 3. **React Frontend** - User interface for interaction and visualization
 
