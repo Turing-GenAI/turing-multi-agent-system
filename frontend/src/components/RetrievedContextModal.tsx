@@ -17,13 +17,104 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
 }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const [updateCount, setUpdateCount] = useState<number>(0);
   const previousDataRef = useRef<RetrievedContextResponse | null>(null);
-  const [updateCount, setUpdateCount] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Update the last update time and count when data changes
+  useEffect(() => {
+    if (data && data !== previousDataRef.current) {
+      setLastUpdateTime(new Date());
+      setUpdateCount(prev => prev + 1);
+      previousDataRef.current = data;
+    }
+  }, [data]);
+  
+  // Reset expanded sections when data changes completely
+  useEffect(() => {
+    if (data && (!previousDataRef.current || Object.keys(data).sort().join(',') !== Object.keys(previousDataRef.current).sort().join(','))) {
+      setExpandedSections({});
+    }
+  }, [data]);
+  
+  useEffect(() => {
+    const styleTag = document.createElement('style');
+    styleTag.innerHTML = `
+      .html-table-container table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        table-layout: auto;
+      }
+      .html-table-container th,
+      .html-table-container td {
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem 0.5rem;
+        text-align: left;
+        vertical-align: top;
+        word-break: normal;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .html-table-container th {
+        background-color: var(--header-bg-color, #f8fafc);
+        font-weight: 600;
+        color: var(--header-text-color, #334155);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        white-space: nowrap;
+      }
+      .html-table-container tr:nth-child(even) {
+        background-color: #f8fafc;
+      }
+      .html-table-container tr:hover {
+        background-color: #f1f5f9;
+      }
+      .html-table-container tbody tr:hover td {
+        background-color: rgba(236, 253, 245, 0.4);
+      }
+    `;
+    document.head.appendChild(styleTag);
+    return () => {
+      document.head.removeChild(styleTag);
+    };
+  }, []);
 
-  // Function to clean up subactivity values by extracting activity ID and removing hash values
-  const cleanSubactivityValue = (value: string): string => {
+  // Only show modal if it's open
+  if (!isOpen) {
+    return null;
+  }
+  
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedText(text);
+      setTimeout(() => setCopiedText(null), 2000);
+    });
+  };
+  
+  // Helper function to clean text content for display
+  const cleanTextContent = (text: string): string => {
+    if (!text) return '';
+    
+    // Only fix common encoding issues without changing formatting
+    return text
+      .replace(/�/g, 'ti') // Fix common encoding issues like "Inspec�on" -> "Inspection"
+      .replace(/�/g, 'i'); // Another common encoding issue
+  };
+  
+  // Helper function to clean sub-activity values
+  const cleanSubactivityValue = (value: string | undefined) => {
     if (!value) return '';
     
     // Extract activity ID if present
@@ -34,171 +125,132 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
     const cleanedText = value
       .replace(/<activity_id#[^>]+>/, '')
       .replace(/###/, '')
-      .trim();
+      .trim()
+      .replace(/^\d+_/, '') // Remove numeric prefixes (e.g., "1_", "2_", etc.)
+      .replace(/^(sub[-_\s]?activity|activity)[:;]?\s*/i, ''); // Remove activity/subactivity prefix
     
     // Return formatted string with activity ID if available
     return activityId ? `${activityId} - ${cleanedText}` : cleanedText;
   };
-
-  // Temporary function to map local URLs to Box URLs
-  // This will be removed once working URLs come from the backend
-  const mapSourceUrl = (url: string, metadata?: any): string => {
-    // For debugging
-    console.log('Source URL mapping:', { url, metadata });
-    
-    let mappedUrl = url;
-    
-    // Map for known URLs
-    if (url.includes('protocol_deviation.xlsx')) {
-      mappedUrl = 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
-    } else if (url.includes('AE_SAE/data/filtered_RaveReport_example') && url.includes('Adverse Events.xlsx')) {
-      mappedUrl = 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
-    } else if (url.includes('Inspection Readiness Guidance V4.0.pdf')) {
-      // For PDF documents in Box, use the base URL
-      mappedUrl = 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
-    }
-    
-    return mappedUrl;
-  };
-
-  // Function to clean up text content from the backend
-  const cleanTextContent = (text: string): string => {
-    if (!text) return '';
-    
-    // Only fix common encoding issues without changing formatting
-    return text
-      .replace(/�/g, 'ti') // Fix common encoding issues like "Inspec�on" -> "Inspection"
-      .replace(/�/g, 'i'); // Another common encoding issue
-  };
-
-  // Function to handle source link click
-  const handleSourceLinkClick = (url: string, metadata?: any) => {
-    const mappedUrl = mapSourceUrl(url, metadata);
-    console.log('Handling source link click:', { url, mappedUrl, metadata });
-    
-    // Open the URL in a new window
-    window.open(mappedUrl, '_blank');
-    return false; // Prevent default link behavior
-  };
-
-  // Function to filter metadata fields for spreadsheet-type documents
+  
+  // Helper function to determine if a metadata field should be shown
   const shouldShowMetadataField = (key: string, metadata: any): boolean => {
-    // List of fields to hide for spreadsheet-type documents
-    const fieldsToHide = [
-      'file_directory',
-      'page_name',
-      'page_number',
-      'languages',
-      'filetype',
-      'category',
-      'element_id',
-      'last_modified'
-    ];
+    const fieldsToHide = ['file_directory', 'page_name', 'page_number', 'languages', 'filetype', 'category', 'element_id', 'last_modified'];
     
-    // Check if this is a spreadsheet-type document
-    const isSpreadsheetDoc = metadata.filename && 
-      (metadata.filename.endsWith('.xlsx') || 
-       metadata.filename.endsWith('.xls') || 
-       metadata.filename.endsWith('.csv') ||
-       (metadata.filetype && 
-        (metadata.filetype.includes('excel') || 
-         metadata.filetype.includes('spreadsheet') || 
-         metadata.filetype.includes('csv'))));
-    
-    // If it's a spreadsheet document and the field is in the hide list, don't show it
-    if (isSpreadsheetDoc && fieldsToHide.includes(key)) {
+    // Always hide site_area regardless of document type
+    if (key === 'site_area') {
       return false;
     }
     
+    const isSpreadsheetDoc = metadata.filename && (metadata.filename.endsWith('.xlsx') || metadata.filename.endsWith('.xls'));
+    if (isSpreadsheetDoc && fieldsToHide.includes(key)) {
+      return false;
+    }
     return true;
   };
-
-  // Custom CSS for styling HTML tables
-  const tableStyles = `
-    .html-table-container table {
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 0.875rem;
-      border-radius: 0.375rem;
-      overflow: hidden;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-    
-    .html-table-container table td,
-    .html-table-container table th {
-      padding: 0.75rem;
-      border: 1px solid #e5e7eb;
-    }
-    
-    .html-table-container table tr:first-child {
-      font-weight: bold;
-      background-color: var(--header-bg-color);
-      color: var(--header-text-color);
-    }
-    
-    .html-table-container table tr:not(:first-child):hover {
-      background-color: #f9fafb;
-    }
-  `;
-
-  useEffect(() => {
-    // Add styles for HTML tables
-    const styleTag = document.createElement('style');
-    styleTag.innerHTML = tableStyles;
-    document.head.appendChild(styleTag);
-    
-    // Add keyboard event listener for ESC key
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+  
+  // Helper function to map metadata keys to user-friendly display names
+  const getMetadataDisplayName = (key: string): string => {
+    const displayNameMap: Record<string, string> = {
+      'source': 'Source',
+      'chunk_index': 'Page Number',
+      'file_name': 'File Name',
+      'relative_path': 'Relative Path',
+      'sql_query': 'SQL Query'
     };
-    window.addEventListener('keydown', handleEsc);
-
-    return () => {
-      document.head.removeChild(styleTag);
-      window.removeEventListener('keydown', handleEsc);
-    };
-  }, [onClose]);
-
-  // Check for data updates and set last update time
-  useEffect(() => {
-    if (data && (!previousDataRef.current || JSON.stringify(data) !== JSON.stringify(previousDataRef.current))) {
-      setLastUpdateTime(new Date());
-      setUpdateCount(prevCount => prevCount + 1);
-      previousDataRef.current = data;
+    
+    return displayNameMap[key] || key;
+  };
+  
+  // Helper function to map source URLs for external links
+  const mapSourceUrl = (source: string, metadata: any): string => {
+    // For debugging
+    console.log('Mapping source URL:', { source, metadata });
+    
+    // If source is already a URL, return it
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return source;
     }
-  }, [data]);
-
-  // Reset expanded sections and update count when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      // Keep all sections closed by default
-      setExpandedSections({});
+    
+    // Map specific sources to Box URLs
+    if (source === 'rag_db.ae_sae.adverse_events') {
+      return 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+    } else if (source === 'rag_db.pd.protocol_deviation') {
+      return 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+    }
+    
+    // Check for specific file names in metadata
+    if (metadata) {
+      // Check both filename and file_name fields
+      const fileName = metadata.filename || metadata.file_name;
       
-      // Reset update count if this is a new session
-      if (!previousDataRef.current) {
-        setUpdateCount(0);
+      if (fileName) {
+        console.log('Found filename in metadata:', fileName);
+        
+        // Handle specific filenames
+        if (fileName === 'Inspection Readiness Guidance V4.0.pdf' || source === 'Inspection Readiness Guidance V4.0.pdf') {
+          return 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
+        }
+        
+        // Handle Excel files related to adverse events
+        if (fileName.includes('Adverse Events.xlsx') || fileName.toLowerCase().includes('adverse_events')) {
+          return 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+        }
+        
+        // Handle Excel files related to protocol deviations
+        if (fileName.includes('protocol_deviation.xlsx') || fileName.toLowerCase().includes('protocol_deviation')) {
+          return 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+        }
       }
     }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const toggleSection = (key: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    
+    // Legacy mappings for backward compatibility
+    if (source.includes('protocol_deviation.xlsx')) {
+      return 'https://app.box.com/s/vh13jqxkobcn2munalyn99fb660uwmp6';
+    } else if (source.includes('AE_SAE/data/filtered_RaveReport_example') && source.includes('Adverse Events.xlsx')) {
+      return 'https://app.box.com/s/yhpjlgh9obecc9y4yv2ulwsfeahobmdg';
+    } else if (source.includes('Inspection Readiness Guidance V4.0.pdf')) {
+      return 'https://app.box.com/s/tj41ww272kasc6cczqra6m8y7ljipeik';
+    }
+    
+    // For other file paths, just return as is
+    return source;
   };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedText(text);
-      setTimeout(() => setCopiedText(null), 2000);
-    });
+  
+  // Helper function to handle source link clicks
+  const handleSourceLinkClick = (source: string, metadata: any): boolean => {
+    console.log('Handling source link click:', { source, metadata });
+    
+    // If source is already a URL, allow default behavior
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return true;
+    }
+    
+    // Check for specific file names in metadata
+    if (metadata) {
+      const fileName = metadata.filename || metadata.file_name;
+      
+      // Handle specific file types
+      if (fileName) {
+        // Check if it's an Excel file or other supported file type
+        const isExcelFile = fileName.toLowerCase().endsWith('.xlsx') || 
+                           fileName.toLowerCase().endsWith('.xls') ||
+                           fileName.toLowerCase().includes('adverse_events') ||
+                           fileName.toLowerCase().includes('protocol_deviation');
+                           
+        const isPdfFile = fileName.toLowerCase().endsWith('.pdf');
+        
+        // For Excel files and PDFs, allow default behavior to open Box URL
+        if (isExcelFile || isPdfFile) {
+          return true;
+        }
+      }
+    }
+    
+    // For other file paths, allow default behavior
+    return true;
   };
-
+  
   const handleRefresh = async () => {
     if (!onRefresh) return;
     
@@ -213,79 +265,127 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
   };
 
   // Helper function to extract content, metadata, and HTML tables from nested structure
-  const extractContentAndMetadata = (obj: any): Array<{ content: string; metadata: any; htmlTable: string | null; activity?: string; subActivity?: string; question?: string }> => {
-    const results: Array<{ content: string; metadata: any; htmlTable: string | null; activity?: string; subActivity?: string; question?: string }> = [];
+  const extractContentAndMetadata = (data: any): Array<{
+    content: string;
+    metadata: any;
+    htmlTable: string | null;
+    activity: string | null;
+    subActivity: string | null;
+    question: string | null;
+    relevanceScore: number | undefined;
+    summary: string | null;
+  }> => {
+    const results: Array<{
+      content: string;
+      metadata: any;
+      htmlTable: string | null;
+      activity: string | null;
+      subActivity: string | null;
+      question: string | null;
+      relevanceScore: number | undefined;
+      summary: string | null;
+    }> = [];
     
-    // Helper function to remove numerical prefixes like "0_", "1_", etc.
-    const removeNumPrefix = (str: string) => {
-      return str.replace(/^\d+_/, '');
+    // Helper function to remove numeric prefix from path segments
+    const removeNumPrefix = (path: string) => {
+      return path.replace(/^\d+_/, '');
     };
     
-    // Process the documents recursively, keeping track of the path
-    const processDocuments = (obj: any, path: string[] = []) => {
-      if (!obj || typeof obj !== 'object') return;
-      
-      // If this is a document with page_content and metadata
-      if (obj.page_content && obj.metadata) {
-        // Extract activity, sub-activity, and question from the path
-        let activity = '';
-        let subActivity = '';
-        let question = '';
-        
-        // Extract the activity from the path
-        const activityPath = path.find(p => p.match(/^\d+_PD$/) || p.match(/^\d+_AE_SAE$/));
-        if (activityPath) {
-          activity = activityPath.match(/^\d+_PD$/) ? "PD" : "AE_SAE";
-        }
-        
-        // Extract the sub-activity (with activity_id) from the path
-        const subActivityPath = path.find(p => p.includes('<activity_id#'));
-        if (subActivityPath) {
-          // Keep the full sub-activity including the activity_id
-          subActivity = removeNumPrefix(subActivityPath);
-        }
-        
-        // Extract the question from the path
-        const questionPath = path.find(p => {
+    // Function to traverse nested data structure
+    const traverse = (obj: any, path: string[] = []) => {
+      // Handle PostgreSQL format data
+      if (obj && typeof obj === 'object') {
+        // Check if this is a leaf node with page_content and metadata
+        if (obj.page_content !== undefined && obj.metadata !== undefined) {
+          let activity = null;
+          let subActivity = null;
+          let question = null;
+          let relevanceScore = undefined;
+          let summary = null;
+          let htmlTable = null;
+          
+          // Extract activity from path
+          const activityPath = path.find(p => !p.includes('<activity_id#') && !p.match(/^\d+_[A-Za-z]/));
+          if (activityPath) {
+            activity = removeNumPrefix(activityPath);
+          }
+          
+          // Extract sub-activity from path
+          const subActivityPath = path.find(p => p.includes('<activity_id#'));
+          if (subActivityPath) {
+            subActivity = subActivityPath;
+          }
+          
           // Find the question after the sub-activity
           const subActivityIndex = path.findIndex(p => p.includes('<activity_id#'));
-          if (subActivityIndex === -1) return false;
+          if (subActivityIndex !== -1) {
+            const questionPath = path.find(p => {
+              const index = path.indexOf(p);
+              return index > subActivityIndex && p.match(/^\d+_[A-Za-z]/);
+            });
+            
+            if (questionPath) {
+              question = removeNumPrefix(questionPath);
+            }
+          }
           
-          const index = path.indexOf(p);
-          return index > subActivityIndex && p.match(/^\d+_[A-Za-z]/);
-        });
-        
-        if (questionPath) {
-          question = removeNumPrefix(questionPath);
+          // Extract relevance score and summary if available
+          if (obj.metadata.relevance_score !== undefined) {
+            relevanceScore = parseFloat(obj.metadata.relevance_score);
+          }
+          
+          if (obj.metadata.summary) {
+            summary = obj.metadata.summary;
+          }
+          
+          // Extract HTML table if available
+          if (obj.metadata.original_data && typeof obj.metadata.original_data === 'string' && 
+              obj.metadata.original_data.includes('<table')) {
+            htmlTable = obj.metadata.original_data;
+          } else if (obj.metadata.text_as_html && typeof obj.metadata.text_as_html === 'string' && 
+                    obj.metadata.text_as_html.includes('<table')) {
+            htmlTable = obj.metadata.text_as_html;
+          } else if (obj.page_content && typeof obj.page_content === 'string' && 
+                    obj.page_content.includes('<table')) {
+            // Sometimes the table might be in the page_content
+            htmlTable = obj.page_content;
+          }
+          
+          results.push({
+            content: obj.page_content,
+            metadata: obj.metadata,
+            htmlTable,
+            activity,
+            subActivity,
+            question,
+            relevanceScore,
+            summary
+          });
         }
         
-        results.push({
-          content: obj.page_content,
-          metadata: obj.metadata,
-          htmlTable: obj.metadata.text_as_html || null,
-          activity,
-          subActivity,
-          question
+        // If this is an array, process each item
+        if (Array.isArray(obj)) {
+          obj.forEach(item => traverse(item, path));
+          return;
+        }
+        
+        // Otherwise, recursively process all properties
+        Object.entries(obj).forEach(([key, value]) => {
+          traverse(value, [...path, key]);
         });
-        return;
       }
-      
-      // If this is an array, process each item
-      if (Array.isArray(obj)) {
-        obj.forEach(item => processDocuments(item, path));
-        return;
-      }
-      
-      // Otherwise, recursively process all properties
-      Object.entries(obj).forEach(([key, value]) => {
-        processDocuments(value, [...path, key]);
-      });
     };
     
     // Start processing from the top level
-    processDocuments(obj);
+    traverse(data);
     
     return results;
+  };
+
+  // Format relevance score as percentage
+  const formatRelevanceScore = (score?: number): string => {
+    if (score === undefined) return 'N/A';
+    return `${(score * 100).toFixed(1)}%`;
   };
 
   if (!data) {
@@ -458,17 +558,43 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                                   </tr>
                                 )}
                                 
+                                {/* Display relevance score if available */}
+                                {item.relevanceScore !== undefined && (
+                                  <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                    <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                      Relevance Score
+                                    </td>
+                                    <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                      <span className={`px-2 py-0.5 rounded-full text-xs ${item.relevanceScore > 0.7 ? 'bg-green-100 text-green-800' : item.relevanceScore > 0.4 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                                        {formatRelevanceScore(item.relevanceScore)}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )}
+                                
+                                {/* Display summary if available */}
+                                {item.summary && (
+                                  <tr className="border-t border-gray-200 bg-white hover:bg-gray-50">
+                                    <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
+                                      Summary
+                                    </td>
+                                    <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
+                                      {item.summary}
+                                    </td>
+                                  </tr>
+                                )}
+                                
                                 {/* Display other metadata fields */}
                                 {Object.entries(item.metadata)
-                                  .filter(([metaKey]) => metaKey !== 'text_as_html') // Exclude text_as_html from metadata table
+                                  .filter(([metaKey]) => metaKey !== 'text_as_html' && metaKey !== 'relevance_score' && metaKey !== 'summary') // Exclude special fields
                                   .filter(([metaKey]) => shouldShowMetadataField(metaKey, item.metadata)) // Apply our custom filter
                                   .map(([metaKey, metaValue]) => (
                                   <tr key={metaKey} className="border-t border-gray-200 bg-white hover:bg-gray-50">
                                     <td className="px-4 py-3 align-top font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                                      {metaKey}
+                                      {getMetadataDisplayName(metaKey)}
                                     </td>
                                     <td className="px-4 py-3 align-top text-gray-800 border border-gray-200">
-                                      {metaKey === 'source' ? (
+                                      {metaKey === 'source' || metaKey === 'filename' || metaKey === 'file_name' ? (
                                         <a 
                                           href={mapSourceUrl(metaValue as string, item.metadata)} 
                                           target="_blank" 
@@ -498,12 +624,13 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                           {item.htmlTable && (
                             <div className="mb-4">
                               <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                              <div className="overflow-x-auto border rounded max-h-96">
+                              <div className="border rounded shadow-sm">
                                 <div 
-                                  className="p-2 text-sm html-table-container" 
+                                  className="p-2 text-sm html-table-container overflow-x-auto overflow-y-auto" 
                                   style={{
                                     '--header-bg-color': '#f7f7f7',
-                                    '--header-text-color': '#333'
+                                    '--header-text-color': '#333',
+                                    maxHeight: '350px'
                                   } as React.CSSProperties}
                                   dangerouslySetInnerHTML={{ __html: item.htmlTable }}
                                 />

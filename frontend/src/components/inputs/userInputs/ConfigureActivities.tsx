@@ -5,23 +5,23 @@ interface Site {
   name: string;
 }
 
-// Mock data for inspection areas
+// Mock data for domain areas
 const mockInspectionAreas: Site[] = [
   {
     id: 'area1',
-    name: 'Inspection Area 1'
+    name: 'Domain Area 1'
   },
   {
     id: 'area2',
-    name: 'Inspection Area 2'
+    name: 'Domain Area 2'
   },
   {
     id: 'area3',
-    name: 'Inspection Area 3'
+    name: 'Domain Area 3'
   }
 ];
 
-// Mock activities for each inspection area
+// Mock activities for each domain area
 const mockActivities: Activity[] = [
   // Protocol Compliance activities
   {
@@ -104,7 +104,7 @@ const mockActivities: Activity[] = [
 
 interface Activity {
   id: string;
-  inspectionAreaId: string;
+  inspectionAreaId: string;  // Note: We keep this as is since it's a property name
   description: string;
   enabled: boolean;
 }
@@ -181,13 +181,13 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
   }, [savedActivities]);
 
   const handleInspectionAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const inspectionAreaId = e.target.value;
-    if (inspectionAreaId === 'new') {
+    const domainId = e.target.value;
+    if (domainId === 'new') {
       setShowNewInspectionAreaInput(true);
       setSelectedInspectionArea('');
     } else {
       setShowNewInspectionAreaInput(false);
-      setSelectedInspectionArea(inspectionAreaId);
+      setSelectedInspectionArea(domainId);
     }
   };
 
@@ -197,7 +197,7 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
 
   const handleAddNewInspectionArea = () => {
     if (newInspectionAreaName.trim()) {
-      const newId = `area-${Date.now()}`;
+      const newId = `domain-${Date.now()}`;
       // Update mockInspectionAreas (in a real app, this would be an API call)
       mockInspectionAreas.push({
         id: newId,
@@ -309,7 +309,7 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
     }, 3000);
   };
 
-  // Group activities by inspection area
+  // Group activities by domain
   const groupActivitiesByArea = () => {
     const groups: {[key: string]: Activity[]} = {};
     
@@ -370,7 +370,7 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
     <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
       <h2 className="text-xl font-semibold mb-4">Configure Activities</h2>
       <p className="text-gray-600 mb-6">
-        Choose an inspection area and enter the activities to be carried out by the agent
+        Choose a domain area and enter the activities to be carried out by the agent
       </p>
 
       {/* Improved Toast Notification */}
@@ -429,35 +429,35 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
       )}
 
       <div className="space-y-6">
-        {/* Inspection Area Selection */}
+        {/* Domain Area Selection */}
         <div>
-          <label htmlFor="inspection-area-select" className="block text-sm font-medium text-gray-700 mb-1">
-            Select Inspection Area
+          <label htmlFor="domain-select" className="block text-sm font-medium text-gray-700 mb-1">
+            Select Domain Area
           </label>
           <select
-            id="inspection-area-select"
+            id="domain-select"
             value={selectedInspectionArea}
             onChange={handleInspectionAreaChange}
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">-- Select an Inspection Area --</option>
+            <option value="">-- Select a Domain Area --</option>
             {mockInspectionAreas.map(area => (
               <option key={area.id} value={area.id}>
                 {area.name}
               </option>
             ))}
-            <option value="new">+ Define New Inspection Area</option>
+            <option value="new">+ Define New Domain Area</option>
           </select>
         </div>
 
-        {/* New Inspection Area Input */}
+        {/* New Domain Area Input */}
         {showNewInspectionAreaInput && (
           <div className="flex space-x-2">
             <input
               type="text"
               value={newInspectionAreaName}
               onChange={handleNewInspectionAreaNameChange}
-              placeholder="Enter new inspection area name"
+              placeholder="Enter new domain area name"
               className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
@@ -525,7 +525,7 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
                     value={filterArea}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterArea(e.target.value)}
                   >
-                    <option value="all">All Areas</option>
+                    <option value="all">All Domain Areas</option>
                     {mockInspectionAreas.map(area => (
                       <option key={area.id} value={area.id}>{area.name}</option>
                     ))}
@@ -548,11 +548,11 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
             
             {filteredActivities.length > 0 ? (
               <>
-                {/* Display mode: Grouped by area */}
+                {/* Display mode: Grouped by domain */}
                 {filterArea === 'all' && filterText === '' && filterStatus === 'all' ? (
                   <div className="border rounded-md divide-y shadow-sm">
                     {Object.entries(groupActivitiesByArea()).map(([areaId, areaActivities]) => {
-                      const area = mockInspectionAreas.find(a => a.id === areaId)?.name || 'Unknown Area';
+                      const area = mockInspectionAreas.find(a => a.id === areaId)?.name || 'Unknown Domain Area';
                       return (
                         <div key={areaId} className="bg-white">
                           <div 

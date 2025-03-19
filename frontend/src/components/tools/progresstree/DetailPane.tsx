@@ -167,16 +167,20 @@ const DetailPane: React.FC<DetailPaneProps> = ({
               color: 'rgb(59, 130, 246)',
               borderRadius: '6px',
               textTransform: 'none',
-              fontWeight: 700,
+              fontWeight: 600,
               px: 2,
               py: 0.75,
               fontSize: '0.8rem',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
               '&:hover': {
                 bgcolor: 'rgba(59, 130, 246, 0.2)',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
               },
               '&.Mui-disabled': {
                 bgcolor: 'rgba(229, 231, 235, 0.2)',
                 color: 'rgba(156, 163, 175, 0.7)',
+                border: '1px solid rgba(229, 231, 235, 0.5)',
               },
               position: 'relative'
             }}

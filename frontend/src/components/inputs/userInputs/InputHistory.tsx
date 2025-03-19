@@ -21,12 +21,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T15:45:00',
     user: 'John Doe',
     inputType: 'Agent Prompt',
-    content: 'Updated Planner Agent prompt to include detailed inspection guidelines',
+    content: 'Updated Planner Agent prompt to include detailed domain guidelines',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Planner Agent', 'Clinical Trial Inspection']
+      relatedItems: ['Planner Agent', 'Clinical Trial Domain']
     }
   },
   {
@@ -34,12 +34,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T14:30:00',
     user: 'Sarah Chen',
     inputType: 'Agent Prompt',
-    content: 'Modified Critique Agent prompt to enhance feedback on inspection questions',
+    content: 'Modified Critique Agent prompt to enhance feedback on domain questions',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Critique Agent', 'Inspection Area 1']
+      relatedItems: ['Critique Agent', 'Domain Area 1']
     }
   },
   {
@@ -47,12 +47,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-09T11:20:00',
     user: 'Michael Brown',
     inputType: 'Agent Prompt',
-    content: 'Updated RAG Agent prompt to prioritize regulatory guidelines for inspections',
+    content: 'Updated Self-RAG Agent prompt to prioritize regulatory guidelines for domains',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['RAG Agent', 'Inspection Area 2', 'Regulatory Guidelines']
+      relatedItems: ['Self-RAG Agent', 'Domain Area 2', 'Regulatory Guidelines']
     }
   },
   {
@@ -60,12 +60,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-08T09:30:00',
     user: 'Jane Smith',
     inputType: 'Agent Prompt',
-    content: 'Refined Self-Reflection Agent prompt for document relevance evaluation',
+    content: 'Refined Reflection Agent prompt for document relevance evaluation',
     status: 'failed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Self-Reflection Agent', 'Document Relevance']
+      relatedItems: ['Reflection Agent', 'Document Relevance']
     }
   },
   {
@@ -73,12 +73,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-07T16:15:00',
     user: 'Robert Johnson',
     inputType: 'Agent Prompt',
-    content: 'Updated Generate Findings Agent prompt to improve analytical conclusions',
+    content: 'Updated Findings Tool prompt to improve analytical conclusions',
     status: 'completed',
     details: {
       section: 'Agent Prompts',
       actionType: 'Update',
-      relatedItems: ['Generate Findings Agent', 'Analytical Conclusions']
+      relatedItems: ['Findings Tool', 'Analytical Conclusions']
     }
   },
   
@@ -88,12 +88,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T16:30:00',
     user: 'Jane Smith',
     inputType: 'Activity',
-    content: 'Added new Inspection Area 1 activities for informed consent verification',
+    content: 'Added new Domain Area 1 activities for informed consent verification',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Create',
-      relatedItems: ['Inspection Area 1', 'Informed Consent', 'Documentation Review']
+      relatedItems: ['Domain Area 1', 'Informed Consent', 'Documentation Review']
     }
   },
   {
@@ -101,12 +101,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-09T13:45:00',
     user: 'Michael Brown',
     inputType: 'Activity',
-    content: 'Created Inspection Area 2 activities for source data verification',
+    content: 'Created Domain Area 2 activities for source data verification',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Create',
-      relatedItems: ['Inspection Area 2', 'Source Data', 'CRF Verification']
+      relatedItems: ['Domain Area 2', 'Source Data', 'CRF Verification']
     }
   },
   {
@@ -114,12 +114,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-08T10:15:00',
     user: 'Sarah Chen',
     inputType: 'Activity',
-    content: 'Added Inspection Area 3 activities for adverse event reporting review',
+    content: 'Added Domain Area 3 activities for adverse event reporting review',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Create',
-      relatedItems: ['Inspection Area 3', 'Adverse Events', 'Safety Monitoring']
+      relatedItems: ['Domain Area 3', 'Adverse Events', 'Safety Monitoring']
     }
   },
   {
@@ -127,12 +127,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-07T14:20:00',
     user: 'Robert Johnson',
     inputType: 'Activity',
-    content: 'Modified Inspection Area 1 activities for protocol deviation documentation',
+    content: 'Modified Domain Area 1 activities for protocol deviation documentation',
     status: 'pending',
     details: {
       section: 'Configure Activities',
       actionType: 'Update',
-      relatedItems: ['Inspection Area 1', 'Protocol Deviations', 'Documentation']
+      relatedItems: ['Domain Area 1', 'Protocol Deviations', 'Documentation']
     }
   },
   {
@@ -140,12 +140,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-06T11:30:00',
     user: 'John Doe',
     inputType: 'Activity',
-    content: 'Updated Inspection Area 2 activities for electronic data capture system auditing',
+    content: 'Updated Domain Area 2 activities for electronic data capture system auditing',
     status: 'completed',
     details: {
       section: 'Configure Activities',
       actionType: 'Update',
-      relatedItems: ['Inspection Area 2', 'EDC System', 'Access Controls']
+      relatedItems: ['Domain Area 2', 'EDC System', 'Access Controls']
     }
   },
   
@@ -155,12 +155,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-10T17:00:00',
     user: 'Robert Johnson',
     inputType: 'Schedule',
-    content: 'Set up monthly Inspection Area 1 inspection schedule',
+    content: 'Set up monthly Domain Area 1 review schedule',
     status: 'completed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Create',
-      relatedItems: ['Monthly', 'Inspection Area 1', 'Day 15', '09:00 AM']
+      relatedItems: ['Monthly', 'Domain Area 1', 'Day 15', '09:00 AM']
     }
   },
   {
@@ -168,12 +168,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-09T15:30:00',
     user: 'Sarah Chen',
     inputType: 'Schedule',
-    content: 'Created weekly Inspection Area 2 verification schedule',
+    content: 'Created weekly Domain Area 2 verification schedule',
     status: 'completed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Create',
-      relatedItems: ['Weekly', 'Inspection Area 2', 'Friday', '14:00 PM']
+      relatedItems: ['Weekly', 'Domain Area 2', 'Friday', '14:00 PM']
     }
   },
   {
@@ -181,12 +181,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-08T12:45:00',
     user: 'Jane Smith',
     inputType: 'Schedule',
-    content: 'Set up daily Inspection Area 3 monitoring schedule',
+    content: 'Set up daily Domain Area 3 monitoring schedule',
     status: 'pending',
     details: {
       section: 'Configure Schedule',
       actionType: 'Create',
-      relatedItems: ['Daily', 'Inspection Area 3', '08:00 AM']
+      relatedItems: ['Daily', 'Domain Area 3', '08:00 AM']
     }
   },
   {
@@ -194,12 +194,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-07T10:00:00',
     user: 'Michael Brown',
     inputType: 'Schedule',
-    content: 'Modified monthly Inspection Area 1 schedule to include additional sites',
+    content: 'Modified monthly Domain Area 1 schedule to include additional sites',
     status: 'completed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Update',
-      relatedItems: ['Monthly', 'Inspection Area 1', 'Multiple Sites']
+      relatedItems: ['Monthly', 'Domain Area 1', 'Multiple Sites']
     }
   },
   {
@@ -207,12 +207,12 @@ const mockHistoryData: InputHistoryEntry[] = [
     timestamp: '2025-03-06T09:15:00',
     user: 'John Doe',
     inputType: 'Schedule',
-    content: 'Updated weekly Inspection Area 2 schedule to include audit trail review',
+    content: 'Updated weekly Domain Area 2 schedule to include audit trail review',
     status: 'failed',
     details: {
       section: 'Configure Schedule',
       actionType: 'Update',
-      relatedItems: ['Weekly', 'Inspection Area 2', 'Audit Trail Review']
+      relatedItems: ['Weekly', 'Domain Area 2', 'Audit Trail Review']
     }
   }
 ];

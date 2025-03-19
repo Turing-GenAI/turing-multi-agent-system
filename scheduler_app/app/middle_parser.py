@@ -198,6 +198,8 @@ def filter_parsed_messages_by_name(parsed_messages):
         "SelfRAG - generate_response_agent",
         "inspection - generate_findings_agent",
         "SelfRAG - retrieval_agent",
+        "SelfRAG - execute_retrieval_tools",
+        "SelfRAG - document_grading_agent"
     }
     
 

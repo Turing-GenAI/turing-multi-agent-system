@@ -132,8 +132,13 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         break;
       case 'trial':
         setSelectedTrial(value);
-        setCurrentStep('site');
+        
+        // Get the available sites for the selected trial
         const sitesForTrial = sites[value] || [];
+        
+        // Comment out the site selection step
+        /*
+        setCurrentStep('site');
         const siteCount = sitesForTrial.length;
         addAgentMessage(
           siteCount === 1
@@ -142,6 +147,29 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           'site',
           { messageId: 'site-selection-message' }
         );
+        */
+        
+        // Randomly select a site from the available sites
+        if (sitesForTrial.length > 0) {
+          const randomIndex = Math.floor(Math.random() * sitesForTrial.length);
+          const randomSite = sitesForTrial[randomIndex].id;
+          setSelectedSite(randomSite);
+          
+          // Skip directly to date selection
+          setCurrentStep('date');
+          addAgentMessage(
+            `Please specify the audit review period for the compliance preparedness assessment:`, 
+            'date',
+            { messageId: 'date-selection-message' }
+          );
+        } else {
+          // Handle the case where there are no sites for the selected trial
+          addAgentMessage(
+            `I couldn't find any clinical sites associated with this trial. Please select a different trial.`,
+            'trial',
+            { messageId: 'trial-selection-message' }
+          );
+        }
         break;
       case 'site':
         setSelectedSite(value);
@@ -161,8 +189,8 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           
           addAgentMessage(
             `📋 Compliance Preparedness Assessment Parameters:\n\n` +
-            `🔹 Clinical Trial ID:    ${selectedTrial}\n` +
-            `🔹 Clinical Site ID:     ${selectedSite}\n` +
+            `🔹 Trial ID:    ${selectedTrial}\n` +
+            // `🔹 Site ID:     ${selectedSite}\n` +
             `🔹 Review Period:     ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
             `Please confirm to initiate the compliance preparedness review.`,
             'button',
