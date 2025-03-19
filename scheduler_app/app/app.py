@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from redis import Redis
 from app.setup_redis import connect_to_redis, initialize_redis_structure
-from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys
+from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys, merge_selfrag_nodes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -255,11 +255,9 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
     current_position = job_details.last_position
     full_messages = "Agent is processing!"
 
-
     if job_details.ai_messages:
         local_path = os.path.join(agent_outputs_path, "agent_scratch_pads")
         ai_messages_path = None
-        
         
         if job_details.ai_message_type == 'sgr':
             ai_messages_path = os.path.join(local_path, 'sgr_' + job_id + ".txt")
@@ -277,7 +275,6 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
                     if full_content:
                         full_messages = full_content.replace("[1m", "").replace("[0m", "")
                 
-
                 if current_position < os.path.getsize(ai_messages_path):
                     with open(ai_messages_path, "r") as f:
                         f.seek(current_position)
@@ -286,8 +283,7 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
                             new_ai_messages = new_content.replace("[1m", "").replace("[0m", "")
                             new_messages = [new_ai_messages]
                         current_position = f.tell()
-            
-                
+    
     findings = {}
     if job_details.findings:
         local_path = os.path.join(agent_outputs_path, "activity_findings")
@@ -314,19 +310,36 @@ def get_ai_messages(job_id: str, job_details: JobMessages):
                     findings[j.replace(".json", "")] = json_data
 
     try:
-        # Parse and process the latest AI message
+        # Parse the latest AI message
         message_parser = parse_ai_messages(new_messages[0] if new_messages else "")
-        processed_messages = filter_parsed_messages_by_name(message_parser)
+        logger.debug(f"Parsed {len(message_parser)} messages from AI output")
         
-        # Add content and summarize
+        # **Merge SelfRAG nodes BEFORE filtering**
+        merged_messages = merge_selfrag_nodes(message_parser)
+        logger.debug(f"After merging, have {len(merged_messages)} messages")
+        
+        # Filter messages AFTER merging
+        processed_messages = filter_parsed_messages_by_name(merged_messages)
+        logger.debug(f"After filtering, have {len(processed_messages)} messages")
+        
+        # Add content for messages that don't have it yet
+        logger.debug("Adding content to processed messages")
         compressed_data = add_content(processed_messages) if processed_messages else []
+        logger.debug(f"Added content to {len(compressed_data)} messages")
+        
+        # Summarize the content
+        logger.debug("Summarizing content")
         summarized_data = summarize_content(compressed_data) if compressed_data else []
+        logger.debug(f"Summarized {len(summarized_data)} messages")
         
         # Filter down to essential keys
+        logger.debug("Filtering down to essential keys")
         filtered_data = filter_json_keys(summarized_data) if summarized_data else []
+        logger.debug(f"Final output has {len(filtered_data)} messages")
+
     except Exception as e:
         logger.error(f"Error processing AI messages: {str(e)}")
-        filtered_data = []
+        filtered_data = []    
 
     res = {"ai_messages": full_messages, "new_ai_messages": new_messages, "last_position": current_position, "findings": findings, "filtered_data": filtered_data}
     return res
