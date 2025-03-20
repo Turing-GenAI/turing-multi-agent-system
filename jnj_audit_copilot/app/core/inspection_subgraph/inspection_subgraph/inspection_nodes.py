@@ -6,6 +6,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.types import interrupt, Command
 from retry import retry
+from typing import Literal
 
 from ....common.constants import (
     FINDINGS_OUTPUT_FOLDER,
@@ -26,8 +27,6 @@ from ....utils.state_definitions import InspectionAgentState
 from ....utils.create_vector_store import process_all_by_site_area
 from .inspection_functions import inspectionFunctions
 
-from ..config import REDIS_DB, REDIS_HOST, REDIS_PORT, REDIS_PWD
-from redis import Redis
 from ....utils.setup_redis import connect_to_redis
 
 # Get the same logger instance set up earlier
