@@ -228,9 +228,7 @@ export const TimelineCard: React.FC = () => {
         region,
         country: countries[region][Math.floor(Math.random() * countries[region].length)],
         pdAlerts: Math.floor(Math.random() * 5),
-        aeAlerts: Math.floor(Math.random() * 8),
-        cssAlerts: Math.floor(Math.random() * 4),
-        sgrAlerts: Math.floor(Math.random() * 3)
+        aeAlerts: Math.floor(Math.random() * 8)
       };
     });
     
@@ -246,9 +244,7 @@ export const TimelineCard: React.FC = () => {
         region,
         country: countries[region][Math.floor(Math.random() * countries[region].length)],
         pdAlerts: Math.floor(Math.random() * 5),
-        aeAlerts: Math.floor(Math.random() * 8),
-        cssAlerts: Math.floor(Math.random() * 4),
-        sgrAlerts: Math.floor(Math.random() * 3)
+        aeAlerts: Math.floor(Math.random() * 8)
       };
     });
 

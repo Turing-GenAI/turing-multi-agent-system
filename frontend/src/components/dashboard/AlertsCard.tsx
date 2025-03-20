@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, AlertCircle } from 'lucide-react';
-import { PDAlertsDialog } from './PDAlertsDialog';
-import { AEAlertsDialog } from './AEAlertsDialog';
+import { D1AlertsDialog } from './PDAlertsDialog';
+import { D2AlertsDialog } from './AEAlertsDialog';
 
 // Function to convert a trial ID to a numeric index for maintaining the ordering logic
 const getTrialIndex = (trialId: string): number => {
@@ -21,8 +21,6 @@ interface Alert {
   country: string;
   pdAlerts: number;
   aeAlerts: number;
-  cssAlerts: number;
-  sgrAlerts: number;
 }
 
 interface AlertsCardProps {
@@ -122,10 +120,8 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PD Alerts</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AE Alerts</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CSS Alerts</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SGR Alerts</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">D1 Alerts</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">D2 Alerts</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -168,8 +164,6 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
                       alert.aeAlerts
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.cssAlerts}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.sgrAlerts}</td>
                 </tr>
               ))}
             </tbody>
@@ -237,14 +231,14 @@ export const AlertsCard: React.FC<AlertsCardProps> = ({ alerts, onClose }) => {
       </div>
       
       {selectedTrialForPD && (
-        <PDAlertsDialog
+        <D1AlertsDialog
           trialId={selectedTrialForPD}
           onClose={closePDDialog}
         />
       )}
 
       {selectedTrialForAE && (
-        <AEAlertsDialog
+        <D2AlertsDialog
           trialId={selectedTrialForAE}
           onClose={closeAEDialog}
         />

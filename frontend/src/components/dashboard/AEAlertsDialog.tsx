@@ -1,12 +1,12 @@
 import React from 'react';
 import { AlertCircle, X } from 'lucide-react';
 
-interface AEAlertsDialogProps {
+interface D2AlertsDialogProps {
   trialId: string;
   onClose: () => void;
 }
 
-interface AEAlert {
+interface D2Alert {
   subject: string;
   site: string;
   eventTerm: string;
@@ -19,9 +19,9 @@ interface AEAlert {
   action: string;
 }
 
-export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose }) => {
-  // Mock data for adverse event alerts
-  const mockAEAlerts: AEAlert[] = [
+export const D2AlertsDialog: React.FC<D2AlertsDialogProps> = ({ trialId, onClose }) => {
+  // Mock data for Domain 2 alerts
+  const mockD2Alerts: D2Alert[] = [
     {
       subject: 'SUB-012',
       site: 'Site 123',
@@ -98,7 +98,7 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
             <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-3">
               <AlertCircle size={16} className="text-orange-500" />
             </div>
-            <h2 className="text-xl font-semibold text-orange-600">Adverse Event Alerts for Trial {trialId}</h2>
+            <h2 className="text-xl font-semibold text-orange-600">Domain 2 Alerts for Trial {trialId}</h2>
           </div>
           <button 
             onClick={onClose}
@@ -114,19 +114,19 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
               <div className="prose prose-sm max-w-none">
                 <h3 className="text-lg font-semibold mb-4 text-orange-800">Summary of Findings</h3>
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  Analysis of trial {trialId} has identified {mockAEAlerts.length} adverse events that require attention. 
+                  Analysis of trial {trialId} has identified {mockD2Alerts.length} Domain 2 events that require attention. 
                   These events include cases of neutropenia, fatigue, hypertension, pneumonitis, and elevated liver enzymes.
                   Some of these events were serious and required study drug interruption or discontinuation.
                 </p>
                 <ul className="list-disc pl-4 mb-4 space-y-2">
                   <li className="text-gray-700">
-                    <strong>Grade 3-4 events:</strong> {mockAEAlerts.filter(a => a.grade >= 3).length} serious events requiring close monitoring
+                    <strong>Grade 3-4 events:</strong> {mockD2Alerts.filter(a => a.grade >= 3).length} serious events requiring close monitoring
                   </li>
                   <li className="text-gray-700">
-                    <strong>Ongoing events:</strong> {mockAEAlerts.filter(a => a.endDate === null).length} events still requiring management
+                    <strong>Ongoing events:</strong> {mockD2Alerts.filter(a => a.endDate === null).length} events still requiring management
                   </li>
                   <li className="text-gray-700">
-                    <strong>Dose modifications:</strong> {mockAEAlerts.filter(a => a.action !== 'No Action').length} events requiring dose modification
+                    <strong>Dose modifications:</strong> {mockD2Alerts.filter(a => a.action !== 'No Action').length} events requiring dose modification
                   </li>
                 </ul>
               </div>
@@ -150,7 +150,7 @@ export const AEAlertsDialog: React.FC<AEAlertsDialogProps> = ({ trialId, onClose
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {mockAEAlerts.map((alert, index) => (
+                    {mockD2Alerts.map((alert, index) => (
                       <tr key={index} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.subject}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.site}</td>

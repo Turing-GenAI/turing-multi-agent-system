@@ -55,12 +55,12 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   const [loadingContext, setLoadingContext] = useState<boolean>(false);
   const [contextError, setContextError] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
-  const [showPDFindings, setShowPDFindings] = useState<boolean>(false);
-  const [showAEFindings, setShowAEFindings] = useState<boolean>(false);
+  const [showD1Findings, setShowD1Findings] = useState<boolean>(false);
+  const [showD2Findings, setShowD2Findings] = useState<boolean>(false);
   const [showContext, setShowContext] = useState<boolean>(false);
   const [showAgentMessages, setShowAgentMessages] = useState<boolean>(true);
-  const [pdExpanded, setPdExpanded] = useState(false);
-  const [aeExpanded, setAeExpanded] = useState(false);
+  const [d1Expanded, setD1Expanded] = useState(false);
+  const [d2Expanded, setD2Expanded] = useState(false);
   
   // Cache for job data to prevent refetching
   const [jobCache, setJobCache] = useState<Record<string, JobCache>>({});
@@ -991,7 +991,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   };
 
   // Render PD findings table
-  const renderPDTable = (findingData: any) => {
+  const renderD1Table = (findingData: any) => {
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
@@ -1033,7 +1033,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   };
 
   // Render AE findings table
-  const renderAETable = (findingData: any) => {
+  const renderD2Table = (findingData: any) => {
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
@@ -1076,8 +1076,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
 
   // Process the retrieved context data
   const processRetrievedContext = (contextData: any) => {
-    const pdChunks: any[] = [];
-    const aeChunks: any[] = [];
+    const d1Chunks: any[] = [];
+    const d2Chunks: any[] = [];
     
     // Navigate through the deeply nested structure to extract context
     Object.keys(contextData).forEach(key1 => {
@@ -1160,12 +1160,12 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         
                         // Try to extract activity from the context key or path
                         if (contextKey.includes('PD') || key1.includes('PD') || key2.includes('PD') || key3.includes('PD')) {
-                          activity = 'PD';
+                          activity = 'D1';
                         } else if (contextKey.includes('AE_SAE') || contextKey.includes('AE') || 
                                   key1.includes('AE_SAE') || key1.includes('AE') || 
                                   key2.includes('AE_SAE') || key2.includes('AE') || 
                                   key3.includes('AE_SAE') || key3.includes('AE')) {
-                          activity = 'AE_SAE';
+                          activity = 'D2';
                         }
                         
                         // Try to extract the sub-activity from keys using a pattern similar to RetrievedContextModal
@@ -1217,10 +1217,10 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         };
                         
                         // Add to the appropriate list based on activity type
-                        if (activity === 'PD') {
-                          pdChunks.push(chunk);
-                        } else if (activity === 'AE_SAE') {
-                          aeChunks.push(chunk);
+                        if (activity === 'D1') {
+                          d1Chunks.push(chunk);
+                        } else if (activity === 'D2') {
+                          d2Chunks.push(chunk);
                         }
                         
                         console.log('Added chunk:', chunk);
@@ -1236,9 +1236,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     });
     
     return {
-      pd: pdChunks,
-      ae: aeChunks,
-      chunks: [...pdChunks, ...aeChunks] // Keep the original format for backward compatibility
+      pd: d1Chunks,
+      ae: d2Chunks,
+      chunks: [...d1Chunks, ...d2Chunks] // Keep the original format for backward compatibility
     };
   };
 
@@ -1488,8 +1488,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               setAiMessages([]);
               setFindings(null);
               setRetrievedContext({ pd: [], ae: [], chunks: [] });
-              setShowPDFindings(false);
-              setShowAEFindings(false);
+              setShowD1Findings(false);
+              setShowD2Findings(false);
               setShowContext(false);
               setShowAgentMessages(true);
             }
@@ -1519,8 +1519,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                   setAiMessages([]);
                   setFindings(null);
                   setRetrievedContext({ pd: [], ae: [], chunks: [] });
-                  setShowPDFindings(false);
-                  setShowAEFindings(false);
+                  setShowD1Findings(false);
+                  setShowD2Findings(false);
                   setShowContext(false);
                   setShowAgentMessages(true);
                 }}
@@ -1536,8 +1536,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               <button
                 onClick={() => {
                   setShowAgentMessages(true);
-                  setShowPDFindings(false);
-                  setShowAEFindings(false);
+                  setShowD1Findings(false);
+                  setShowD2Findings(false);
                   setShowContext(false);
                 }}
                 disabled={loadingMessages}
@@ -1556,53 +1556,53 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               </button>
               <button
                 onClick={() => {
-                  setShowPDFindings(true);
-                  setShowAEFindings(false);
+                  setShowD1Findings(true);
+                  setShowD2Findings(false);
                   setShowContext(false);
                   setShowAgentMessages(false);
                 }}
                 disabled={loadingFindings}
                 className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-                  showPDFindings ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  showD1Findings ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                 } ${loadingFindings ? 'opacity-50' : ''}`}
               >
                 <AlertTriangle className="w-4 h-4" />
                 {loadingFindings ? (
                   <span className="flex items-center">
-                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> Loading PD...
+                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> Loading D1...
                   </span>
                 ) : (
-                  <span>Protocol Deviations</span>
+                  <span>Domain 1 Findings</span>
                 )}
               </button>
               
               <button
                 onClick={() => {
-                  setShowAEFindings(true);
-                  setShowPDFindings(false);
+                  setShowD2Findings(true);
+                  setShowD1Findings(false);
                   setShowContext(false);
                   setShowAgentMessages(false);
                 }}
                 disabled={loadingFindings}
                 className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-                  showAEFindings ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  showD2Findings ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                 } ${loadingFindings ? 'opacity-50' : ''}`}
               >
                 <AlertCircle className="w-4 h-4" />
                 {loadingFindings ? (
                   <span className="flex items-center">
-                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> Loading AE...
+                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> Loading D2...
                   </span>
                 ) : (
-                  <span>Adverse Events</span>
+                  <span>Domain 2 Findings</span>
                 )}
               </button>
               
               <button
                 onClick={() => {
                   setShowContext(true);
-                  setShowPDFindings(false);
-                  setShowAEFindings(false);
+                  setShowD1Findings(false);
+                  setShowD2Findings(false);
                   setShowAgentMessages(false);
                 }}
                 disabled={loadingContext}
@@ -1666,11 +1666,11 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               )}
               
               {/* Show PD Findings */}
-              {showPDFindings && (
+              {showD1Findings && (
                 <div className="bg-white rounded-lg p-4 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-yellow-600 flex items-center">
                     <AlertTriangle className="w-5 h-5 mr-2" />
-                    Protocol Deviation Findings
+                    Domain 1 Findings
                   </h3>
                   {loadingFindings ? (
                     <div className="flex justify-center items-center h-32">
@@ -1683,14 +1683,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                     </div>
                   ) : !findings || !findings.pd || findings.pd.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                      <p>No Protocol Deviation findings for this job</p>
+                      <p>No Domain 1 findings for this job</p>
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
                       <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
-                           onClick={() => setPdExpanded(!pdExpanded)}>
+                           onClick={() => setD1Expanded(!d1Expanded)}>
                         <div className="flex items-center">
-                          {pdExpanded ? 
+                          {d1Expanded ? 
                             <ChevronDown className="w-4 h-4 text-gray-700" /> : 
                             <ChevronRight className="w-4 h-4 text-gray-700" />
                           }
@@ -1698,7 +1698,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                               <AlertTriangle size={14} className="text-yellow-500" />
                             </div>
-                            <h4 className="font-medium text-yellow-600">Protocol Deviations</h4>
+                            <h4 className="font-medium text-yellow-600">Domain 1</h4>
                             <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                               {findings.pd.length} {findings.pd.length === 1 ? 'item' : 'items'}
                             </span>
@@ -1706,7 +1706,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         </div>
                       </div>
                       
-                      {pdExpanded && (
+                      {d1Expanded && (
                         <div className="divide-y divide-gray-100 animate-slideDown">
                           {findings.pd.map((finding, index) => (
                             <div key={`pd-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
@@ -1723,7 +1723,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                 <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
                                   <div className="whitespace-pre-line text-gray-800">
                                     <ReactMarkdown>
-                                      {cleanTextContent(finding.content, true).cleanedText.replace(/Protocol Deviation|PD:|Subject:|Site:|Category:|Description:/gi, (match: string) => `**${match}**`)}
+                                      {cleanTextContent(finding.content, true).cleanedText.replace(/Domain 1|D1:|Subject:|Site:|Category:|Description:/gi, (match: string) => `**${match}**`)}
                                     </ReactMarkdown>
                                   </div>
                                 </div>
@@ -1733,7 +1733,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                               {finding.table && finding.table.length > 0 && (
                                 <div className="mt-4">
                                   <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                                  {renderPDTable(finding)}
+                                  {renderD1Table(finding)}
                                 </div>
                               )}
                             </div>
@@ -1746,11 +1746,11 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               )}
               
               {/* Show AE Findings */}
-              {showAEFindings && (
+              {showD2Findings && (
                 <div className="bg-white rounded-lg p-4 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-orange-600 flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Adverse Event Findings
+                    Domain 2 Findings
                   </h3>
                   {loadingFindings ? (
                     <div className="flex justify-center items-center h-32">
@@ -1763,14 +1763,14 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                     </div>
                   ) : !findings || !findings.ae || findings.ae.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                      <p>No Adverse Event findings for this job</p>
+                      <p>No Domain 2 findings for this job</p>
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
                       <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
-                           onClick={() => setAeExpanded(!aeExpanded)}>
+                           onClick={() => setD2Expanded(!d2Expanded)}>
                         <div className="flex items-center">
-                          {aeExpanded ? 
+                          {d2Expanded ? 
                             <ChevronDown className="w-4 h-4 text-gray-700" /> : 
                             <ChevronRight className="w-4 h-4 text-gray-700" />
                           }
@@ -1778,7 +1778,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                               <AlertCircle size={14} className="text-orange-500" />
                             </div>
-                            <h4 className="font-medium text-orange-600">Adverse Events / Serious Adverse Events</h4>
+                            <h4 className="font-medium text-orange-600">Domain 2</h4>
                             <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                               {findings.ae.length} {findings.ae.length === 1 ? 'item' : 'items'}
                             </span>
@@ -1786,7 +1786,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                         </div>
                       </div>
                       
-                      {aeExpanded && (
+                      {d2Expanded && (
                         <div className="divide-y divide-gray-100 animate-slideDown">
                           {findings.ae.map((finding, index) => (
                             <div key={`ae-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
@@ -1803,7 +1803,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                 <div className="text-sm bg-white border rounded-md p-4 max-h-80 overflow-auto">
                                   <div className="whitespace-pre-line text-gray-800">
                                     <ReactMarkdown>
-                                      {cleanTextContent(finding.content, true).cleanedText.replace(/Adverse Event|AE:|SAE:|Subject:|Site:|Event:|Grade:|Start Date:|End Date:|Seriousness:|Treatment:/gi, (match: string) => `**${match}**`)}
+                                      {cleanTextContent(finding.content, true).cleanedText.replace(/Domain 2|D2:|Subject:|Site:|Event:|Grade:|Start Date:|End Date:|Seriousness:|Treatment:/gi, (match: string) => `**${match}**`)}
                                     </ReactMarkdown>
                                   </div>
                                 </div>
@@ -1813,7 +1813,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                               {finding.table && finding.table.length > 0 && (
                                 <div className="mt-4">
                                   <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
-                                  {renderAETable(finding)}
+                                  {renderD2Table(finding)}
                                 </div>
                               )}
                             </div>
@@ -1851,9 +1851,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                       {retrievedContext.pd && retrievedContext.pd.length > 0 && (
                         <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
                           <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
-                               onClick={() => setPdExpanded(!pdExpanded)}>
+                               onClick={() => setD1Expanded(!d1Expanded)}>
                             <div className="flex items-center">
-                              {pdExpanded ? 
+                              {d1Expanded ? 
                                 <ChevronDown className="w-4 h-4 text-gray-700" /> : 
                                 <ChevronRight className="w-4 h-4 text-gray-700" />
                               }
@@ -1861,7 +1861,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                 <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                                   <AlertTriangle size={14} className="text-gray-700" />
                                 </div>
-                                <h4 className="font-medium text-gray-700">Protocol Deviations</h4>
+                                <h4 className="font-medium text-gray-700">Domain 1</h4>
                                 <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                                   {retrievedContext.pd.length} {retrievedContext.pd.length === 1 ? 'item' : 'items'}
                                 </span>
@@ -1869,7 +1869,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                             </div>
                           </div>
                           
-                          {pdExpanded && (
+                          {d1Expanded && (
                             <div className="divide-y divide-gray-100 animate-slideDown">
                               {retrievedContext.pd.map((chunk, index) => (
                                 <div key={`pd-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
@@ -2077,9 +2077,9 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                       {retrievedContext.ae && retrievedContext.ae.length > 0 && (
                         <div className="border rounded-lg overflow-hidden shadow-sm mb-4 bg-white">
                           <div className="bg-white p-3 cursor-pointer flex items-center justify-between transition-colors"
-                               onClick={() => setAeExpanded(!aeExpanded)}>
+                               onClick={() => setD2Expanded(!d2Expanded)}>
                             <div className="flex items-center">
-                              {aeExpanded ? 
+                              {d2Expanded ? 
                                 <ChevronDown className="w-4 h-4 text-gray-700" /> : 
                                 <ChevronRight className="w-4 h-4 text-gray-700" />
                               }
@@ -2087,7 +2087,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                                 <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                                   <AlertCircle size={14} className="text-gray-700" />
                                 </div>
-                                <h4 className="font-medium text-gray-700">Adverse Events / Serious Adverse Events</h4>
+                                <h4 className="font-medium text-gray-700">Domain 2</h4>
                                 <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full ml-2">
                                   {retrievedContext.ae.length} {retrievedContext.ae.length === 1 ? 'item' : 'items'}
                                 </span>
@@ -2095,7 +2095,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                             </div>
                           </div>
                           
-                          {aeExpanded && (
+                          {d2Expanded && (
                             <div className="divide-y divide-gray-100 animate-slideDown">
                               {retrievedContext.ae.map((chunk, index) => (
                                 <div key={`ae-${index}`} className="p-4 hover:bg-gray-50 transition-colors">
@@ -2318,8 +2318,8 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                   setAiMessages([]);
                   setFindings(null);
                   setRetrievedContext({ pd: [], ae: [], chunks: [] });
-                  setShowPDFindings(false);
-                  setShowAEFindings(false);
+                  setShowD1Findings(false);
+                  setShowD2Findings(false);
                   setShowContext(false);
                   setShowAgentMessages(true);
                 }}

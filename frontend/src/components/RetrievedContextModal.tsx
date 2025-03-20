@@ -470,9 +470,9 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
               let formattedDisplayKey = displayKey;
               
               if (displayKey === 'PD') {
-                formattedDisplayKey = 'Protocol Deviations';
+                formattedDisplayKey = 'Domain 1';
               } else if (displayKey === 'AE_SAE') {
-                formattedDisplayKey = 'Adverse Events / Serious Adverse Events';
+                formattedDisplayKey = 'Domain 2';
               }
               
               // Define color classes based on section type
