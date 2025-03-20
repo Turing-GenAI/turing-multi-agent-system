@@ -46,9 +46,6 @@ message_types = [
 trial_supervisor_graph = trialSupervisorGraph()
 graph = trial_supervisor_graph.create_trial_supervisor_graph()
 _printed = set()
-# define state globally
-state = None
-
 
 def _print_event(
     event: dict, _printed: set, max_length=15000, scratchpad_filename=None
@@ -229,7 +226,7 @@ def run_graph_after_interruption(config_, state_before_interruption, scratchpad_
     
     return tasks, state
 
-def run_graph(graph_inputs, graph_config, run_id, scratchpad_filename):
+def run_graph(graph_inputs, graph_config, scratchpad_filename):
     # Run the graph for the first time
     state_before_interruption = run_graph_first_run(
         graph_inputs,
@@ -238,16 +235,12 @@ def run_graph(graph_inputs, graph_config, run_id, scratchpad_filename):
         save_image_flag=True
     )
 
-    print(f"Graph processed successfully (first run). Run ID: {run_id}, Scratchpad: {scratchpad_filename}")
-
     while True:
         # Run the graph after an interruption
         tasks, state_before_interruption = run_graph_after_interruption(
             state_before_interruption = state_before_interruption, 
             config_=graph_config, 
             scratchpad_filename=scratchpad_filename)
-
-        print(f"Graph processed successfully (after interrupt). Run ID: {run_id}, Scratchpad: {scratchpad_filename}")
         
         if len(tasks) == 0:
             # completed

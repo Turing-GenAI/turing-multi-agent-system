@@ -41,12 +41,13 @@ class RedisAppRunner:
             "sgr_exec_agent_messages",
         ]
         self.feedback_messages = {
-            "generate_findings_agent": """
-            Do you approve of the above generated findings?\nType 'y' to continue; otherwise, explain.\n
-            Please specify any rephrasing or formatting \nadjustments you would like.\n\nUser input -> """,
-            "feedback_agent": """
-            Do you approve of the above sub-activities?\nType 'y' to continue; otherwise, explain.\n
-            Please specify the adjustments you would like.\n\nUser input -> """,
+                "feedback_agent": """
+                Do you approve of the generated sub-activities?\n{sub_activities_list}\nType 'y' to continue; otherwise,.\n
+                Please specify the sub-activities you would like.\n\nUser input ->""",
+                
+                "generate_findings_agent": """
+                Do you approve of the above generated findings? Type 'y' to continue; otherwise, explain.\n
+                Please specify any rephrasing or formatting adjustments you would like.\n\nUser input ->"""   
         }
         self._printed = set()
 
@@ -125,6 +126,50 @@ class RedisAppRunner:
         else:
             return findings_feedback, process_human_feedback_chain.invoke({"input": findings_feedback}).content
 
+    def get_human_feedback_for_sub_activities(self, run_id, feedback_node, sub_activities):
+        """
+        Collects human feedback for a given feedback node and processes it.
+
+        This function displays the feedback node information and prompts the user
+        for feedback using pre-defined messages. If the user approves by typing 'y',
+        it returns 'y'. Otherwise, it processes the feedback using a feedback chain
+        to generate a refined response.
+
+        Args:
+            feedback_node (str): The identifier for the feedback node.
+
+        Returns:
+            str: 'y' if approved by the user, otherwise a processed feedback response.
+        """
+        res = self.set(run_id, payload = {"status": "take_human_feedback", "message":self.feedback_messages.get(feedback_node, "Feedback: ")}).format(sub_activities_list=" -> "+"\n -> ".join(sub_activities))
+
+        subactivities_feedback = 'y'
+        i=0
+        while i<1200:
+            i+=1
+            res = self.get(run_id)
+            status = res.get("status")
+            if status == "got_human_feedback":
+                subactivities_feedback = res.get("job_details", {}).get("feedback")
+                break
+            else:
+                time.sleep(3)
+                continue
+
+        if i>=360:
+            res = self.set(run_id, payload = {"status": "got_human_feedback", "feedback":"Agent continued as y, after waiting for 30 seconds"})
+        response_dict = {}
+        if subactivities_feedback.lower() == "y":
+            response_dict.update({"human_feedback": subactivities_feedback, "response_val": "y"})
+        else:
+            response = process_human_feedback_for_sub_activities_chain.invoke({"input": subactivities_feedback, "sub_activities_list": "\n".join(sub_activities)}).content
+            if response.lower() == "y":
+                response_dict.update({"human_feedback": subactivities_feedback, "response_val": "y"})
+            else:
+                sub_activities_updated = process_human_feedback_for_sub_activities_chain_2.invoke({"input": response})
+                response_dict.update({"human_feedback": subactivities_feedback, "response_val": sub_activities_updated, "final_sub_activities": sub_activities_updated})
+        return response_dict
+
     def _process_graph(self, inputs, config, scratchpad_filename):
         trial_supervisor_graph = trialSupervisorGraph()
         graph = trial_supervisor_graph.create_trial_supervisor_graph()
@@ -188,6 +233,111 @@ class RedisAppRunner:
             page_title=FINAL_OUTPUT_PAGE_TITLE,
         )
 
+    def run_graph_first_run(self, inputs, config_, scratchpad_filename=None, save_image_flag=False):
+        """
+        Executes the trial supervisor graph and processes events in a loop until completion or interruption.
+
+        Args:
+            inputs (dict): The input data for the graph.
+            config (dict): The configuration settings for the graph.
+            scratchpad_filename (str, optional): The filename for writing messages.
+
+        The function initializes and runs the trial supervisor graph, streaming events and processing them.
+        It continues to stream events until all tasks are completed or an interruption occurs. If user feedback
+        is required, it collects feedback, updates the graph state, and proceeds accordingly. Finally, it
+        combines text files into a single document.
+        """
+        self.trial_supervisor_graph = trialSupervisorGraph()
+        self.graph = self.trial_supervisor_graph.create_trial_supervisor_graph()
+
+        if save_image_flag:
+            save_image(self.graph)
+        for event in self.graph.stream(
+            inputs, config=config_, stream_mode="values", subgraphs=True
+        ):
+            state = event[-1]
+            _print_event(
+                state, _printed, scratchpad_filename=scratchpad_filename
+            )
+        return state
+
+
+    def run_graph_after_interruption(self,config_, state_before_interruption, scratchpad_filename=None, interruption_inputs={}):
+        """
+        Executes the trial supervisor graph and processes events in a loop until completion or interruption.
+
+        Args:
+            inputs (dict): The input data for the graph.
+            config (dict): The configuration settings for the graph.
+            scratchpad_filename (str, optional): The filename for writing messages.
+
+        The function initializes and runs the trial supervisor graph, streaming events and processing them.
+        It continues to stream events until all tasks are completed or an interruption occurs. If user feedback
+        is required, it collects feedback, updates the graph state, and proceeds accordingly. Finally, it
+        combines text files into a single document.
+        """
+
+        # get the purpose and last node
+        purpose = state_before_interruption["purpose"]
+        last_node = state_before_interruption["last_node"]
+
+        if purpose == "get_user_feedback_for_sub_activities":
+            # get human feedback
+            sub_activities = state_before_interruption["final_sub_activities"].sub_activities
+            response_dict = get_human_feedback_for_sub_activities(last_node, sub_activities=sub_activities)
+            # human_feedback = response_dict.get("human_feedback", "NA")
+            # response_val = response_dict.get("response_val", "NA")
+            final_sub_activities = response_dict.get("final_sub_activities", state_before_interruption["final_sub_activities"])
+            continue_state = Command(resume = {"final_sub_activities": final_sub_activities})
+            
+        # if purpose is to get user feedback, then collect user feedback
+        if purpose == "get_user_feedback":
+            # get human feedback
+            human_feedback, agent_feedback = get_human_feedback(last_node)
+            print(f"Human Feedback: {bold_start}{human_feedback}{bold_end}", "\n")
+
+            #get current config for updating state
+            current_config = self.graph.get_state(config_, subgraphs=True).tasks[0].state.config
+            self.graph.update_state(
+                current_config, {"human_feedback": agent_feedback}
+            )
+            continue_state = None
+        
+        for event in self.graph.stream(continue_state, config=config_, stream_mode="values", subgraphs=True):
+            state = event[-1]        
+            _print_event(
+                state, _printed, scratchpad_filename=scratchpad_filename
+            )
+        
+        tasks = self.graph.get_state(config_, subgraphs=True).tasks
+        
+        return tasks, state
+
+    def run_graph(self, graph_inputs, graph_config, scratchpad_filename):
+        # Run the graph for the first time
+        state_before_interruption = run_graph_first_run(
+            graph_inputs,
+            config_=graph_config,
+            scratchpad_filename=scratchpad_filename,
+            save_image_flag=True
+        )
+
+        while True:
+            # Run the graph after an interruption
+            tasks, state_before_interruption = run_graph_after_interruption(
+                state_before_interruption = state_before_interruption, 
+                config_=graph_config, 
+                scratchpad_filename=scratchpad_filename)
+            
+            if len(tasks) == 0:
+                # completed
+                break
+        
+        combine_txt_files_to_docx(folder_path = FINDINGS_OUTPUT_FOLDER, run_id=run_id,
+                                output_filename = FINAL_OUTPUT_DOCX_FILENAME,
+                                page_title = FINAL_OUTPUT_PAGE_TITLE)
+
+
     def run_agent(self, job):
         run_id = str(job.get("job_id"))
         site_id = job.get("site_id")
@@ -209,10 +359,15 @@ class RedisAppRunner:
            "recursion_limit": 100,  # Sets a limit on recursion depth to prevent stack overflow
         }
 
-        self._process_graph(
-            inputs = graph_inputs,
-            config=graph_config,
-            scratchpad_filename=scratchpad_filename,
+        # self._process_graph(
+        #     inputs = graph_inputs,
+        #     config=graph_config,
+        #     scratchpad_filename=scratchpad_filename,
+        # )
+        self.run_graph(
+            graph_inputs = graph_inputs,
+            graph_config = graph_config,
+            scratchpad_filename = scratchpad_filename
         )
 
 
