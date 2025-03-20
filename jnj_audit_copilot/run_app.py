@@ -229,19 +229,7 @@ def run_graph_after_interruption(config_, state_before_interruption, scratchpad_
     
     return tasks, state
 
-if __name__ == "__main__":
-
-    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
-    scratchpad_filename = run_id + ".txt"
-
-    create_directory_structure(
-        run_id=run_id,
-    )
-    os.makedirs(AGENT_SCRATCHPAD_FOLDER, exist_ok=True)
-
-    graph_inputs = clean_graph_inputs(graph_inputs.copy())
-    graph_inputs["run_id"] = run_id
-    
+def run_graph(graph_inputs, graph_config, run_id, scratchpad_filename):
     # Run the graph for the first time
     state_before_interruption = run_graph_first_run(
         graph_inputs,
@@ -253,7 +241,7 @@ if __name__ == "__main__":
     print(f"Graph processed successfully (first run). Run ID: {run_id}, Scratchpad: {scratchpad_filename}")
 
     while True:
-
+        # Run the graph after an interruption
         tasks, state_before_interruption = run_graph_after_interruption(
             state_before_interruption = state_before_interruption, 
             config_=graph_config, 
@@ -268,3 +256,17 @@ if __name__ == "__main__":
     combine_txt_files_to_docx(folder_path = FINDINGS_OUTPUT_FOLDER, run_id=run_id,
                               output_filename = FINAL_OUTPUT_DOCX_FILENAME,
                               page_title = FINAL_OUTPUT_PAGE_TITLE)
+
+if __name__ == "__main__":
+    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
+    scratchpad_filename = run_id + ".txt"
+
+    create_directory_structure(
+        run_id=run_id,
+    )
+    os.makedirs(AGENT_SCRATCHPAD_FOLDER, exist_ok=True)
+
+    graph_inputs = clean_graph_inputs(graph_inputs.copy())
+    graph_inputs["run_id"] = run_id
+    
+    run_graph(graph_inputs, graph_config, run_id, scratchpad_filename)

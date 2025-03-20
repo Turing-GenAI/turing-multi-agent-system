@@ -8,6 +8,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 from langchain.schema import HumanMessage, SystemMessage
 from retry import retry
+import shutil
 
 from app.common.config import ACTIVITY_LIST_FILE, INPUT_DIR, SITE_DATA_INPUT_FILE_NAMES
 from app.common.constants import (
@@ -466,3 +467,22 @@ def is_folder_empty(folder_path):
     except FileNotFoundError:
         # If the folder doesn't exist, consider it empty
         return True
+
+    import shutil
+
+def delete_folder(folder_path):
+    """
+    Delete a folder and all its contents.
+    
+    Args:
+        folder_path (str): Path to the folder to delete
+        
+    Returns:
+        bool: True if deletion was successful, False otherwise
+    """
+    try:
+        shutil.rmtree(folder_path)
+        return True
+    except Exception as e:
+        print(f"Error deleting folder {folder_path}: {e}")
+        return False

@@ -23,6 +23,7 @@ from ....utils.langchain_azure_openai import model_with_sub_activity_structured_
 from ....utils.log_setup import get_logger
 from ....utils.response_classes import DiscrepancyFunction
 from ....utils.state_definitions import InspectionAgentState
+from ....utils.create_vector_store import process_all_by_site_area
 from .inspection_functions import inspectionFunctions
 
 # Get the same logger instance set up earlier
@@ -88,35 +89,57 @@ class inspectionNodes:
                 ),
             }
 
+    # def site_area_ingestion_node(self, state: InspectionAgentState):
+    #     site_area = state["site_area"]
+    #     trigger = state["trigger"]
+    #     site_id = trigger["site_id"]
+    #     trial_id = trigger["trial_id"]
+    #     reingest_data_flag = trigger["reingest_data_flag"]
+    #     ingestor = IngestionFacade(
+    #         site_area=site_area, site_id=site_id, trial_id=trial_id, reingest_data_flag=reingest_data_flag
+    #     )
+    #     summary_vectorstore, data_retriever = ingestor.ingest_data()
+    #     guidelines_vectorstore = ingestor.ingest_guidelines()
+
+    #     add_msg = []
+    #     if summary_vectorstore is None:
+    #         add_msg.append("summary_vectorstore")
+    #     if data_retriever is None:
+    #         add_msg.append("data_retriever")
+    #     if guidelines_vectorstore is None:
+    #         add_msg.append("guidelines_vectorstore")
+    #     error = ""
+    #     if len(add_msg) > 0:
+    #         error = "\nbut could not create" + ", ".join(add_msg) + ". Check applications.log for more info"
+
+    #     logger.debug(f"Calling site_area_ingestion_node: Data Ingestion for site area-{site_area} completed!")
+    #     return {
+    #         "inspection_messages": AIMessage(
+    #             name=f"{bold_start}inspection - data_ingestion node:{bold_end}",
+    #             content=(
+    #                 f"Ingestion for Domain: {site_area},  Input-X1-{trial_id} " f"and Input-X2-{site_id} is Done!{error}"
+    #             ),
+    #         )
+    #     }
     def site_area_ingestion_node(self, state: InspectionAgentState):
         site_area = state["site_area"]
         trigger = state["trigger"]
         site_id = trigger["site_id"]
         trial_id = trigger["trial_id"]
         reingest_data_flag = trigger["reingest_data_flag"]
-        ingestor = IngestionFacade(
-            site_area=site_area, site_id=site_id, trial_id=trial_id, reingest_data_flag=reingest_data_flag
-        )
-        summary_vectorstore, data_retriever = ingestor.ingest_data()
-        guidelines_vectorstore = ingestor.ingest_guidelines()
-
-        add_msg = []
-        if summary_vectorstore is None:
-            add_msg.append("summary_vectorstore")
-        if data_retriever is None:
-            add_msg.append("data_retriever")
-        if guidelines_vectorstore is None:
-            add_msg.append("guidelines_vectorstore")
-        error = ""
-        if len(add_msg) > 0:
-            error = "\nbut could not create" + ", ".join(add_msg) + ". Check applications.log for more info"
-
-        logger.debug(f"Calling site_area_ingestion_node: Data Ingestion for site area-{site_area} completed!")
+        logger.debug(f"Calling function : site_area_ingestion_node for Domain: {site_area}...")
+        # Call the process_all_by_site_area function
+        try:
+            process_all_by_site_area(site_area, reingest_data_flag)
+        except Exception as e:
+            logger.error(f"Error during ingestion of data for site area {site_area}: {e}")
+            print(f"Error during ingestion of data for site area {site_area}: {e}")
+        
         return {
             "inspection_messages": AIMessage(
                 name=f"{bold_start}inspection - data_ingestion node:{bold_end}",
                 content=(
-                    f"Ingestion for Domain: {site_area},  Input-X1-{trial_id} " f"and Input-X2-{site_id} is Done!{error}"
+                    f"Ingestion for Domain: {site_area},  Input-X1-{trial_id} " f"and Input-X2-{site_id} is Done!"
                 ),
             )
         }

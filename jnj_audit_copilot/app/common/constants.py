@@ -15,7 +15,7 @@ def get_project_root():
     """
     # Path to this file
     current_file = os.path.abspath(__file__)
-    print(f"Current file path: {current_file}")
+    # print(f"Current file path: {current_file}")
     
     # Path to common directory
     common_dir = os.path.dirname(current_file)
@@ -26,7 +26,7 @@ def get_project_root():
     # Path to turing-multi-agent-system directory
     turing_dir = os.path.dirname(jnj_dir)
     
-    print(f"Project root determined as: {turing_dir}")
+    # print(f"Project root determined as: {turing_dir}")
     
     return turing_dir
 
