@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Database, Users, Activity, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import DataSources from '../components/inputs/DataSources';
 import UserInputs from '../components/inputs/UserInputs';
@@ -13,6 +13,10 @@ export const Inputs: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<TabType>('data_sources');
   // State to track if the sidebar is collapsed
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // State for navbar scroll hiding
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const navbarRef = useRef<HTMLDivElement>(null);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -39,16 +43,40 @@ export const Inputs: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 py-4 px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {/* Removed the "Inputs" title */}
+        <header 
+          ref={navbarRef}
+          className={`bg-white border-b border-gray-200 sticky top-0 z-10 transition-transform duration-300 ${
+            !showNavbar ? 'transform -translate-y-full' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between py-4 px-6">
+            <div className="flex flex-1 items-center">
+              <h1 className="text-lg font-semibold text-gray-900">Data Inputs</h1>
+              <p className="ml-4 text-sm text-gray-500">
+                Configure and manage data sources, system architecture, and user inputs
+              </p>
             </div>
           </div>
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden">
+        <div 
+          className="flex-1 flex overflow-hidden"
+          onScroll={(e) => {
+            const target = e.currentTarget;
+            const currentScrollPos = target.scrollTop;
+            
+            if (currentScrollPos > prevScrollPos) {
+              // Scrolling down, hide navbar
+              setShowNavbar(false);
+            } else {
+              // Scrolling up, show navbar
+              setShowNavbar(true);
+            }
+            
+            setPrevScrollPos(currentScrollPos);
+          }}
+        >
           {/* Left Panel - Tabbed Menu */}
           <div 
             className={`bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col relative ${
