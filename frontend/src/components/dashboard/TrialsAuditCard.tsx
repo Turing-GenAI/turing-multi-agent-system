@@ -159,7 +159,7 @@ export const TrialsAuditCard: React.FC<TrialsAuditCardProps> = ({ trials, onClos
             {/* Right column - Completed */}
             <div className="p-4">
               <h3 className="text-lg font-semibold mb-4 flex items-center">
-                Completed Trials 
+                Audited Trials 
                 <span className="ml-2 px-2 py-0.5 text-sm font-medium bg-green-100 text-green-800 rounded-full">
                   {completedTrials.length}
                 </span>

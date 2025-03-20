@@ -36,53 +36,53 @@ const mockStats = {
 const mockActivities: Activity[] = [
   {
     id: '1',
-    title: 'Protocol Deviation alert for Trial #28745',
-    description: '3 protocol deviations were not closed in an acceptable time frame.',
+    title: 'Protocol Deviation alert for Trial CNTO1275AMY3001',
+    description: '3 protocol deviations were identified during the audit process.',
     timestamp: new Date(),
     type: 'deviation',
-    status: 'Open',
+    status: 'In Progress',
   },
   {
     id: '2',
-    title: 'Adverse Event alert for Trial #35912',
-    description: '2 adverse events were reported with delay.',
+    title: 'Adverse Event alert for Trial VAC18193RSV2028',
+    description: '2 adverse events require additional follow-up actions.',
     timestamp: new Date(),
     type: 'finding',
-    status: 'Open',
+    status: 'In Progress',
   },
   {
     id: '3',
-    title: 'Informed Consent alert for Trial #47231',
-    description: 'Some patients have not consented for the applicable ICF version',
+    title: 'Informed Consent alert for Trial 90014496PUC3103',
+    description: 'Some patients have missing documentation in the audit trail',
     timestamp: new Date(),
     type: 'deviation',
-    status: 'Open',
+    status: 'In Progress',
   },
 ];
 
 const mockActions: ActionItem[] = [
   {
     id: '1',
-    title: 'Close Protocol Deviations for Trial #28745',
-    description: 'Review and close 3 protocol deviations that have exceeded acceptable timeframe',
+    title: 'Review Protocol Deviations for Trial CNTO1275AMY3001',
+    description: 'Audit 3 protocol deviations that were identified in the initial review',
     priority: 'high',
-    dueDate: new Date('2025-03-12'),
+    dueDate: new Date('2025-03-22'),
     status: 'pending',
   },
   {
     id: '2',
-    title: 'Investigate Adverse Event Reporting Delays for Trial #35912',
-    description: 'Determine root cause of delayed reporting for 2 adverse events and implement corrective measures',
+    title: 'Follow Up on Adverse Events for Trial VAC18193RSV2028',
+    description: 'Complete audit process for 2 adverse events and document findings',
     priority: 'high',
-    dueDate: new Date('2025-03-11'),
+    dueDate: new Date('2025-03-21'),
     status: 'in_progress',
   },
   {
     id: '3',
-    title: 'Update ICF Consents for Trial #47231',
-    description: 'Ensure all patients complete consent for the latest ICF version and document appropriately',
+    title: 'Audit Informed Consent Forms for Trial 90014496PUC3103',
+    description: 'Verify documentation completeness for all patient consent forms',
     priority: 'medium',
-    dueDate: new Date('2025-03-15'),
+    dueDate: new Date('2025-03-25'),
     status: 'pending',
   },
 ];
@@ -109,7 +109,7 @@ export const Dashboard: React.FC = () => {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard
-              title="Total Deviations"
+              title="Total Findings"
               value={mockStats.totalDeviations}
               icon={BarChart2}
               trend={{ value: 12, isPositive: false }}
@@ -117,7 +117,7 @@ export const Dashboard: React.FC = () => {
               iconColor="text-blue-600"
             />
             <StatCard
-              title="Open Alerts"
+              title="In Progress Alerts"
               value={mockStats.openActions}
               icon={AlertCircle}
               trend={{ value: 5, isPositive: true }}
@@ -133,12 +133,12 @@ export const Dashboard: React.FC = () => {
               iconColor="text-red-600"
             />
             <StatCard
-              title="Completed Alerts"
+              title="Audited Alerts"
               value={mockStats.completedActions}
               icon={CheckCircle2}
               trend={{ value: 8, isPositive: true }}
-              bgColor="bg-purple-50"
-              iconColor="text-purple-600"
+              bgColor="bg-green-50"
+              iconColor="text-green-600"
             />
           </div>
         </>
