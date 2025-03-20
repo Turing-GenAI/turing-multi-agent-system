@@ -26,6 +26,7 @@ class inspectionSubgraph:
         builder = StateGraph(InspectionAgentState)
         builder.add_node("site_area_agent", self.inspection_nodes.site_area_agent_node)
         builder.add_node("site_area_router", self.inspection_nodes.site_area_router_node)
+        # builder.add_node("fetch_subactivity_agent", self.inspection_nodes.fetch_subactivity_node)
         builder.add_node("planner_agent", self.inspection_nodes.sub_activity_generator_node)
         builder.add_node("critique_agent", self.inspection_nodes.validate_sub_activity_node)
         builder.add_node("feedback_agent", self.inspection_nodes.work_on_feedback_node)

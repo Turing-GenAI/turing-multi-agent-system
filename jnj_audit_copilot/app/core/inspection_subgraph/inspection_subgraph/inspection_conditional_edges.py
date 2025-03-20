@@ -58,6 +58,7 @@ class inspectionConditionalFunctions:
         else:
             return "data_ingestion"
 
+    # def site_area_routing(self, state: InspectionAgentState) -> Literal["site_area_agent", "fetch_subactivity_agent"]:
     def site_area_routing(self, state: InspectionAgentState) -> Literal["site_area_agent", "planner_agent"]:
         """
         Routes to the appropriate agent based on the current parent activity index.
@@ -75,6 +76,7 @@ class inspectionConditionalFunctions:
         # Check if there are more activities in the list
         if parent_index < len(state["all_activities"]):
             return "planner_agent"
+            # return "fetch_subactivity_agent"
         else:
             return "site_area_agent"
 
