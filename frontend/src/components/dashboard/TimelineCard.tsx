@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, CheckCircle2, AlertCircle, FileCheck, X } from 'lucide-react';
 import { TrialsAuditCard } from './TrialsAuditCard';
 import { AlertsCard } from './AlertsCard';
@@ -199,46 +199,44 @@ export const TimelineCard: React.FC = () => {
     setShowTrialsModal(true);
   };
 
-  const handleAlertsClick = () => {
-    // Generate random alerts data
+  // Create a memoized function to generate alerts data
+  const generateAlertsData = useCallback(() => {
+    // Generate random alerts data based on trials data for consistency
     const regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America'] as const;
     type Region = typeof regions[number];
     
     const countries: Record<Region, string[]> = {
-      'North America': ['USA', 'Canada'],
-      'Europe': ['UK', 'Germany', 'France', 'Spain'],
-      'Asia Pacific': ['Japan', 'China', 'Australia', 'South Korea'],
+      'North America': ['USA', 'Canada', 'Mexico'],
+      'Europe': ['UK', 'Germany', 'France', 'Italy', 'Spain'],
+      'Asia Pacific': ['Japan', 'China', 'India', 'South Korea'],
       'Latin America': ['Brazil', 'Mexico', 'Argentina']
     };
-    const statuses: ('In Progress' | 'Completed')[] = ['In Progress', 'Completed'];
+    const statuses: ('In Progress' | 'Audited')[] = ['In Progress', 'Audited'];
 
-    // Start from trial number 100 and scale up to approximately 30,000
-    // Always have some trials in "In Progress" status (10-20 trials)
-    const inProgressCount = 10 + Math.floor(Math.random() * 10); // 10-20 trials in progress
-    const completedCount = 100; // Show 100 completed trials initially
+    // Use the same counts as trials
+    const inProgressCount = trials.filter(trial => trial.isLive).length; // Match in-progress trials
+    const completedCount = trials.filter(trial => !trial.isLive).length; // Match completed trials
     
-    // Generate completed trials (first 100 trials)
+    // Generate completed alerts that match the number of completed trials
     const completedAlerts = Array.from({ length: completedCount }, (_, i) => {
       const region = regions[Math.floor(Math.random() * regions.length)];
-      const trialNumber = i + 1; // Trials 1-100 are completed
+      const trialNumber = i + 1; 
       const trialId = generateTrialId(trialNumber);
       return {
         trialId,
-        status: 'Completed' as const,
+        status: 'Audited' as const,
         region,
         country: countries[region][Math.floor(Math.random() * countries[region].length)],
         pdAlerts: Math.floor(Math.random() * 5),
-        aeAlerts: Math.floor(Math.random() * 8),
-        cssAlerts: Math.floor(Math.random() * 4),
-        sgrAlerts: Math.floor(Math.random() * 3)
+        aeAlerts: Math.floor(Math.random() * 8)
       };
     });
     
-    // Generate in-progress trials (starting from 101)
+    // Generate in-progress alerts that match the number of in-progress trials
     const inProgressAlerts = Array.from({ length: inProgressCount }, (_, i) => {
       const region = regions[Math.floor(Math.random() * regions.length)];
-      // Start from 101 and randomly distribute up to ~30,000
-      const trialNumber = 101 + Math.floor(Math.random() * 29900);
+      // Use trial number that matches the in-progress trials
+      const trialNumber = 101 + i;
       const trialId = generateTrialId(trialNumber);
       return {
         trialId,
@@ -246,14 +244,12 @@ export const TimelineCard: React.FC = () => {
         region,
         country: countries[region][Math.floor(Math.random() * countries[region].length)],
         pdAlerts: Math.floor(Math.random() * 5),
-        aeAlerts: Math.floor(Math.random() * 8),
-        cssAlerts: Math.floor(Math.random() * 4),
-        sgrAlerts: Math.floor(Math.random() * 3)
+        aeAlerts: Math.floor(Math.random() * 8)
       };
     });
 
     // Combine and sort the alerts
-    const newAlerts = [...inProgressAlerts, ...completedAlerts].sort((a, b) => {
+    return [...inProgressAlerts, ...completedAlerts].sort((a, b) => {
       // Sort by status first (In Progress first)
       if (a.status === 'In Progress' && b.status !== 'In Progress') return -1;
       if (a.status !== 'In Progress' && b.status === 'In Progress') return 1;
@@ -263,7 +259,11 @@ export const TimelineCard: React.FC = () => {
       const bNum = getTrialIndex(b.trialId);
       return aNum - bNum;
     });
+  }, [trials]);
 
+  const handleAlertsClick = () => {
+    // Use the memoized function to generate alerts
+    const newAlerts = generateAlertsData();
     setAlerts(newAlerts);
     setShowAlertsModal(true);
   };
@@ -354,11 +354,21 @@ export const TimelineCard: React.FC = () => {
           {timelineData.map((point, index) => (
             <div key={point.quarter} className="relative flex-1 px-4">
               {/* Timeline dot */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-[42px] w-[18px] h-[18px] bg-blue-500 rounded-full"></div>
+              <div className={`absolute left-1/2 -translate-x-1/2 top-[42px] w-[18px] h-[18px] bg-blue-500 rounded-full ${
+                point.isLive ? 'ring-2 ring-blue-300' : ''
+              }`}>
+                {point.isLive && (
+                  <span className="absolute w-full h-full rounded-full animate-ping bg-blue-400 opacity-60"></span>
+                )}
+              </div>
 
               {/* Content */}
               <div className="text-center mb-16">
-                <h2 className="text-xl font-semibold text-gray-700 mb-12">{point.quarter}</h2>
+                <h2 className={`text-xl font-semibold mb-12 ${
+                  point.isLive 
+                    ? 'text-blue-600' 
+                    : 'text-gray-700'
+                }`}>{point.quarter}</h2>
                 
                 <div className="space-y-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
@@ -370,8 +380,9 @@ export const TimelineCard: React.FC = () => {
                   </div>
 
                   <div 
-                    className={`bg-green-50 p-4 rounded-lg cursor-pointer hover:bg-green-100 transition-colors ${point.isLive ? 'relative overflow-hidden' : ''}`}
-                    onClick={handleTrialsClick}
+                    className={`bg-green-50 p-4 rounded-lg ${point.isLive ? 'cursor-pointer hover:bg-green-100 transition-colors relative overflow-hidden' : 'opacity-90 relative'}`}
+                    onClick={point.isLive ? handleTrialsClick : undefined}
+                    title={point.isLive ? "Click to view trials audited" : "Historical data - details not available"}
                   >
                     {point.isLive && (
                       <div className="absolute top-0 right-0 w-3 h-3">
@@ -387,8 +398,9 @@ export const TimelineCard: React.FC = () => {
                   </div>
 
                   <div 
-                    className={`bg-yellow-50 p-4 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors ${point.isLive ? 'relative overflow-hidden' : ''}`}
-                    onClick={handleAlertsClick}
+                    className={`bg-yellow-50 p-4 rounded-lg ${point.isLive ? 'cursor-pointer hover:bg-yellow-100 transition-colors relative overflow-hidden' : 'opacity-90 relative'}`}
+                    onClick={point.isLive ? handleAlertsClick : undefined}
+                    title={point.isLive ? "Click to view open alerts" : "Historical data - details not available"}
                   >
                     {point.isLive && (
                       <div className="absolute top-0 right-0 w-3 h-3">
@@ -427,8 +439,9 @@ export const TimelineCard: React.FC = () => {
 
       {showAlertsModal && (
         <AlertsCard 
-          alerts={alerts.filter(alert => alert.status === 'In Progress' || alert.status === 'Completed')} 
+          alerts={alerts} 
           onClose={() => setShowAlertsModal(false)} 
+          onRefresh={generateAlertsData}
         />
       )}
     </div>

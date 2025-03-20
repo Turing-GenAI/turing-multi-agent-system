@@ -11,7 +11,7 @@ import { ContactSupportModal } from '../components/modals/ContactSupportModal';
 import JobHistoryPanel from '../components/JobHistoryPanel'
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
-import { Home, FileText, AlertCircle, Settings, HelpCircle, Menu, Database, History, Lightbulb } from 'lucide-react';
+import { History, Lightbulb } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 import { AIMessagesResponse, TreeNode, RetrievedContextResponse } from '../api';
 
@@ -44,7 +44,7 @@ export const AuditPage: React.FC = () => {
   });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedAgentTab, setSelectedAgentTab] = useState<AgentType>('trial_master');
+  const [selectedAgent, setSelectedAgent] = useState<AgentType>('trial_master');
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const [isPDLoading, setIsPDLoading] = useState(false);
@@ -84,6 +84,10 @@ export const AuditPage: React.FC = () => {
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
   const [isTermsOfServiceModalOpen, setIsTermsOfServiceModalOpen] = useState(false);
   const [isContactSupportModalOpen, setIsContactSupportModalOpen] = useState(false);
+
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const navbarRef = useRef<HTMLDivElement>(null);
 
   const isMessageProcessed = (content: string, nodeName: string) => {
     const messageId = `${nodeName}-${content}`.trim();
@@ -170,9 +174,9 @@ export const AuditPage: React.FC = () => {
           console.log("processQueue : ",  cont, ', newMessage: ', JSON.stringify(newMessage))
           setMessagesByAgent(prev => ({
             ...prev,
-            [selectedAgentTab]: prev[selectedAgentTab].some(msg => msg.id === messageId)
-              ? prev[selectedAgentTab].map(msg => msg.id === messageId ? newMessage : msg)
-              : [...prev[selectedAgentTab], newMessage],
+            [selectedAgent]: prev[selectedAgent].some(msg => msg.id === messageId)
+              ? prev[selectedAgent].map(msg => msg.id === messageId ? newMessage : msg)
+              : [...prev[selectedAgent], newMessage],
           }));
 
           console.log("processQueue, setMessageByAgent: ", messagesByAgent)
@@ -193,9 +197,9 @@ export const AuditPage: React.FC = () => {
 
         setMessagesByAgent(prev => ({
           ...prev,
-          [selectedAgentTab]: prev[selectedAgentTab].some(msg => msg.id === messageId)
-            ? prev[selectedAgentTab].map(msg => msg.id === messageId ? newMessage : msg)
-            : [...prev[selectedAgentTab], newMessage],
+          [selectedAgent]: prev[selectedAgent].some(msg => msg.id === messageId)
+            ? prev[selectedAgent].map(msg => msg.id === messageId ? newMessage : msg)
+            : [...prev[selectedAgent], newMessage],
         }));
 
         if (!SKIP_ANIMATION) {
@@ -209,7 +213,7 @@ export const AuditPage: React.FC = () => {
             currentContent += char;
             setMessagesByAgent(prev => ({
               ...prev,
-              [selectedAgentTab]: prev[selectedAgentTab].map(msg =>
+              [selectedAgent]: prev[selectedAgent].map(msg =>
                 msg.id === messageId
                   ? { ...msg, content: currentContent }
                   : msg
@@ -230,7 +234,7 @@ export const AuditPage: React.FC = () => {
     };
 
     processQueue();
-  }, [messageQueue, isProcessingQueue, selectedAgentTab]);
+  }, [messageQueue, isProcessingQueue, selectedAgent]);
 
   const addAgentMessage = async (
     message: string, 
@@ -1180,38 +1184,54 @@ export const AuditPage: React.FC = () => {
   }, [jobStatus]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        {/* <header className="bg-white border-b border-gray-200 py-4 px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Menu className="w-6 h-6 text-gray-600 lg:hidden" />
-              <h1 className="text-xl font-semibold text-gray-800"> Audit Compliance Assistant</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setShowJobHistory(true)}
-                disabled={false}
-                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <History className="w-4 h-4 mr-2" />
-                Job History
-              </button>
+    <div 
+      className="flex flex-col h-screen bg-gray-50 overflow-auto" 
+      onScroll={(e) => {
+        const target = e.currentTarget;
+        const currentScrollPos = target.scrollTop;
+        
+        if (currentScrollPos > prevScrollPos) {
+          // Scrolling down, hide navbar
+          setShowNavbar(false);
+        } else {
+          // Scrolling up, show navbar
+          setShowNavbar(true);
+        }
+        
+        setPrevScrollPos(currentScrollPos);
+      }}
+    >
+      {/* Navbar */}
+      <div 
+        ref={navbarRef}
+        className={`bg-white border-b border-gray-200 sticky top-0 z-10 transition-transform duration-300 ${
+          !showNavbar ? 'transform -translate-y-full' : ''
+        }`}
+      >
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex flex-1">
+              <div className="flex items-center">
+                <h1 className="text-lg font-semibold text-gray-900">Audit Copilot</h1>
+                <p className="ml-4 text-sm text-gray-500">
+                  AI-powered assistant for audit compliance and inspection findings analysis
+                </p>
+              </div>
             </div>
           </div>
-        </header> */}
-
+        </div>
+      </div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Agent Window Area */}
         <div className="flex-1 overflow-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full p-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <AgentWindow
-                messages={messagesByAgent[selectedAgentTab]}
-                userInput={userInput[selectedAgentTab]}
-                updateUserInput={(value) => setUserInput(prev => ({ ...prev, [selectedAgentTab]: value }))}
-                handleSendMessage={(e) =>  handleSendMessage(selectedAgentTab, e)}
+                messages={messagesByAgent[selectedAgent]}
+                userInput={userInput[selectedAgent]}
+                updateUserInput={(value) => setUserInput(prev => ({ ...prev, [selectedAgent]: value }))}
+                handleSendMessage={(e) =>  handleSendMessage(selectedAgent, e)}
                 trials={trials}
                 sites={sites}
                 onInputComplete={(data) => {

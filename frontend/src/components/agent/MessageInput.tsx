@@ -8,26 +8,42 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   handleSendMessage,
   disabled = false,
 }) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (userInput.trim()) {
+        handleSendMessage(e);
+      }
+    }
+  };
+
   return (
-    <form onSubmit={handleSendMessage} className="flex space-x-2">
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      if (userInput.trim()) {
+        handleSendMessage(e);
+      }
+    }} className="flex space-x-2">
       <input
         type="text"
         value={userInput}
         onChange={(e) => updateUserInput(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="Type your message..."
         disabled={disabled}
-        className={`flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+        className={`flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           disabled ? 'bg-gray-100 cursor-not-allowed' : ''
         }`}
       />
       <button
         type="submit"
-        disabled={disabled}
-        className={`px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          disabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
+        disabled={disabled || !userInput.trim()}
+        className={`w-10 h-10 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          disabled || !userInput.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'
         }`}
+        aria-label="Send message"
       >
-        <Send className="w-4 h-4" />
+        <Send className="w-5 h-5" />
       </button>
     </form>
   );

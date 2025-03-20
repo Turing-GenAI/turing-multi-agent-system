@@ -1,12 +1,12 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
-interface PDAlertsDialogProps {
+interface D1AlertsDialogProps {
   trialId: string;
   onClose: () => void;
 }
 
-interface PDAlert {
+interface D1Alert {
   subject: string;
   protocol: string;
   site: string;
@@ -17,9 +17,9 @@ interface PDAlert {
   daysOutstanding: number;
 }
 
-export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose }) => {
-  // Mock data for protocol deviation alerts
-  const mockPDAlerts: PDAlert[] = [
+export const D1AlertsDialog: React.FC<D1AlertsDialogProps> = ({ trialId, onClose }) => {
+  // Mock data for Domain 1 alerts
+  const mockD1Alerts: D1Alert[] = [
     {
       subject: 'SUB-001',
       protocol: 'PROTO-43',
@@ -86,7 +86,7 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
             <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
               <AlertTriangle size={16} className="text-yellow-500" />
             </div>
-            <h2 className="text-xl font-semibold text-yellow-600">Protocol Deviation Alerts for Trial {trialId}</h2>
+            <h2 className="text-xl font-semibold text-yellow-600">Domain 1 Alerts for Trial {trialId}</h2>
           </div>
           <button 
             onClick={onClose}
@@ -102,20 +102,20 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
               <div className="prose prose-sm max-w-none">
                 <h3 className="text-lg font-semibold mb-4 text-yellow-800">Summary of Findings</h3>
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  Analysis of trial {trialId} has identified {mockPDAlerts.length} protocol deviations that require attention. 
-                  These deviations span across multiple categories including informed consent, eligibility criteria, 
-                  and medication administration. Specific actions are recommended to address each deviation and 
+                  Analysis of trial {trialId} has identified {mockD1Alerts.length} Domain 1 alerts that require attention. 
+                  These alerts span across multiple categories including informed consent, eligibility criteria, 
+                  and medication administration. Specific actions are recommended to address each alert and 
                   prevent similar occurrences in the future.
                 </p>
                 <ul className="list-disc pl-4 mb-4 space-y-2">
                   <li className="text-gray-700">
-                    <strong>Critical deviations:</strong> {mockPDAlerts.filter(a => a.severity === 'Critical').length} issues requiring immediate action
+                    <strong>Critical alerts:</strong> {mockD1Alerts.filter(a => a.severity === 'Critical').length} issues requiring immediate action
                   </li>
                   <li className="text-gray-700">
-                    <strong>Major deviations:</strong> {mockPDAlerts.filter(a => a.severity === 'Major').length} issues requiring prompt attention
+                    <strong>Major alerts:</strong> {mockD1Alerts.filter(a => a.severity === 'Major').length} issues requiring prompt attention
                   </li>
                   <li className="text-gray-700">
-                    <strong>Minor deviations:</strong> {mockPDAlerts.filter(a => a.severity === 'Minor').length} issues to be addressed according to standard procedures
+                    <strong>Minor alerts:</strong> {mockD1Alerts.filter(a => a.severity === 'Minor').length} issues to be addressed according to standard procedures
                   </li>
                 </ul>
               </div>
@@ -131,13 +131,13 @@ export const PDAlertsDialog: React.FC<PDAlertsDialogProps> = ({ trialId, onClose
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Site</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Category</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Severity</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Deviation</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Alert</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border border-gray-200">Description</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {mockPDAlerts.map((alert, index) => (
+                    {mockD1Alerts.map((alert, index) => (
                       <tr key={index} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.subject}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 border border-gray-200">{alert.protocol}</td>

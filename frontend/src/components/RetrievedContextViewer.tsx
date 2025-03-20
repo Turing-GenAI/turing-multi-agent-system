@@ -245,9 +245,9 @@ export const RetrievedContextViewer: React.FC<RetrievedContextViewerProps> = ({ 
         let formattedDisplayKey = displayKey;
 
         if (displayKey === 'PD') {
-          formattedDisplayKey = 'Protocol Deviations';
+          formattedDisplayKey = 'Domain 1';
         } else if (displayKey === 'AE_SAE') {
-          formattedDisplayKey = 'Adverse Events / Serious Adverse Events';
+          formattedDisplayKey = 'Domain 2';
         }
 
         return (

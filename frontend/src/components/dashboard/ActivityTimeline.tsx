@@ -19,14 +19,14 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ activities }
     // Check if title contains specific keywords to determine alert type
     const title = activity.title.toLowerCase();
     
-    if (title.includes('protocol deviation')) {
+    if (title.includes('protocol deviation') || title.includes('domain 1') || title.includes('d1')) {
       return {
         dotColor: 'bg-amber-500',
         bgColor: 'bg-amber-50',
         textColor: 'text-amber-700',
         icon: <AlertTriangle className="h-4 w-4 text-amber-500" />
       };
-    } else if (title.includes('adverse event')) {
+    } else if (title.includes('adverse event') || title.includes('domain 2') || title.includes('d2')) {
       return {
         dotColor: 'bg-red-500',
         bgColor: 'bg-red-50',

@@ -90,14 +90,14 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
 
   const handleFindingsClick = (type: 'pd' | 'ae') => {
     if (type === 'ae') {
-      setDialogTitle('Adverse Event Findings');
+      setDialogTitle('Domain 2 Findings');
       setSelectedContent({
         conclusion: findingsData.discrepancy_data_activity_id_AE_SAE_001?.conclusion,
         table: findingsData.discrepancy_data_activity_id_AE_SAE_001?.table,
         type: 'ae'
       });
     } else {
-      setDialogTitle('Protocol Deviation Findings');
+      setDialogTitle('Domain 1 Findings');
       setSelectedContent({
         conclusion: findingsData.discrepancy_data_activity_id_PD_001?.conclusion,
         table: findingsData.discrepancy_data_activity_id_PD_001?.table,
@@ -208,7 +208,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               )}
             </div>
             <div>
-              <div className="font-medium text-gray-700">Protocol Deviations</div>
+              <div className="font-medium text-gray-700">Domain 1</div>
               <div className="text-gray-500">{isPDLoading ? 'Fetching...' : `${pdFindings} ${pdFindings === 1 ? 'finding' : 'findings'}`}</div>
             </div>
           </div>
@@ -225,7 +225,7 @@ export const FindingsSummary: React.FC<FindingsSummaryProps> = ({
               )}
             </div>
             <div>
-              <div className="font-medium text-gray-700">Adverse Events</div>
+              <div className="font-medium text-gray-700">Domain 2</div>
               <div className="text-gray-500">{isAELoading ? 'Fetching...' : `${aeFindings} ${aeFindings === 1 ? 'finding' : 'findings'}`}</div>
             </div>
           </div>
