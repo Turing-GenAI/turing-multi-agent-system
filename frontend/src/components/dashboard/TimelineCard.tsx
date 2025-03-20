@@ -354,11 +354,21 @@ export const TimelineCard: React.FC = () => {
           {timelineData.map((point, index) => (
             <div key={point.quarter} className="relative flex-1 px-4">
               {/* Timeline dot */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-[42px] w-[18px] h-[18px] bg-blue-500 rounded-full"></div>
+              <div className={`absolute left-1/2 -translate-x-1/2 top-[42px] w-[18px] h-[18px] bg-blue-500 rounded-full ${
+                point.isLive ? 'ring-2 ring-blue-300' : ''
+              }`}>
+                {point.isLive && (
+                  <span className="absolute w-full h-full rounded-full animate-ping bg-blue-400 opacity-60"></span>
+                )}
+              </div>
 
               {/* Content */}
               <div className="text-center mb-16">
-                <h2 className="text-xl font-semibold text-gray-700 mb-12">{point.quarter}</h2>
+                <h2 className={`text-xl font-semibold mb-12 ${
+                  point.isLive 
+                    ? 'text-blue-600' 
+                    : 'text-gray-700'
+                }`}>{point.quarter}</h2>
                 
                 <div className="space-y-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
