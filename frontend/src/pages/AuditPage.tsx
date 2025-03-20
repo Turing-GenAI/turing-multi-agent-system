@@ -542,6 +542,10 @@ export const AuditPage: React.FC = () => {
 
   const buildTreeFromFilteredDataWithoutPreviousTree = (filteredActivities: TreeNode[] | undefined) => {
     if (!filteredActivities || filteredActivities.length === 0) return [];
+  
+    // Log initial data for debugging
+    console.log("Starting to build tree from filtered data:", JSON.stringify(filteredActivities));
+  
     const parentNodes = ["inspection - site_area_agent", "trial supervisor - inspection_master_agent"];
     const previousActivities = currentActivitiesRef.current
     const activities: TreeNode[] = []
@@ -555,17 +559,18 @@ export const AuditPage: React.FC = () => {
       }
       activities.push(parentNode)
     }
-    
-    
+  
     // Find the last Unknown activity if it exists
     // const lastUnknownActivity = [...filteredActivities].reverse().find(activity => activity.name === "Unknown");
-    
-    filteredActivities.forEach((activity) => {
+  
+    filteredActivities.forEach((activity, index) => {
       // Skip Unknown activities except for the last one
       // if (activity.name === "Unknown" && activity !== lastUnknownActivity) {
       //   return;
       // }
-      
+  
+      console.log(`Processing node ${index}: ${activity.name}`);
+  
       if (parentNodes.includes(activity.name)) {
         // If it's a parent node, deep clone and add it
         activities.push(deepCloneTreeNode(activity));
@@ -585,112 +590,189 @@ export const AuditPage: React.FC = () => {
       }
     });
 
+    console.log("Final tree structure:", JSON.stringify(activities));
     return activities;
   };
 
   const processProgressTreeResponse = async (aiMessageResponse: AIMessagesResponse, jobId: string) => {
-    console.log("BackendIntegration: ", "processProgressTreeResponse  : ", aiMessageResponse)
-    console.log("processProgressTreeResponse:", aiMessageResponse);
-    let filteredActivities = aiMessageResponse.filtered_data
-    filteredActivities = filteredActivities?.filter(node => !(node.name === "Unknown" && node.content?.includes("User input -> Human Feedback:")))
-    if(!filteredActivities || filteredActivities.length == 0) return
-    const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities)
-    allActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
-    // Update the ref with new activities
-    // currentActivitiesRef.current = buildTreeFromFilteredData(filteredActivities);
+    // Add initial delay to ensure DOM is ready
+    await delay(1000);
+  
+    let filteredActivities = aiMessageResponse.filtered_data;
+  
+    // Validate data structure
+    if (!filteredActivities || !Array.isArray(filteredActivities)) {
+      console.error("Invalid tree data structure:", filteredActivities);
+      return;
+    }
+  
+    if (filteredActivities.length === 0) {
+      console.log("No activities to process");
+      return;
+    }
+  
+    console.log("Processing filtered activities:", filteredActivities.length);
+  
+    // Process and build tree with validation
+    const activities = buildTreeFromFilteredDataWithoutPreviousTree(filteredActivities);
+  
+    // Wait for DOM to stabilize before continuing
+    await delay(1500);
+  
+    // Store current activities for reference
     currentActivitiesRef.current = activities;
     console.log("Activities length: ", activities?.length, " new activites : ", filteredActivities, " after building tree activities: ", activities);
+  
     if (activities && activities?.length > 0) {
       // Process the activities to handle unknown node
       const { updatedActivities, humanFeedbackPrompt } = findAndRemoveUnknownNode(activities);
       console.log("splitNodes : ", "humanFeedbackPrompt:", humanFeedbackPrompt);
       console.log("splitNodes : ", "updatedActivities length: ", updatedActivities?.length);
+  
+      // Make sure we have valid activities before continuing
+      if (!updatedActivities || updatedActivities.length === 0) {
+        console.error("No valid activities after processing");
+        return;
+      }
 
       if(updatedActivities.length > 1) {
+        // Wait longer before splitting trees to ensure DOM is stable
+        await delay(1500);
+  
         // Split activities into two trees
         const firstTree = updatedActivities.slice(0, -1); // All nodes except the last one
         const secondTree = [updatedActivities[updatedActivities.length - 1]]; // Last node as a separate tree
-        
+  
         // Get the second last parent node and its last child
         const secondLastParentNode = firstTree[firstTree.length - 1];
         const lastChild = secondLastParentNode.children?.length ? 
           secondLastParentNode.children[secondLastParentNode.children.length - 1] : 
           null;
-        
-        console.log("splitNodes : ", "Adding first tree with length : ", firstTree.length)
-        
+  
+        console.log("splitNodes : ", "Adding first tree with length : ", firstTree.length);
+        console.log("First tree structure:", JSON.stringify(firstTree));
+  
         // Use unique timestamp for this set of operations
         const timestamp = Date.now();
-        
-        // Add the first tree progress
-        addAgentMessage(
-          "",  // Empty message since we're just showing the tree
-          "progresstree",
-          {
-            messageId: `progress-tree-first-${timestamp}`,  // Unique identifier with timestamp
-            value: firstTree,
-            onChange: (updatedTree: TreeNode) => {
-              setProgressTree(updatedTree);
-            },
-            progressTreeProps: {
-              showBreadcrumbs: true,
-              showMiniMap: true,
-              showKeyboardNav: true,
-              showQuickActions: true,
-              initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
-              animationDuration: 0  // Disable animation for first tree
+  
+        // New: Add longer animation duration and properly verify the first tree
+        // Process the first tree in a more robust way
+        const processFirstTree = async () => {
+          // Ensure we have a complete tree with the parent node and all children
+          if (firstTree.length > 0) {
+            // Process nodes as a complete unit to preserve parent-child relationships
+            console.log("Processing first tree as a complete unit:", firstTree.length);
+            
+            // First, ensure the tree structure is complete
+            let processedTree = [...firstTree];
+            
+            // Find the root node (should be "inspection - site_area_agent")
+            const rootNodeIndex = processedTree.findIndex(node => node.name === "inspection - site_area_agent");
+            
+            if (rootNodeIndex !== -1) {
+              // Extract the root node
+              const rootNode = processedTree[rootNodeIndex];
+              
+              // Create a flattened copy of all nodes
+              const allNodes = [...processedTree];
+              
+              // Identify known problematic nodes
+              const critiqueNode = allNodes.find(node => node.name.includes("critique_agent"));
+              const feedbackNode = allNodes.find(node => node.name.includes("feedback_agent"));
+              
+              // Log the problematic nodes for debugging
+              if (critiqueNode && feedbackNode) {
+                console.log("Found critique and feedback nodes:", 
+                  { critiqueId: critiqueNode.id, feedbackId: feedbackNode.id });
+              }
+              
+              // Build a stable tree structure with explicit parent-child relationships
+              // This ensures proper connectivity especially between critique and feedback agent
+              processedTree = [
+                {
+                  ...rootNode,
+                  children: processedTree
+                    .filter(node => node.id !== rootNode.id)
+                    .map(child => {
+                      // Special handling for critique/feedback relationship
+                      if (child.name && child.name.includes("critique_agent")) {
+                        return {
+                          ...child,
+                          parentId: rootNode.id,
+                          // Ensure feedback agent is properly attached as child of critique
+                          children: child.children || 
+                            (feedbackNode ? [{ ...feedbackNode, parentId: child.id }] : undefined)
+                        };
+                      }
+                      // Skip feedback if we've attached it to critique already
+                      if (child.name && child.name.includes("feedback_agent") && critiqueNode) {
+                        return undefined; // Will be filtered out by the filter(Boolean)
+                      }
+                      return {
+                        ...child,
+                        parentId: rootNode.id
+                      };
+                    })
+                    .filter(Boolean) as TreeNode[] // Remove undefined entries with type assertion
+                }
+              ];
             }
+            
+            // Now process the restructured tree sequentially with double delay
+            await delay(1000); // Extra delay before processing
+            processedTree = await processSequentially(processedTree, 500); // Longer per-node delay (500ms)
+            console.log("Processed tree:", JSON.stringify(processedTree));
+            
+            // Wait even longer before rendering
+            await delay(1500);
+            
+            // Add the first tree progress - with even higher animation duration for stability
+            addAgentMessage(
+              "",  // Empty message since we're just showing the tree
+              "progresstree",
+              {
+                messageId: `progress-tree-first-${timestamp}`,  // Unique identifier with timestamp
+                value: processedTree
+              }
+            );
           }
-        );
-        
+        };
+  
+        // Execute the first tree processing
+        await processFirstTree();
+  
+        // Wait longer between tree operations for stability
+        await delay(2500);
+  
         // Only add content message if it exists in the backend data
         if(lastChild && secondLastParentNode.name === "inspection - site_area_agent" && lastChild.content) {
           console.log("splitNodes : ", "second last child found with content : ", lastChild.content);
-          addAgentMessage(lastChild.content, "text", { messageId: `agent-message-${timestamp}` });
+          addAgentMessage(lastChild.content, "trial", { messageId: `agent-message-${timestamp}` });
+  
+          // Wait after adding content
+          await delay(1000);
         }
-        
-        console.log("splitNodes : ", "Adding second tree with length : ", secondTree.length)
+  
+        // Add the second tree progress
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
           "progresstree",
           {
             messageId: `progress-tree-second-${timestamp}`,  // Use timestamp to make unique identifier
-            value: secondTree,
-            onChange: (updatedTree: TreeNode) => {
-              setProgressTree(updatedTree);
-            },
-            progressTreeProps: {
-              showBreadcrumbs: true,
-              showMiniMap: true,
-              showKeyboardNav: true,
-              showQuickActions: true,
-              initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
-              animationDuration: 200
-            }
+            value: secondTree
           }
         );
-        
+  
       }
       else if (updatedActivities.length > 0) {
         // If we have regular activities, add them as a progress tree
         console.log("Progress tree response:", updatedActivities);
         addAgentMessage(
           "",  // Empty message since we're just showing the tree
-          "progresstree",
+          "progresstree", 
           {
             messageId: `progress-tree-${Date.now()}`,  // Use timestamp to make unique identifier
-            value: updatedActivities,
-            onChange: (updatedTree: TreeNode) => {
-              setProgressTree(updatedTree);
-            },
-            progressTreeProps: {
-              showBreadcrumbs: true,
-              showMiniMap: true,
-              showKeyboardNav: true,
-              showQuickActions: true,
-              initialExpandedNodes: ['0', '0.0'],  // Expand first two levels by default
-              animationDuration: 200
-            }
+            value: updatedActivities
           }
         );
       }
@@ -704,6 +786,61 @@ export const AuditPage: React.FC = () => {
         }, 10000); // 10 seconds delay
       }
     }
+  };
+
+  const processSequentially = async (nodes: TreeNode[], delayMs: number = 300): Promise<TreeNode[]> => {
+    // Create a new array to hold validated nodes
+    const validatedNodes: TreeNode[] = [];
+    
+    // Process each node sequentially with validation
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      
+      // Skip processing if node is already processed (avoid duplicates)
+      if (validatedNodes.some(vNode => vNode.id === node.id)) {
+        continue;
+      }
+
+      // Extra logging to help diagnose critique/feedback relationship
+      if (node.name && (node.name.includes("critique") || node.name.includes("feedback"))) {
+        console.log(`Processing node ${node.name} with id ${node.id}`, 
+          { hasChildren: !!node.children, childCount: node.children?.length || 0 });
+      }
+      
+      // Validate node structure
+      const validNode = {
+        ...node,
+        // Ensure id is a number or convertible to a number
+        id: typeof node.id === 'number' ? node.id : Number(node.id) || i,
+        // Ensure name is a string
+        name: typeof node.name === 'string' ? node.name : String(node.name || `Node ${i}`),
+        // Process children recursively if they exist, but only process them once
+        children: node.children ? await processSequentially(node.children, delayMs) : undefined
+      };
+      
+      validatedNodes.push(validNode);
+      
+      // Add delay between processing each node - longer delay for problematic nodes
+      if (i < nodes.length - 1) {
+        // Extra long delay for critique and feedback nodes
+        if (node.name && (node.name.includes("critique") || node.name.includes("feedback"))) {
+          await delay(delayMs * 2); // Double delay for problematic nodes
+        } else {
+          await delay(delayMs);
+        }
+      }
+    }
+    
+    // Sort the nodes to ensure parent nodes come before their children
+    return validatedNodes.sort((a, b) => {
+      // Root nodes first, then by ID
+      const aIsRoot = !nodes.some(n => n.children?.some(c => c.id === a.id));
+      const bIsRoot = !nodes.some(n => n.children?.some(c => c.id === b.id));
+      
+      if (aIsRoot && !bIsRoot) return -1;
+      if (!aIsRoot && bIsRoot) return 1;
+      return Number(a.id) - Number(b.id);
+    });
   };
 
   const fetchAIMessages = async (jobId: string, withFindings: boolean = false, retryCount: number = 3) => {
