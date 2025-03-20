@@ -36,16 +36,16 @@ const mockStats = {
 const mockActivities: Activity[] = [
   {
     id: '1',
-    title: 'Protocol Deviation alert for Trial CNTO1275AMY3001',
-    description: '3 protocol deviations were identified during the audit process.',
+    title: 'Domain 1 (D1) alert for Trial CNTO1275AMY3001',
+    description: '3 D1 alerts were identified during the audit process.',
     timestamp: new Date(),
     type: 'deviation',
     status: 'In Progress',
   },
   {
     id: '2',
-    title: 'Adverse Event alert for Trial VAC18193RSV2028',
-    description: '2 adverse events require additional follow-up actions.',
+    title: 'Domain 2 (D2) alert for Trial VAC18193RSV2028',
+    description: '2 D2 alerts require additional follow-up actions.',
     timestamp: new Date(),
     type: 'finding',
     status: 'In Progress',
@@ -63,16 +63,16 @@ const mockActivities: Activity[] = [
 const mockActions: ActionItem[] = [
   {
     id: '1',
-    title: 'Review Protocol Deviations for Trial CNTO1275AMY3001',
-    description: 'Audit 3 protocol deviations that were identified in the initial review',
+    title: 'Review D1 Alerts for Trial CNTO1275AMY3001',
+    description: 'Audit 3 D1 alerts that were identified in the initial review',
     priority: 'high',
     dueDate: new Date('2025-03-22'),
     status: 'pending',
   },
   {
     id: '2',
-    title: 'Follow Up on Adverse Events for Trial VAC18193RSV2028',
-    description: 'Complete audit process for 2 adverse events and document findings',
+    title: 'Follow Up on D2 Alerts for Trial VAC18193RSV2028',
+    description: 'Complete audit process for 2 D2 alerts and document findings',
     priority: 'high',
     dueDate: new Date('2025-03-21'),
     status: 'in_progress',
