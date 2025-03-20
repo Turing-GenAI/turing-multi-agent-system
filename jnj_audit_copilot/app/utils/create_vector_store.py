@@ -10,6 +10,8 @@ from langchain_community.document_loaders import (
 import pandas as pd
 from sqlalchemy import create_engine, inspect
 from dotenv import load_dotenv
+import argparse
+import sys
 
 from ..scripts.box_copy_files import get_box_client, process_folder_contents
 from .langchain_azure_openai import azure_embedding_openai_client
@@ -133,13 +135,14 @@ class DataProcessor:
                 logger.error(f"Error getting tables from summaries schema: {e}")
                 return None
 
-        def process_summary_data_by_site_area(self, site_area: str):
+        def process_summary_data_by_site_area(self, site_area: str, force_reingestion: bool = False):
             """
             Create a new vector store collection for summaries and store embeddings.
             Each site area gets its own collection.
             
             Args:
                 site_area (str): Name of the site area (e.g., 'PD', 'AE_SAE')
+                force_reingestion (bool): If True, will drop existing collection and recreate
             """
             try:
                 # Get the data for this site area
@@ -158,6 +161,24 @@ class DataProcessor:
                 logger.info(f"Storing summaries for {site_area}...")
                 
                 collection_name = f"summaries_{site_area.lower()}"
+                
+                # Create a client to check if collection exists and has documents
+                client = MongoVCoreVectorClient(
+                    collection_name=collection_name,
+                    embedding_function=azure_embedding_openai_client,
+                    vector_dimension=self.vector_dimension,
+                    index_type=self.vector_index_type,
+                    create_vector_index=self.create_vector_index
+                )
+                
+                # If reingestion is forced, delete the existing collection
+                if force_reingestion:
+                    try:
+                        # Drop the existing collection
+                        client.collection.drop()
+                        logger.info(f"Dropped existing collection {collection_name} for reingestion")
+                    except Exception as drop_error:
+                        logger.warning(f"Could not drop collection {collection_name}: {drop_error}")
                 
                 # Create documents with metadata
                 documents = []
@@ -261,7 +282,7 @@ class DataProcessor:
                     client,
                     folder_id=self.box_root_folder_id,
                     local_base_path=self.base_documents_dir,
-                    download_mode="overwrite"  # Use smart mode to only download changed files, we can also use "skip" to skip download and "overwrite" to overwrite existing files
+                    download_mode="smart"  # Use smart mode to only download changed files, we can also use "skip" to skip download and "overwrite" to overwrite existing files
                 )
                 print(f"Download complete. Stats: {stats}")
                 logger.info(f"Download complete. Stats: {stats}")
@@ -301,9 +322,13 @@ class DataProcessor:
                 logger.error(f"Error processing file {file_path}: {e}")
                 return None
 
-        def process_documents_by_site_area(self, site_area: str):
+        def process_documents_by_site_area(self, site_area: str, force_reingestion: bool = False):
             """
             Process all documents in a site area and store in vector database
+            
+            Args:
+                site_area (str): Name of the site area (e.g., 'PD', 'AE_SAE')
+                force_reingestion (bool): If True, will drop existing collection and recreate
             """
             try:
                 site_area_path = os.path.join(self.base_documents_dir, site_area)
@@ -339,6 +364,23 @@ class DataProcessor:
 
                 # Create and store in vector database
                 collection_name = f"guidelines_{site_area.lower()}"
+                
+                # Create a client to check if collection exists
+                if force_reingestion:
+                    try:
+                        # Create a temporary client to drop the existing collection
+                        temp_client = MongoVCoreVectorClient(
+                            collection_name=collection_name,
+                            embedding_function=azure_embedding_openai_client,
+                            vector_dimension=self.vector_dimension,
+                            index_type=self.vector_index_type,
+                            create_vector_index=self.create_vector_index
+                        )
+                        # Drop the existing collection
+                        temp_client.collection.drop()
+                        logger.info(f"Dropped existing collection {collection_name} for reingestion")
+                    except Exception as drop_error:
+                        logger.warning(f"Could not drop collection {collection_name}: {drop_error}")
                 
                 vectorstore = MongoVCoreVectorClient.from_documents(
                         documents=all_splits,
@@ -382,37 +424,232 @@ class DataProcessor:
                 logger.error(f"Error processing site areas: {e}")
                 return results
 
+def process_all_by_site_area(site_area: str, force_reingestion: bool = False):
+    """
+    Process a specific site area's data and update the MongoDB vector stores.
+    
+    This function allows targeted reingestion of data for a specific site area,
+    which is useful when there are changes to the source data that need to be 
+    reflected in the RAG pipeline.
+    
+    Args:
+        site_area (str): The site area to process (e.g. 'PD', 'AE_SAE')
+        force_reingestion (bool): If True, drops existing collections before reingestion
+                               to ensure clean data. Default is False.
+    
+    Returns:
+        dict: A dictionary with status information about the processing
+    """
+    results = {
+        "site_area": site_area,
+        "guidelines_processed": False,
+        "summaries_processed": False
+    }
+    
+    try:
+        logger.info(f"Starting processing for site area: {site_area}")
+        if force_reingestion:
+            logger.info(f"Force reingestion enabled - will drop existing collections")
+        
+        # Initialize the processor
+        data_processor = DataProcessor()
+        
+        # Process guidelines documents
+        try:
+            guidelines_processor = data_processor.GuidelinesProcessor(data_processor)
+            
+            # Download files from Box if necessary
+            if force_reingestion:
+                logger.info("Triggering Box file download due to force reingestion")
+                guidelines_processor.download_box_files()
+            elif not os.path.exists(os.path.join(BOX_DOWNLOAD_FOLDER, site_area)):
+                logger.info(f"Site area directory {site_area} not found, downloading Box files")
+                guidelines_processor.download_box_files()
+            
+            # Process the guidelines documents
+            logger.info(f"Processing guidelines documents for {site_area}")
+            guidelines_vectorstore = guidelines_processor.process_documents_by_site_area(
+                site_area=site_area,
+                force_reingestion=force_reingestion
+            )
+            
+            if guidelines_vectorstore:
+                count = guidelines_vectorstore.count()
+                logger.info(f"Successfully processed guidelines for {site_area}. Collection now has {count} documents.")
+                
+                # Debug: Check metadata of first few documents
+                if count > 0:
+                    try:
+                        # Sample query to check metadata
+                        sample_results = guidelines_vectorstore.similarity_search(
+                            query="test query",
+                            k=min(3, count)
+                        )
+                        
+                        logger.info(f"Sample guidelines docs metadata check ({len(sample_results)} docs):")
+                        for i, doc in enumerate(sample_results):
+                            logger.info(f"Doc {i+1} metadata: {doc.metadata}")
+                            # Comment out problematic logging line with encoding issues
+                            # logger.info(f"Doc {i+1} content preview: {doc.page_content[:50]}...")
+                    except Exception as check_e:
+                        logger.error(f"Error checking guidelines metadata: {check_e}")
+                
+                results["guidelines_processed"] = True
+                results["guidelines_count"] = count
+        except Exception as e:
+            logger.error(f"Error processing guidelines for {site_area}: {e}")
+            results["guidelines_error"] = str(e)
+        
+        # Process summary data
+        try:
+            site_data_processor = data_processor.SiteDataProcessor(data_processor)
+            
+            # Process the summary data
+            logger.info(f"Processing summary data for {site_area}")
+            summary_vectorstore = site_data_processor.process_summary_data_by_site_area(
+                site_area=site_area,
+                force_reingestion=force_reingestion
+            )
+            
+            if summary_vectorstore:
+                count = summary_vectorstore.count()
+                logger.info(f"Successfully processed summaries for {site_area}. Collection now has {count} documents.")
+                
+                # Debug: Check metadata of first few documents
+                if count > 0:
+                    try:
+                        # Get the collection name
+                        collection_name = f"summaries_{site_area.lower()}"
+                        logger.info(f"Summary collection name: {collection_name}")
+                        
+                        # Sample query to check metadata
+                        sample_results = summary_vectorstore.similarity_search(
+                            query="test query",
+                            k=min(3, count)
+                        )
+                        
+                        logger.info(f"Sample summary docs metadata check ({len(sample_results)} docs):")
+                        for i, doc in enumerate(sample_results):
+                            logger.info(f"Doc {i+1} metadata: {doc.metadata}")
+                            # Comment out problematic logging line with encoding issues
+                            # logger.info(f"Doc {i+1} content preview: {doc.page_content[:50]}...")
+                            
+                        # Check if site_area field exists and is correctly set
+                        missing_site_area = [i for i, doc in enumerate(sample_results) 
+                                           if 'site_area' not in doc.metadata 
+                                           or doc.metadata['site_area'] != site_area]
+                        
+                        if missing_site_area:
+                            logger.warning(f"Found {len(missing_site_area)} docs without proper site_area metadata")
+                        
+                        # Try a filtered search to confirm filtering works
+                        filtered_results = summary_vectorstore.similarity_search(
+                            query="test query",
+                            k=min(3, count),
+                            filter={"site_area": site_area}
+                        )
+                        
+                        logger.info(f"Filtered search returned {len(filtered_results)} results")
+                        
+                    except Exception as check_e:
+                        logger.error(f"Error checking summary metadata: {check_e}")
+                
+                results["summaries_processed"] = True
+                results["summaries_count"] = count
+        except Exception as e:
+            logger.error(f"Error processing summaries for {site_area}: {e}")
+            results["summaries_error"] = str(e)
+        
+        logger.info(f"Completed processing for site area: {site_area}")
+        return results
+        
+    except Exception as e:
+        logger.error(f"An unexpected error occurred processing site area {site_area}: {e}")
+        results["error"] = str(e)
+        return results
+
 if __name__ == "__main__":
+    # Create argument parser
+    parser = argparse.ArgumentParser(description="MongoDB Vector Store Creation and Management")
+    parser.add_argument("--mode", choices=["all", "site"], default="all",
+                       help="Processing mode: 'all' for all site areas, 'site' for specific site area")
+    parser.add_argument("--site-area", type=str, 
+                       help="Site area to process (required when mode is 'site')")
+    parser.add_argument("--force-reingestion", action="store_true", 
+                       help="Force reingestion of data (drop existing collections)")
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
     # Log the vector store being used
     logger.info("Using MongoDB vCore as vector store")
     print("Using MongoDB vCore as vector store")
+    
+    # Process based on the chosen mode
+    if args.mode == "site":
+        # Check if site area is provided
+        if not args.site_area:
+            print("❌ Error: Site area is required when mode is 'site'")
+            parser.print_help()
+            sys.exit(1)
+            
+        # Process specific site area
+        print(f"\n=== Processing Single Site Area: {args.site_area} ===")
+        print(f"Force Reingestion: {'Enabled' if args.force_reingestion else 'Disabled'}")
         
-    data_processor = DataProcessor()
-    guidelines_processor = data_processor.GuidelinesProcessor(data_processor)
-    
-    # Step 1: Download Box files
-    print("=== Starting Box File Download ===")
-    download_success = guidelines_processor.download_box_files()
-    if download_success:
-        print("✅ Box file download completed successfully or using existing files")
+        results = process_all_by_site_area(args.site_area, args.force_reingestion)
+        
+        # Print results
+        if results["guidelines_processed"] and results["summaries_processed"]:
+            print("\n✅ Successfully processed both guidelines and summaries")
+            print(f"  - Guidelines documents: {results.get('guidelines_count', 0)}")
+            print(f"  - Summary documents: {results.get('summaries_count', 0)}")
+        else:
+            print("\n⚠️ Processing completed with some issues:")
+            
+            if results.get("guidelines_processed"):
+                print(f"✅ Guidelines: {results.get('guidelines_count', 0)} documents")
+            elif "guidelines_error" in results:
+                print(f"❌ Guidelines error: {results['guidelines_error']}")
+            else:
+                print("❌ Guidelines processing failed")
+                
+            if results.get("summaries_processed"):
+                print(f"✅ Summaries: {results.get('summaries_count', 0)} documents")
+            elif "summaries_error" in results:
+                print(f"❌ Summaries error: {results['summaries_error']}")
+            else:
+                print("❌ Summaries processing failed")
+                
+        print(f"\n=== Processing of {args.site_area} Complete ===")
     else:
-        print("⚠️ Box file download had issues - will use any existing files instead")
-    
-    # Step 2: Process documents and create vector stores
-    print("\n=== Starting Guidelines Processing ===")
-    results = guidelines_processor.process_all_documents()
-    successful_areas = [area for area, success in results.items() if success]
-    failed_areas = [area for area, success in results.items() if not success]
-    
-    print(f"✅ Successfully processed {len(successful_areas)} site areas: {', '.join(successful_areas) if successful_areas else 'None'}")
-    if failed_areas:
-        print(f"❌ Failed to process {len(failed_areas)} site areas: {', '.join(failed_areas)}")
-    
-    # Step 3: Process summary data from PostgreSQL
-    print("\n=== Starting Summary Data Processing ===")
-    site_data_processor = data_processor.SiteDataProcessor(data_processor)
-    site_data_processor.process_all_summary_data()
-    print("✅ Summary data processing completed")
-    
-    print("\n=== Vector Store Creation Complete ===")
-    print("The data is now ready for querying using the MongoDB vCore vector search")
+        # Process all site areas (original functionality)
+        data_processor = DataProcessor()
+        guidelines_processor = data_processor.GuidelinesProcessor(data_processor)
+        
+        # Step 1: Download Box files
+        print("=== Starting Box File Download ===")
+        download_success = guidelines_processor.download_box_files()
+        if download_success:
+            print("✅ Box file download completed successfully or using existing files")
+        else:
+            print("⚠️ Box file download had issues - will use any existing files instead")
+        
+        # Step 2: Process documents and create vector stores
+        print("\n=== Starting Guidelines Processing ===")
+        results = guidelines_processor.process_all_documents()
+        successful_areas = [area for area, success in results.items() if success]
+        failed_areas = [area for area, success in results.items() if not success]
+        
+        print(f"✅ Successfully processed {len(successful_areas)} site areas: {', '.join(successful_areas) if successful_areas else 'None'}")
+        if failed_areas:
+            print(f"❌ Failed to process {len(failed_areas)} site areas: {', '.join(failed_areas)}")
+        
+        # Step 3: Process summary data from PostgreSQL
+        print("\n=== Starting Summary Data Processing ===")
+        site_data_processor = data_processor.SiteDataProcessor(data_processor)
+        site_data_processor.process_all_summary_data()
+        print("✅ Summary data processing completed")
+        
+        print("\n=== Vector Store Creation Complete ===")
+        print("The data is now ready for querying using the MongoDB vCore vector search")

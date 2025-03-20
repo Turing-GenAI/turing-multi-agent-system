@@ -22,6 +22,7 @@ from ....utils.langchain_azure_openai import model_with_sub_activity_structured_
 from ....utils.log_setup import get_logger
 from ....utils.response_classes import DiscrepancyFunction
 from ....utils.state_definitions import InspectionAgentState
+from ....utils.create_vector_store import process_all_by_site_area
 from .inspection_functions import inspectionFunctions
 
 # Get the same logger instance set up earlier
@@ -88,35 +89,69 @@ class inspectionNodes:
             }
 
     def site_area_ingestion_node(self, state: InspectionAgentState):
+        """
+        Ingest data for a specific site area using the process_all_by_site_area function.
+        
+        This updated version uses the more efficient site area processing function
+        that only reingets data for the specific site area instead of all areas.
+        
+        Args:
+            state (InspectionAgentState): The current state of the inspection agent.
+            
+        Returns:
+            dict: Updated state with information about the ingestion process.
+        """
+        logger.debug("Calling function: site_area_ingestion_node...")
+        
         site_area = state["site_area"]
         trigger = state["trigger"]
         site_id = trigger["site_id"]
         trial_id = trigger["trial_id"]
         reingest_data_flag = trigger["reingest_data_flag"]
-        ingestor = IngestionFacade(
-            site_area=site_area, site_id=site_id, trial_id=trial_id, reingest_data_flag=reingest_data_flag
+        
+        # Use the new more efficient site area processing function
+        results = process_all_by_site_area(
+            site_area=site_area,
+            force_reingestion=reingest_data_flag
         )
-        summary_vectorstore, data_retriever = ingestor.ingest_data()
-        guidelines_vectorstore = ingestor.ingest_guidelines()
-
-        add_msg = []
-        if summary_vectorstore is None:
-            add_msg.append("summary_vectorstore")
-        if data_retriever is None:
-            add_msg.append("data_retriever")
-        if guidelines_vectorstore is None:
-            add_msg.append("guidelines_vectorstore")
-        error = ""
-        if len(add_msg) > 0:
-            error = "\nbut could not create" + ", ".join(add_msg) + ". Check applications.log for more info"
-
-        logger.debug(f"Calling site_area_ingestion_node: Data Ingestion for site area-{site_area} completed!")
+        
+        # Check results and build status message
+        error_messages = []
+        success_messages = []
+        
+        if results.get("guidelines_processed", False):
+            guidelines_count = results.get("guidelines_count", 0)
+            success_messages.append(f"Guidelines vectorstore created with {guidelines_count} documents")
+        else:
+            if "guidelines_error" in results:
+                error_messages.append(f"Could not create guidelines_vectorstore: {results['guidelines_error']}")
+            else:
+                error_messages.append("Could not create guidelines_vectorstore")
+                
+        if results.get("summaries_processed", False):
+            summaries_count = results.get("summaries_count", 0)
+            success_messages.append(f"Summary vectorstore created with {summaries_count} documents")
+        else:
+            if "summaries_error" in results:
+                error_messages.append(f"Could not create summary_vectorstore: {results['summaries_error']}")
+            else:
+                error_messages.append("Could not create summary_vectorstore")
+        
+        # Build the final message
+        status_message = f"Ingestion for Domain: {site_area}, Input-X1-{trial_id} and Input-X2-{site_id} is Done!"
+        
+        if success_messages:
+            status_message += f"\n✅ Success: {', '.join(success_messages)}"
+            
+        if error_messages:
+            status_message += f"\n⚠️ Errors: {', '.join(error_messages)}"
+            
+        logger.debug(f"Data Ingestion for site area-{site_area} completed! Status: {len(error_messages) == 0}")
+        
         return {
             "inspection_messages": AIMessage(
                 name=f"{bold_start}inspection - data_ingestion node:{bold_end}",
-                content=(
-                    f"Ingestion for Domain: {site_area},  Input-X1-{trial_id} " f"and Input-X2-{site_id} is Done!{error}"
-                ),
+                content=status_message
             )
         }
 

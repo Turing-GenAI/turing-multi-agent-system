@@ -311,6 +311,25 @@ class MongoVCoreVectorClient:
         Returns:
             MongoVCoreVectorClient: A new client with the added documents
         """
+        # Verify that all documents have the site_area metadata field since this is critical for filtering
+        site_area_missing = False
+        for i, doc in enumerate(documents):
+            if "site_area" not in doc.metadata:
+                site_area_missing = True
+                logger.warning(f"Document {i} missing site_area metadata field. Document metadata: {doc.metadata}")
+                if "site_area" in collection_name:
+                    # Try to extract site_area from collection name as fallback
+                    try:
+                        # Extract site_area from collection names like "summaries_pd" or "guidelines_ae_sae"
+                        site_area = collection_name.split('_', 1)[1]
+                        logger.info(f"Adding site_area metadata from collection name: {site_area}")
+                        doc.metadata["site_area"] = site_area
+                    except Exception as e:
+                        logger.error(f"Error extracting site_area from collection name: {e}")
+        
+        if site_area_missing:
+            logger.warning(f"Some documents were missing site_area metadata - this may cause filtering issues in queries")
+        
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
         
