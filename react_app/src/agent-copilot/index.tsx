@@ -618,7 +618,7 @@ const AgentSettingsPopup: React.FC = () => {
 	}, [foundJob]);
 
 	const trialXSiteIDs = {
-		CNTO1275PUC3001: ["P73-PL10007", "P73-PL10008", "U4-JP1002", "U4-JP1003"],
+		CNTO1275PUC3001: ["P73-PL10007", "P73-PL10008"],
 		RIVAROXHFA3001: ["AR00091"],
 		"90014496LYM1001": ["BV7-US10007"],
 	};
