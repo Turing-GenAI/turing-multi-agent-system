@@ -136,8 +136,6 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         // Get the available sites for the selected trial
         const sitesForTrial = sites[value] || [];
         
-        // Comment out the site selection step
-        /*
         setCurrentStep('site');
         const siteCount = sitesForTrial.length;
         addAgentMessage(
@@ -147,8 +145,8 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           'site',
           { messageId: 'site-selection-message' }
         );
-        */
         
+        /* Commenting out the random site selection since we're restoring the dropdown
         // Randomly select a site from the available sites
         if (sitesForTrial.length > 0) {
           const randomIndex = Math.floor(Math.random() * sitesForTrial.length);
@@ -170,6 +168,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
             { messageId: 'trial-selection-message' }
           );
         }
+        */
         break;
       case 'site':
         setSelectedSite(value);
@@ -190,7 +189,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
           addAgentMessage(
             `📋 Compliance Preparedness Assessment Parameters:\n\n` +
             `🔹 Trial ID:    ${selectedTrial}\n` +
-            // `🔹 Site ID:     ${selectedSite}\n` +
+            `🔹 Site ID:     ${selectedSite}\n` +
             `🔹 Review Period:     ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
             `Please confirm to initiate the compliance preparedness review.`,
             'button',
