@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Clock, MessageSquare, Database, FileWarning, ChevronDown, ChevronRight, AlertTriangle, FileText, Copy, History, ClipboardList } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { auditService } from '../api/services/auditService';
@@ -18,6 +18,8 @@ interface JobHistoryPanelProps {
   onClose: () => void;
   onSelectJob: (jobId: string) => void;
   onJobCountChange?: (count: number) => void; // Add new prop to expose job count
+  jobCount?: number; // Pass in the current job count from AuditPage
+  isJobCountLoading?: boolean; // Pass loading state from AuditPage
 }
 
 // Cache interfaces
@@ -33,7 +35,7 @@ const JOB_CACHE_KEY = 'turing_job_cache';
 // Cache expiration time (7 days in milliseconds)
 const CACHE_EXPIRATION = 7 * 24 * 60 * 60 * 1000;
 
-const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob, onJobCountChange }) => {
+const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob, onJobCountChange, jobCount, isJobCountLoading }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,13 +67,65 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   // Cache for job data to prevent refetching
   const [jobCache, setJobCache] = useState<Record<string, JobCache>>({});
 
+  // Initial fetch jobs with loading state
+  const initialFetchJobs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await auditService.getJobs();
+      if (response.data && response.data.jobs) {
+        // Sort jobs by creation date (newest first)
+        const sortedJobs = response.data.jobs.sort((a, b) => {
+          return new Date(b.run_at).getTime() - new Date(a.run_at).getTime();
+        });
+        
+        setJobs(sortedJobs.map(job => ({
+          id: job.job_id,
+          status: job.status,
+          created_at: job.run_at,
+          completed_at: job.completed_time,
+          trial_id: job.trial_id,
+          site_id: job.site_id,
+          date: job.date
+        })));
+        
+        if (onJobCountChange) {
+          onJobCountChange(sortedJobs.length);
+        }
+      } else {
+        // Successfully contacted the API but no jobs were returned
+        setJobs([]);
+        if (onJobCountChange) {
+          onJobCountChange(0);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+      setError('Failed to fetch jobs. Please try again later.');
+      setJobs([]);
+      
+      if (onJobCountChange) {
+        onJobCountChange(0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onJobCountChange]);
+
   useEffect(() => {
     initialFetchJobs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const styleTag = document.createElement('style');
     styleTag.innerHTML = `
+      .html-table-container {
+        max-height: 400px;
+        overflow-y: auto;
+      }
       .html-table-container table {
         border-collapse: collapse;
         width: 100%;
@@ -119,67 +173,24 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     };
   }, []);
 
-  // Initial fetch jobs with loading state
-  const initialFetchJobs = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await auditService.getJobs();
-      if (response.data && response.data.jobs) {
-        // Sort jobs by creation date (newest first)
-        const sortedJobs = response.data.jobs.sort((a, b) => {
-          return new Date(b.run_at).getTime() - new Date(a.run_at).getTime();
-        });
-        setJobs(sortedJobs.map(job => ({
-          id: job.job_id,
-          status: job.status,
-          created_at: job.run_at,
-          completed_at: job.completed_time,
-          trial_id: job.trial_id,
-          site_id: job.site_id,
-          date: job.date
-        })));
-        if (onJobCountChange) {
-          onJobCountChange(sortedJobs.length);
-        }
-      } else {
-        // Successfully contacted the API but no jobs were returned
-        setJobs([]);
-        if (onJobCountChange) {
-          onJobCountChange(0);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching jobs:", err);
-      setError("Failed to load job history. The backend API may be unavailable or experiencing issues. Please try again later.");
-      // Don't modify the jobs array when there's an API error
-      // This ensures we show the error message instead of "No jobs found"
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Refresh jobs with a separate refreshing state
   const fetchJobs = async () => {
     // Prevent multiple fetches
-    if (isRefreshing) return;
-    
+    if (isRefreshing) {
+      return;
+    }
+
     setIsRefreshing(true);
-    
-    // Keep the previous error state until we confirm success or a new error
-    // Don't clear error right away to prevent flickering to "No jobs found" state
-    
+    setError(null);
+
     try {
       const response = await auditService.getJobs();
-      // Only clear error state when we have a successful response
-      setError(null);
-      
       if (response.data && response.data.jobs) {
         // Sort jobs by creation date (newest first)
         const sortedJobs = response.data.jobs.sort((a, b) => {
           return new Date(b.run_at).getTime() - new Date(a.run_at).getTime();
         });
+        
         setJobs(sortedJobs.map(job => ({
           id: job.job_id,
           status: job.status,
@@ -189,13 +200,16 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
           site_id: job.site_id,
           date: job.date
         })));
-        if (onJobCountChange) {
+        
+        // Only update job count if it's different from the current value
+        if (onJobCountChange && sortedJobs.length !== jobCount) {
           onJobCountChange(sortedJobs.length);
         }
       } else {
         // Successfully contacted the API but no jobs were returned
         setJobs([]);
-        if (onJobCountChange) {
+        // Only update job count if it's not already 0
+        if (onJobCountChange && jobCount !== 0) {
           onJobCountChange(0);
         }
       }
@@ -204,6 +218,11 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       setError("Failed to load job history. The backend API may be unavailable or experiencing issues. Please try again later.");
       // Don't modify the jobs array when there's an API error
       // This ensures we show the error message instead of "No jobs found"
+      
+      // Only update job count if it's not already 0 and we have an error
+      if (onJobCountChange && jobCount !== 0) {
+        onJobCountChange(0);
+      }
     } finally {
       // Small delay before removing the refreshing state to make animation smoother
       setTimeout(() => {
@@ -272,7 +291,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
       if (messagesResponse && messagesResponse.data) {
         const responseData = messagesResponse.data;
         const aiMessagesData = responseData.ai_messages || [];
-        setAiMessages(aiMessagesData);
+        setAiMessages(aiMessagesData as string[]);
         
         // Process findings if available
         let findingsData = null;
@@ -1266,12 +1285,29 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
           <History className="w-5 h-5 mr-2 text-blue-600" />
           Job History
         </h2>
-        <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
+          <div 
+            className={`flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-100 border border-blue-200 shadow-sm rounded-lg px-3 py-1.5 text-gray-700 transition-all duration-300 ${loading || isRefreshing || isJobCountLoading ? 'animate-pulse' : ''}`}
+            title={`${jobCount?.toLocaleString() || 0} jobs in history`}
+          >
+            {loading || isRefreshing || isJobCountLoading ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-1.5 text-blue-600 animate-spin" />
+                <span className="font-semibold text-blue-700">Loading</span>
+              </>
+            ) : (
+              <>
+                <ClipboardList className="w-4 h-4 mr-1.5 text-blue-600" />
+                <span className="font-semibold text-blue-700">{jobCount || 0}</span>
+                <span className="ml-1 text-gray-600 text-sm">{(jobCount || 0) === 1 ? 'job' : 'jobs'}</span>
+              </>
+            )}
+          </div>
           <button
             onClick={fetchJobs}
             className="p-1.5 rounded-full hover:bg-gray-100 transition-all disabled:opacity-50"
             title="Refresh job list"
-            disabled={loading || isRefreshing}
+            disabled={isRefreshing}
           >
             <RefreshCw className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
