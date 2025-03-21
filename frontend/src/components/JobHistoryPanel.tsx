@@ -1287,7 +1287,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
         </h2>
         <div className="flex items-center space-x-3">
           <div 
-            className={`flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-100 border border-blue-200 shadow-sm rounded-lg px-3 py-1.5 text-gray-700 transition-all duration-300 ${loading || isRefreshing || isJobCountLoading ? 'animate-pulse' : ''}`}
+            className={`flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-100 border border-blue-200 shadow-sm rounded-lg px-3 py-1.5 text-gray-700 transition-all duration-300 ${loading || isRefreshing || isJobCountLoading ? 'animate-border-pulse' : ''}`}
             title={`${jobCount?.toLocaleString() || 0} jobs in history`}
           >
             {loading || isRefreshing || isJobCountLoading ? (
