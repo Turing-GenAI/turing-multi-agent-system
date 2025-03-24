@@ -62,7 +62,7 @@ CHROMADB_INDEX_GUIDELINES = "guidelines"
 
 # Box Constants
 BOX_ROOT_FOLDER_ID = os.getenv("BOX_ROOT_FOLDER_ID", "0")
-BOX_DOWNLOAD_FOLDER = os.path.join(project_root, "jnj_audit_copilot", 'documents')
+BOX_DOWNLOAD_FOLDER = os.path.join(project_root, "jnj_audit_copilot", 'box_download')
 
 # PostgreSQL connection
 db_url = "postgresql://citus:V3ct0r%243arch%402024%21@c-rag-pg-cluster-vectordb.ohp4jnn4od53fv.postgres.cosmos.azure.com:5432/rag_db?sslmode=require"

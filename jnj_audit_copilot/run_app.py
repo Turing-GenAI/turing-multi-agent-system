@@ -262,4 +262,4 @@ if __name__ == "__main__":
     graph_inputs = clean_graph_inputs(graph_inputs.copy())
     graph_inputs["run_id"] = run_id
     
-    run_graph(graph_inputs, graph_config, run_id, scratchpad_filename)
+    run_graph(graph_inputs, graph_config, scratchpad_filename)

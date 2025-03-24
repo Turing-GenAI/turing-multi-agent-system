@@ -21,7 +21,7 @@ graph_inputs = {
             ],  # List of inspection areas for the site
             "date": "2024-10-11",  # Date for the scheduled inspection trigger
             "trigger_type": "immediate",  # Type of trigger indicating urgency or timing
-            "reingest_data_flag": False,  # Flag to specify if data re-ingestion is required
+            "reingest_data_flag": True,  # Flag to specify if data re-ingestion is required
         },
     ],
     "revision_number": 0,  # Current revision number of the activity generator process
