@@ -359,6 +359,6 @@ const mockAuditService = {
 };
 
 // Export either mock or real service based on environment variable
-export const auditService = import.meta.env.VITE_USE_MOCK_API === 'true' 
+export const auditService = import.meta.env.USE_MOCK_API === 'true' 
   ? mockAuditService 
   : realAuditService;
