@@ -469,6 +469,7 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
             value={selectedInspectionArea}
             onChange={handleInspectionAreaChange}
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{ textOverflow: 'ellipsis', whiteSpace: 'normal' }}
           >
             <option value="">-- Select a Domain Area --</option>
             {mockInspectionAreas.map(area => (
@@ -551,9 +552,10 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
                 
                 <div>
                   <select
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
                     value={filterArea}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterArea(e.target.value)}
+                    style={{ textOverflow: 'ellipsis', whiteSpace: 'normal' }}
                   >
                     <option value="all">All Domain Areas</option>
                     {mockInspectionAreas.map(area => (
@@ -564,9 +566,10 @@ const ConfigureActivities: React.FC<ConfigureActivitiesProps> = ({ savedActiviti
                 
                 <div>
                   <select
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
                     value={filterStatus}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
+                    style={{ textOverflow: 'ellipsis', whiteSpace: 'normal' }}
                   >
                     <option value="all">All Status</option>
                     <option value="enabled">Enabled</option>
