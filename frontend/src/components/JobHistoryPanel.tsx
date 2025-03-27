@@ -359,28 +359,37 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
         try {
           const localStorageKey = `job_cache_${jobId}`;
           
+          // Ensure aiMessages is an array before attempting to map
+          const aiMessagesArray = Array.isArray(cacheData.aiMessages) 
+            ? cacheData.aiMessages 
+            : (typeof cacheData.aiMessages === 'string' ? [cacheData.aiMessages] : []);
+          
           // Limit the size of data saved to localStorage by extracting
           // only essential fields to avoid quota errors
           const essentialCacheData = {
-            aiMessages: cacheData.aiMessages?.map(msg => ({
-              id: msg.id,
-              role: msg.role,
+            aiMessages: aiMessagesArray.map(msg => ({
+              id: msg.id || 'unknown',
+              role: msg.role || 'unknown',
               content: msg.content && msg.content.length > 500 ? 
-                msg.content.substring(0, 500) + '...' : msg.content
+                msg.content.substring(0, 500) + '...' : (msg.content || '')
             })) || [],
             
-            // Store simplified findings data
+            // Store simplified findings data with null checks
             findings: {
-              pd: (cacheData.findings?.pd || []).map(item => ({
-                id: item.id,
-                content: item.content && item.content.length > 500 ? 
-                  item.content.substring(0, 500) + '...' : item.content
-              })),
-              ae: (cacheData.findings?.ae || []).map(item => ({
-                id: item.id,
-                content: item.content && item.content.length > 500 ? 
-                  item.content.substring(0, 500) + '...' : item.content
-              }))
+              pd: Array.isArray(cacheData.findings?.pd) 
+                ? cacheData.findings.pd.map(item => ({
+                    id: item.id || 'unknown',
+                    content: item.content && item.content.length > 500 ? 
+                      item.content.substring(0, 500) + '...' : (item.content || '')
+                  }))
+                : [],
+              ae: Array.isArray(cacheData.findings?.ae)
+                ? cacheData.findings.ae.map(item => ({
+                    id: item.id || 'unknown',
+                    content: item.content && item.content.length > 500 ? 
+                      item.content.substring(0, 500) + '...' : (item.content || '')
+                  }))
+                : []
             },
             
             // Skip storing large retrieved context in localStorage
@@ -1014,7 +1023,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
-      <div className="overflow-x-auto overflow-y-auto mt-4" style={{ maxHeight: '350px' }}>
+      <div className="overflow-x-auto overflow-y-auto mt-4 max-h-[350px]">
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -1056,7 +1065,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
-      <div className="overflow-x-auto overflow-y-auto mt-4" style={{ maxHeight: '350px' }}>
+      <div className="overflow-x-auto overflow-y-auto mt-4 max-h-[350px]">
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-gray-50 sticky top-0">
             <tr>

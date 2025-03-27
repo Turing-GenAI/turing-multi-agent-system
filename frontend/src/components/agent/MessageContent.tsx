@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 
 const TypewriterText = ({ text }: { text: string }) => {
   return (
-    <span style={{ whiteSpace: 'pre-wrap' }}>
+    <span className="whitespace-pre-wrap">
       {text.split('').map((char, index) => (
         <motion.span
           key={index}
@@ -151,7 +151,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
           ) : (
             <ReactMarkdown components={{
               // Ensure paragraphs maintain their line breaks
-              p: ({children}) => <p style={{whiteSpace: 'pre-wrap'}}>{children}</p>
+              p: ({children}) => <p className="whitespace-pre-wrap">{children}</p>
             }}>{content}</ReactMarkdown>
           )}
         </p>
