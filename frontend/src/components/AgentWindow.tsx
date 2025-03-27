@@ -7,6 +7,13 @@ import { MessageBubble } from './agent/MessageBubble';
 import { getMessageBackgroundColor } from './agent/utils';
 import { AuditProgressSteps } from './agent/AuditProgressSteps';
 
+// Define trial to site ID mapping 
+const TRIAL_SITE_MAPPING: Record<string, string[]> = {
+  CNTO1275PUC3001: ["P73-PL10007", "P73-PL10008"],
+  RIVAROXHFA3001: ["AR00091"],
+  "90014496LYM1001": ["BV7-US10007"],
+};
+
 interface AgentWindowProps {
   trials: string[];
   sites: { [key: string]: Array<{ id: string; status: string }> };
@@ -50,6 +57,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
   const [showGreeting, setShowGreeting] = useState(true);
   const [currentStep, setCurrentStep] = useState<'greeting' | 'trial' | 'site' | 'date' | 'confirm'>('greeting');
   const [isAnalysisStarted, setIsAnalysisStarted] = useState(false);
+  const [useRandomSiteId] = useState<boolean>(true); // Set to false to use manual site selection
 
   const isScrolledToBottom = () => {
     const container = messageContainerRef.current;
@@ -112,6 +120,64 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    // Effect to update site ID when trial ID changes - this must run whenever selectedTrial changes
+    if (selectedTrial && useRandomSiteId) {
+      // Get site IDs for the selected trial
+      const specificSiteIDs = TRIAL_SITE_MAPPING[selectedTrial] || [];
+      
+      if (specificSiteIDs.length > 0) {
+        // Select a random site from the predefined list for this trial
+        const randomIndex = Math.floor(Math.random() * specificSiteIDs.length);
+        const randomSite = specificSiteIDs[randomIndex];
+        setSelectedSite(randomSite);
+      } else if (sites[selectedTrial]?.length > 0) {
+        // Fallback to using the sites from the prop if no predefined mapping exists
+        const randomIndex = Math.floor(Math.random() * sites[selectedTrial].length);
+        const randomSite = sites[selectedTrial][randomIndex].id;
+        setSelectedSite(randomSite);
+      }
+    }
+  }, [selectedTrial, useRandomSiteId, sites]);
+
+  useEffect(() => {
+    // Separate effect to update the confirmation message when any parameter changes
+    if (currentStep === 'confirm') {
+      updateConfirmationMessage();
+    }
+  }, [selectedTrial, selectedSite, dateRange, currentStep]);
+
+  const updateConfirmationMessage = () => {
+    const confirmationMessageId = 'confirmation-summary';
+    
+    // Construct message based on available data
+    let message = `📋 Compliance Preparedness Assessment Parameters:\n\n`;
+    
+    if (selectedTrial) {
+      message += `🔹 Trial ID:    ${selectedTrial}\n`;
+    }
+    
+    if (dateRange.from && dateRange.to) {
+      message += `🔹 Review Period:     ${dateRange.from.toLocaleDateString()} to ${dateRange.to.toLocaleDateString()}\n\n`;
+    }
+    
+    message += `Please confirm to initiate the compliance preparedness review.`;
+    
+    addAgentMessage(message, 'button', { messageId: confirmationMessageId });
+    
+    // Only update parent if we have complete data
+    if (selectedTrial && dateRange.from && dateRange.to) {
+      onInputComplete({
+        selectedTrial,
+        selectedSite,
+        dateRange: {
+          from: dateRange.from,
+          to: dateRange.to
+        },
+      });
+    }
+  };
+
   const handleToolInput = (type: 'trial' | 'site' | 'date' | 'button' | 'progresstree', value: any) => {
     // Handle internal state updates for wizard flow
     switch (type) {
@@ -133,42 +199,68 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
       case 'trial':
         setSelectedTrial(value);
         
+        // If we're already at the confirmation step, stay there and update the message
+        if (currentStep === 'confirm') {
+          // The useEffect will handle updating the message
+          break;
+        }
+        
+        // Otherwise, proceed with normal trial selection flow
         // Get the available sites for the selected trial
         const sitesForTrial = sites[value] || [];
         
-        setCurrentStep('site');
-        const siteCount = sitesForTrial.length;
-        addAgentMessage(
-          siteCount === 1
-            ? `I've located 1 clinical site associated with this trial. Would you like to review it?`
-            : `I've located ${siteCount} clinical sites associated with this trial. Which site would you like to review?`,
-          'site',
-          { messageId: 'site-selection-message' }
-        );
-        
-        /* Commenting out the random site selection since we're restoring the dropdown
-        // Randomly select a site from the available sites
-        if (sitesForTrial.length > 0) {
-          const randomIndex = Math.floor(Math.random() * sitesForTrial.length);
-          const randomSite = sitesForTrial[randomIndex].id;
-          setSelectedSite(randomSite);
+        if (useRandomSiteId) {
+          // RANDOM SITE ID SELECTION MODE
+          // Get site IDs for the selected trial, or fall back to available sites
+          const specificSiteIDs = TRIAL_SITE_MAPPING[value] || [];
           
-          // Skip directly to date selection
-          setCurrentStep('date');
-          addAgentMessage(
-            `Please specify the audit review period for the compliance preparedness assessment:`, 
-            'date',
-            { messageId: 'date-selection-message' }
-          );
+          if (specificSiteIDs.length > 0) {
+            // Select a random site from the predefined list for this trial
+            const randomIndex = Math.floor(Math.random() * specificSiteIDs.length);
+            const randomSite = specificSiteIDs[randomIndex];
+            setSelectedSite(randomSite);
+            
+            // Skip directly to date selection
+            setCurrentStep('date');
+            addAgentMessage(
+              `Please specify the audit review period for the compliance preparedness assessment:`, 
+              'date',
+              { messageId: 'date-selection-message' }
+            );
+          } else if (sitesForTrial.length > 0) {
+            // Fallback to using the sites from the prop if no predefined mapping exists
+            const randomIndex = Math.floor(Math.random() * sitesForTrial.length);
+            const randomSite = sitesForTrial[randomIndex].id;
+            setSelectedSite(randomSite);
+            
+            // Skip directly to date selection
+            setCurrentStep('date');
+            addAgentMessage(
+              `Please specify the audit review period for the compliance preparedness assessment:`, 
+              'date',
+              { messageId: 'date-selection-message' }
+            );
+          } else {
+            // Handle the case where there are no sites for the selected trial
+            addAgentMessage(
+              `I couldn't find any clinical sites associated with this trial. Please select a different trial.`,
+              'trial',
+              { messageId: 'trial-selection-message' }
+            );
+          }
         } else {
-          // Handle the case where there are no sites for the selected trial
+          // MANUAL SITE ID SELECTION MODE
+          setCurrentStep('site');
+          const siteCount = sitesForTrial.length;
           addAgentMessage(
-            `I couldn't find any clinical sites associated with this trial. Please select a different trial.`,
-            'trial',
-            { messageId: 'trial-selection-message' }
+            siteCount === 1
+              ? `I've located 1 clinical site associated with this trial. Would you like to review it?`
+              : `I've located ${siteCount} clinical sites associated with this trial. Which site would you like to review?`,
+            'site',
+            { messageId: 'site-selection-message' }
           );
         }
-        */
+        
         break;
       case 'site':
         setSelectedSite(value);
@@ -183,23 +275,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         setDateRange(value);
         if (value.from && value.to) {
           setCurrentStep('confirm');
-          // Use a consistent ID for the confirmation message to allow updates
-          const confirmationMessageId = 'confirmation-summary';
-          
-          addAgentMessage(
-            `📋 Compliance Preparedness Assessment Parameters:\n\n` +
-            `🔹 Trial ID:    ${selectedTrial}\n` +
-            `🔹 Site ID:     ${selectedSite}\n` +
-            `🔹 Review Period:     ${value.from.toLocaleDateString()} to ${value.to.toLocaleDateString()}\n\n` +
-            `Please confirm to initiate the compliance preparedness review.`,
-            'button',
-            { messageId: confirmationMessageId }
-          );
-          onInputComplete({
-            selectedTrial,
-            selectedSite,
-            dateRange: value,
-          });
+          // The confirmation message will be created/updated by the useEffect
         }
         break;
     }

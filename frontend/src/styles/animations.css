@@ -1,0 +1,79 @@
+/* Badge animations */
+@keyframes fadeIn {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@keyframes bgShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes subtlePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes glowEffect {
+  0% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+  50% { box-shadow: 0 0 4px rgba(59, 130, 246, 0.6); }
+  100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+@keyframes borderColorPulse {
+  0% { border-color: rgba(209, 213, 219, 1); }
+  50% { border-color: rgba(96, 165, 250, 0.8); }
+  100% { border-color: rgba(209, 213, 219, 1); }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  animation: bgShimmer 1.5s ease-in-out;
+}
+
+.animate-subtle-pulse {
+  animation: subtlePulse 0.8s ease-in-out;
+}
+
+.animate-glow {
+  animation: glowEffect 1.2s ease-in-out;
+}
+
+.animate-border-pulse {
+  animation: borderColorPulse 1.2s ease-in-out;
+}
+
+/* Badge styles */
+.badge-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f2ff 100%);
+  border: 1px solid #dbeafe;
+  color: #1e40af;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.badge-modern:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.badge-modern.animated {
+  animation: subtlePulse 0.8s ease-in-out, borderColorPulse 1.2s ease-in-out;
+}

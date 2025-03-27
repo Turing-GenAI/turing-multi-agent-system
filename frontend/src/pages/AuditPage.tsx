@@ -11,9 +11,10 @@ import { ContactSupportModal } from '../components/modals/ContactSupportModal';
 import JobHistoryPanel from '../components/JobHistoryPanel'
 import { mockResponses, pdFindings, aeFindings, sgrFindings, trials, sites } from '../data/mockData';
 import { Finding, Message, AgentType } from '../types';
-import { History, Lightbulb } from 'lucide-react';
+import { History, Lightbulb, RefreshCw } from 'lucide-react';
 import { auditService } from '../api/services/auditService'; // Import the audit service
 import { AIMessagesResponse, TreeNode, RetrievedContextResponse } from '../api';
+import '../styles/animations.css'; // Import the animations CSS
 
 // Set this to true to skip message streaming animation (for debugging)
 const SKIP_ANIMATION = true;
@@ -52,6 +53,7 @@ export const AuditPage: React.FC = () => {
   const [isContextLoading, setIsContextLoading] = useState(false);
   const [showJobHistory, setShowJobHistory] = useState<boolean>(false);
   const [jobCount, setJobCount] = useState<number>(0);
+  const [isJobCountLoading, setIsJobCountLoading] = useState<boolean>(false);
   const currentActivitiesRef = useRef<TreeNode[]>([]);
   const allActivitiesRef = useRef<TreeNode[]>([]);
   const lastJobStatusRef = useRef<string | null>(null);
@@ -930,10 +932,21 @@ export const AuditPage: React.FC = () => {
       try {
         const response = await auditService.getJobs();
         if (response.data && response.data.jobs) {
-          setJobCount(response.data.jobs.length);
+          const newJobCount = response.data.jobs.length;
+          
+          // Only show animation if job count actually changes
+          if (newJobCount !== jobCount) {
+            setIsJobCountLoading(true);
+            // Add a small delay to ensure animation is visible
+            setTimeout(() => {
+              setJobCount(newJobCount);
+              setIsJobCountLoading(false);
+            }, 600);
+          }
         }
       } catch (error) {
         console.error("Error fetching job count:", error);
+        setIsJobCountLoading(false);
       }
     };
 
@@ -945,7 +958,7 @@ export const AuditPage: React.FC = () => {
 
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [jobCount]);  // Added jobCount as dependency
 
   useEffect(() => {
     if (jobId && jobStatus === 'completed') {
@@ -954,16 +967,27 @@ export const AuditPage: React.FC = () => {
         try {
           const response = await auditService.getJobs();
           if (response.data && response.data.jobs) {
-            setJobCount(response.data.jobs.length);
+            const newJobCount = response.data.jobs.length;
+            
+            // Only show animation if job count actually changes
+            if (newJobCount !== jobCount) {
+              setIsJobCountLoading(true);
+              // Add a small delay to show the loading animation
+              setTimeout(() => {
+                setJobCount(newJobCount);
+                setIsJobCountLoading(false);
+              }, 600);
+            }
           }
         } catch (error) {
           console.error("Error fetching job count:", error);
+          setIsJobCountLoading(false);
         }
       };
       
       fetchJobCount();
     }
-  }, [jobId, jobStatus]);
+  }, [jobId, jobStatus, jobCount]);  // Added jobCount as dependency
 
   const handleSendMessage = (agent: AgentType, e: React.FormEvent) => {
     e.preventDefault();
@@ -1183,6 +1207,24 @@ export const AuditPage: React.FC = () => {
     }
   }, [jobStatus]);
 
+  const formatJobCount = (count: number): string => {
+    if (count < 1000) {
+      return count.toString();
+    } else if (count < 10000) {
+      // Format as #.#k for 4 digits (e.g., 1234 → 1.2k)
+      return `${Math.floor(count / 100) / 10}k`;
+    } else if (count < 100000) {
+      // Format as ##k for 5 digits (e.g., 31015 → 31k)
+      return `${Math.floor(count / 1000)}k`;
+    } else if (count < 1000000) {
+      // Format as ###k for 6 digits (e.g., 123456 → 123k)
+      return `${Math.floor(count / 1000)}k`;
+    } else {
+      // Format as #.#M for 7 digits (e.g., 1234567 → 1.2M)
+      return `${Math.floor(count / 100000) / 10}M`;
+    }
+  };
+
   return (
     <div 
       className="flex flex-col h-screen bg-gray-50 overflow-auto" 
@@ -1223,6 +1265,8 @@ export const AuditPage: React.FC = () => {
       </div>
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Custom CSS animations are now added to the component's CSS file */}
+        
         {/* Agent Window Area */}
         <div className="flex-1 overflow-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full p-6">
@@ -1248,23 +1292,36 @@ export const AuditPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <Lightbulb className="w-5 h-5 mr-2 text-gray-800" />
-                  Insights Panel
-                </h2>
-                <button
-                  onClick={() => setShowJobHistory(true)}
-                  disabled={false}
-                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <History className="w-4 h-4 mr-2" />
-                  Job History
-                  {jobCount > 0 && (
-                    <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-gray-700 bg-gray-200 rounded-full border border-gray-300">
-                      {jobCount > 9 ? '9+' : jobCount}
-                    </span>
-                  )}
-                </button>
+                  <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <Lightbulb className="w-5 h-5 mr-2 text-gray-800" />
+                    Insights Panel
+                  </h2>
+                  <button
+                    onClick={() => setShowJobHistory(true)}
+                    disabled={false}
+                    className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isJobCountLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <History className="w-4 h-4 mr-2" />
+                    )}
+                    Job History
+                    {jobCount > 0 && (
+                      <span 
+                        className={`ml-2 badge-modern ${isJobCountLoading ? 'animated' : ''}`}
+                        style={{ 
+                          minWidth: '2rem',
+                          maxWidth: '4.5rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                        title={`${jobCount.toLocaleString()} jobs in history`}
+                      >
+                        {formatJobCount(jobCount)}
+                      </span>
+                    )}
+                  </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <FindingsTable 
@@ -1393,7 +1450,16 @@ export const AuditPage: React.FC = () => {
             <JobHistoryPanel
               onClose={() => setShowJobHistory(false)}
               onSelectJob={(jobId) => console.log(`Job selected: ${jobId}`)}
-              onJobCountChange={setJobCount}
+              onJobCountChange={(count) => {
+                setIsJobCountLoading(true);
+                // Add a small delay to show the loading animation
+                setTimeout(() => {
+                  setJobCount(count);
+                  setIsJobCountLoading(false);
+                }, 600);
+              }}
+              jobCount={jobCount}
+              isJobCountLoading={isJobCountLoading}
             />
           </div>
         </div>
