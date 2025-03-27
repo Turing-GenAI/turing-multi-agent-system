@@ -9,7 +9,7 @@ import { User, Lock, Mail, AlertCircle, BrainCircuit, CheckCircle, Shield, LogIn
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loginWithGoogle, loginWithEmail, registerWithEmail, isAuthenticated } = useAuth();
+  const { loginWithGoogle, loginWithEmail, registerWithEmail, isAuthenticated, authError, clearAuthError } = useAuth();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -37,6 +37,15 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Update local error state when authError changes
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+      setIsLoading(false);
+      setFormSubmitted(false);
+    }
+  }, [authError]);
+
   // Measure form heights for both states
   useEffect(() => {
     if (animatingForm) return;
@@ -59,8 +68,17 @@ export const LoginPage: React.FC = () => {
     setFormSubmitted(true);
     setIsLoading(true);
     setError('');
+    clearAuthError();
 
     try {
+      // First check if the email domain is valid before attempting authentication
+      if (!email.endsWith('@turing.com')) {
+        setError('Only @turing.com email addresses are allowed');
+        setIsLoading(false);
+        setFormSubmitted(false);
+        return;
+      }
+      
       let success;
       
       if (isRegistering) {
@@ -72,12 +90,24 @@ export const LoginPage: React.FC = () => {
         }
         success = await registerWithEmail(name, email, password);
         if (!success) {
-          setError('Registration failed. Email may already be in use.');
+          // Check if there's an auth error from context first
+          if (authError) {
+            // authError will be shown automatically via useEffect
+          } else {
+            // Otherwise show a generic message
+            setError('Registration failed. Email may already be in use.');
+          }
         }
       } else {
         success = await loginWithEmail(email, password);
         if (!success) {
-          setError('Invalid email or password');
+          // Check if there's an auth error from context first
+          if (authError) {
+            // authError will be shown automatically via useEffect
+          } else {
+            // If it's a valid @turing.com email but login failed, it's likely an invalid password
+            setError('Invalid email or password');
+          }
         }
       }
       
@@ -105,6 +135,10 @@ export const LoginPage: React.FC = () => {
     // Start form transition animation
     setAnimatingForm(true);
     setFormSubmitted(true);
+    
+    // Clear any existing errors when switching modes
+    setError('');
+    clearAuthError();
     
     // Prepare the container for animation - set explicit height
     if (formContainerRef.current && formRef.current) {
@@ -149,7 +183,16 @@ export const LoginPage: React.FC = () => {
   const renderGoogleButton = () => {
     return (
       <GoogleLogin
-        onSuccess={loginWithGoogle}
+        onSuccess={async (credentialResponse) => {
+          setIsLoading(true);
+          setError('');
+          clearAuthError();
+          const success = await loginWithGoogle(credentialResponse);
+          setIsLoading(false);
+          if (!success && !authError) {
+            setError('Google Sign In failed. Please try again.');
+          }
+        }}
         onError={() => {
           setError('Google Sign In failed. Please try again.');
         }}

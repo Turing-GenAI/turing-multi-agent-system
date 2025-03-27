@@ -90,9 +90,9 @@ function App() {
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh", padding: "20px", gap: "20px" }}>
+    <div className="flex h-screen p-5 gap-5">
       {/* Left Pane: Chat Window */}
-      <Paper elevation={3} style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
+      <Paper elevation={3} className="flex-1 p-5 overflow-y-auto">
         {/* Top-Level Progress: Inspection Areas */}
         <Stepper activeStep={activeInspectionArea - 1} alternativeLabel>
           {inspectionAreas.map((area) => (
@@ -103,7 +103,7 @@ function App() {
         </Stepper>
 
         {/* Mid-Level: Activities */}
-        <div style={{ marginTop: "20px" }}>
+        <div className="mt-5">
           {filteredActivities.map((activity) => (
             <Accordion
               key={activity.id}
@@ -140,7 +140,7 @@ function App() {
         </div>
 
         {/* Additional Features: Search and Actions */}
-        <div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
+        <div className="mt-5 flex gap-2.5">
           <TextField label="Search" variant="outlined" size="small" fullWidth />
           <Button variant="contained" color="primary">
             Filter
@@ -149,11 +149,11 @@ function App() {
       </Paper>
 
       {/* Right Pane: Output Results */}
-      <Paper elevation={3} style={{ flex: 1, padding: "20px" }}>
+      <Paper elevation={3} className="flex-1 p-5">
         <Typography variant="h6" gutterBottom>
           Output Pane
         </Typography>
-        <Divider style={{ marginBottom: "20px" }} />
+        <Divider className="mb-5" />
         {selectedAgentOutput ? (
           <Typography>{selectedAgentOutput}</Typography>
         ) : (

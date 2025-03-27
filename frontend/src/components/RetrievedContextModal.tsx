@@ -626,11 +626,10 @@ export const RetrievedContextModal: React.FC<RetrievedContextModalProps> = ({
                               <h5 className="font-medium text-gray-700 mb-2">Table Data:</h5>
                               <div className="border rounded shadow-sm">
                                 <div 
-                                  className="p-2 text-sm html-table-container overflow-x-auto overflow-y-auto" 
+                                  className="p-2 text-sm html-table-container overflow-x-auto overflow-y-auto max-h-[350px]" 
                                   style={{
                                     '--header-bg-color': '#f7f7f7',
-                                    '--header-text-color': '#333',
-                                    maxHeight: '350px'
+                                    '--header-text-color': '#333'
                                   } as React.CSSProperties}
                                   dangerouslySetInnerHTML={{ __html: item.htmlTable }}
                                 />

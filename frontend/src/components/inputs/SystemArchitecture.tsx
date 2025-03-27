@@ -52,22 +52,18 @@ const CustomNode = ({ data }: { data: any }) => {
   
   return (
     <div
-      className="border rounded-md shadow-md"
+      className={`border rounded-md shadow-md text-xs relative ${isDataNode ? 'z-[999]' : 'z-[5]'} pointer-events-auto`}
       style={{
         background: bgColor,
-        borderWidth: '1px',
         width,
-        fontSize: '12px',
-        position: 'relative',
-        zIndex: isDataNode ? 999 : 5, // Much higher z-index for data nodes
-        pointerEvents: 'all', // Ensure node is clickable
+        borderWidth: '1px',
       }}
     >
       {/* Top handle */}
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: '#555' }}
+        className="bg-neutral-600"
         id="top"
       />
       
@@ -75,7 +71,7 @@ const CustomNode = ({ data }: { data: any }) => {
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#555' }}
+        className="bg-neutral-600"
         id="left"
       />
       
@@ -90,7 +86,7 @@ const CustomNode = ({ data }: { data: any }) => {
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: '#555' }}
+        className="bg-neutral-600"
         id="right"
       />
       
@@ -98,7 +94,7 @@ const CustomNode = ({ data }: { data: any }) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: '#555' }}
+        className="bg-neutral-600"
         id="bottom"
       />
     </div>
@@ -113,30 +109,25 @@ const ContainerNode = ({ data }: { data: any }) => {
 
   return (
     <div
-      className="border rounded-md shadow-sm"
+      className={`border rounded-md shadow-sm text-sm relative z-0 overflow-visible pointer-events-none`}
       style={{
         background: bgColor,
-        borderWidth: '1px',
         width,
         height,
-        fontSize: '14px',
-        position: 'relative',
-        zIndex: 0,
-        overflow: 'visible',
-        pointerEvents: 'none', // Make container non-interactive
+        borderWidth: '1px',
       }}
     >
       {/* Optionally remove handles if you don't want to connect lines to the container itself */}
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: '#555', visibility: 'hidden' }}
+        className="bg-neutral-600 invisible"
       />
       <div className="font-bold text-center py-1 border-b border-gray-300">{data.label}</div>
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: '#555', visibility: 'hidden' }}
+        className="bg-neutral-600 invisible"
       />
     </div>
   );
