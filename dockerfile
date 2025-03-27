@@ -1,5 +1,5 @@
 # Use Ubuntu as the base image
-FROM ubuntu:22.04
+FROM ubuntu:22.04 AS backend
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -49,5 +49,41 @@ WORKDIR /app/scheduler_app
 ENV VIRTUAL_ENV="/app/scheduler_app/.venv"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Specify the command to run the application
-CMD ["uvicorn", "app.app:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+# Build frontend stage
+FROM node:20-alpine AS frontend
+
+WORKDIR /app/frontend
+
+# Copy frontend files
+COPY ./frontend/package*.json ./
+# Install dependencies
+RUN npm ci
+
+# Copy the rest of the frontend code
+COPY ./frontend .
+
+# Build the frontend application
+RUN npm run build
+
+# Final stage: Combine backend and frontend
+FROM backend AS final
+
+# Copy the built frontend assets from the frontend stage
+COPY --from=frontend /app/frontend/dist /app/frontend/dist
+
+# Install a simple HTTP server to serve the frontend
+RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
+
+# Copy the nginx configuration
+RUN mkdir -p /etc/nginx/sites-available/
+COPY ./nginx.conf /etc/nginx/sites-available/default
+
+# Expose ports for backend and frontend
+EXPOSE 8000 5173
+
+# Copy startup script
+COPY ./start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Start both services
+CMD ["/app/start.sh"]

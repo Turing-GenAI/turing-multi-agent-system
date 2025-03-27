@@ -1,0 +1,50 @@
+services:
+  web:
+    build:
+      context: .
+      target: backend
+    image: auditcopilot.azurecr.io/web:v3_turing_demo
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OUTPUT_DIR=/app/outputs
+    volumes:
+      - ./jnj_outputs:/app/outputs
+      - ./chromadb:/app/chromadb
+      - ./chromadb_new:/app/chromadb_new
+    command: uvicorn app.app:app --reload --host 0.0.0.0 --port 8000
+    working_dir: /app/scheduler_app
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+      
+  frontend:
+    image: node:20-alpine
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
+      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/yarn.lock:/app/yarn.lock
+      - ./frontend/eslint.config.js:/app/eslint.config.js
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    command: sh -c "yarn install --no-optional && yarn dev --host 0.0.0.0"
+    depends_on:
+      - web
