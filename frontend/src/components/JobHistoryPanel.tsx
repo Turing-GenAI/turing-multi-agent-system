@@ -23,8 +23,14 @@ interface JobHistoryPanelProps {
 }
 
 // Cache interfaces
+interface AiMessage {
+  id: string;
+  role: string;
+  content: string;
+}
+
 interface JobCache {
-  aiMessages: string[];
+  aiMessages: AiMessage[] | string[];
   findings: any;
   retrievedContext: any;
   timestamp: number; // Add timestamp for cache invalidation if needed
@@ -41,7 +47,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
-  const [aiMessages, setAiMessages] = useState<string[]>([]);
+  const [aiMessages, setAiMessages] = useState<(string | AiMessage)[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [messageError, setMessageError] = useState<string | null>(null);
   
@@ -63,9 +69,117 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   const [showAgentMessages, setShowAgentMessages] = useState<boolean>(true);
   const [d1Expanded, setD1Expanded] = useState(false);
   const [d2Expanded, setD2Expanded] = useState(false);
+
+  // IndexedDB setup and helper functions
+  const DB_NAME = 'turing_job_cache_db';
+  const DB_VERSION = 1;
+  const JOB_STORE = 'job_cache';
   
-  // Cache for job data to prevent refetching
-  const [jobCache, setJobCache] = useState<Record<string, JobCache>>({});
+  // Initialize the database
+  const initIndexedDB = () => {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      
+      request.onerror = (event) => {
+        console.error('IndexedDB error:', event);
+        reject('Failed to open IndexedDB');
+      };
+      
+      request.onsuccess = (event) => {
+        const db = request.result as IDBDatabase;
+        resolve(db);
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = request.result as IDBDatabase;
+        if (!db.objectStoreNames.contains(JOB_STORE)) {
+          // Create object store with jobId as key
+          db.createObjectStore(JOB_STORE, { keyPath: 'jobId' });
+          console.log('Created IndexedDB job cache store');
+        }
+      };
+    });
+  };
+  
+  // Save job data to IndexedDB
+  const saveJobToCache = async (jobId: string, data: any) => {
+    try {
+      // Add a timestamp for cache invalidation
+      const jobData = {
+        jobId,
+        aiMessages: data.aiMessages || [],
+        findings: data.findings || null,
+        retrievedContext: data.retrievedContext || null,
+        timestamp: Date.now()
+      };
+      
+      const db = await initIndexedDB();
+      const transaction = db.transaction(JOB_STORE, 'readwrite');
+      const store = transaction.objectStore(JOB_STORE);
+      
+      const request = store.put(jobData);
+      
+      return new Promise<void>((resolve, reject) => {
+        request.onsuccess = () => {
+          console.log(`Saved job ${jobId} to IndexedDB cache`);
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error('Error saving to IndexedDB:', event);
+          reject(event);
+        };
+        
+        transaction.oncomplete = () => {
+          db.close();
+        };
+      });
+    } catch (err) {
+      console.error("Error saving to IndexedDB cache:", err);
+    }
+  };
+  
+  // Get job data from IndexedDB
+  const getJobFromCache = async (jobId: string): Promise<any | null> => {
+    try {
+      const db = await initIndexedDB();
+      const transaction = db.transaction(JOB_STORE, 'readonly');
+      const store = transaction.objectStore(JOB_STORE);
+      
+      const request = store.get(jobId);
+      
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => {
+          const jobData = request.result;
+          if (jobData) {
+            // Check if cache is still valid (7 days)
+            const now = Date.now();
+            if (jobData.timestamp && (now - jobData.timestamp < 7 * 24 * 60 * 60 * 1000)) {
+              console.log(`Retrieved job ${jobId} from IndexedDB cache`);
+              resolve(jobData);
+            } else {
+              console.log(`Job ${jobId} cache expired, need to refetch`);
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        };
+        
+        request.onerror = (event) => {
+          console.error('Error reading from IndexedDB:', event);
+          reject(event);
+        };
+        
+        transaction.oncomplete = () => {
+          db.close();
+        };
+      });
+    } catch (err) {
+      console.error('IndexedDB read failed:', err);
+      return null;
+    }
+  };
 
   // Initial fetch jobs with loading state
   const initialFetchJobs = useCallback(async () => {
@@ -233,65 +347,44 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
 
   // Fetch AI messages and findings for a specific job
   const fetchJobDetail = async (jobId: string) => {
-    // First check component state cache
-    if (jobCache[jobId]) {
-      console.log(`Using in-memory cached data for job ${jobId}`);
-      setAiMessages(jobCache[jobId].aiMessages);
-      setFindings(jobCache[jobId].findings);
-      setRetrievedContext(jobCache[jobId].retrievedContext);
-      return;
-    }
-    
-    // Then check localStorage cache
-    try {
-      const localStorageKey = `job_cache_${jobId}`;
-      const cachedDataStr = localStorage.getItem(localStorageKey);
-      
-      if (cachedDataStr) {
-        const cachedData = JSON.parse(cachedDataStr);
-        // Check if cache is still valid (7 days)
-        const now = Date.now();
-        if (cachedData.timestamp && (now - cachedData.timestamp < 7 * 24 * 60 * 60 * 1000)) {
-          console.log(`Using localStorage cached data for job ${jobId}`);
-          setAiMessages(cachedData.aiMessages || []);
-          setFindings(cachedData.findings);
-          setRetrievedContext(cachedData.retrievedContext);
-          
-          // Also update the in-memory cache
-          setJobCache(prevCache => {
-            const updatedCache: Record<string, JobCache> = {
-              ...prevCache,
-              [jobId]: cachedData as JobCache
-            };
-            return updatedCache;
-          });
-          return;
-        } else {
-          console.log(`Cached data for job ${jobId} has expired, fetching fresh data`);
-        }
-      }
-    } catch (err) {
-      console.error("Error reading from localStorage:", err);
-      // Continue with API call if localStorage fails
-    }
-    
+    // Set all loading states to true
     setLoadingMessages(true);
     setLoadingFindings(true);
-    setLoadingContext(true); // Always set context loading when getting job details
+    setLoadingContext(true);
+    
+    // Clear any previous errors
     setMessageError(null);
     setFindingsError(null);
     setContextError(null);
     
     try {
-      // Fetch both AI messages and findings in parallel
-      const [messagesResponse] = await Promise.all([
-        auditService.getAIMessages(jobId, true)
-      ]);
+      // First check if data exists in IndexedDB cache
+      const cachedData = await getJobFromCache(jobId);
+      
+      if (cachedData) {
+        console.log(`Using cached data for job ${jobId} from IndexedDB`);
+        setAiMessages(cachedData.aiMessages || []);
+        setFindings(cachedData.findings);
+        setRetrievedContext(cachedData.retrievedContext);
+        
+        // Reset all loading states since we loaded from cache
+        setLoadingMessages(false);
+        setLoadingFindings(false);
+        setLoadingContext(false);
+        return;
+      }
+      
+      // No cache or expired cache, fetch fresh data
+      console.log(`Fetching fresh data for job ${jobId}`);
+      
+      // Get AI messages
+      const messagesResponse = await auditService.getAIMessages(jobId, true);
+      setLoadingMessages(false);
       
       if (messagesResponse && messagesResponse.data) {
         const responseData = messagesResponse.data;
         const aiMessagesData = responseData.ai_messages || [];
-        setAiMessages(aiMessagesData as string[]);
+        setAiMessages(aiMessagesData as (string | AiMessage)[]);
         
         // Process findings if available
         let findingsData = null;
@@ -326,115 +419,47 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               ae: aeFindings
             };
             setFindings(findingsData);
+            setLoadingFindings(false);
           } catch (err) {
             console.error("Error processing findings:", err);
             setFindingsError("Failed to process findings data.");
+            setLoadingFindings(false);
           }
         } else {
           // No findings in the response
           setFindings(null);
+          setLoadingFindings(false);
         }
         
         // Fetch the retrieved context for this job
         const contextData = await fetchRetrievedContextData(jobId);
         
-        // Cache the job data with timestamp
-        const cacheData = {
-          aiMessages: aiMessagesData,
-          findings: findingsData,
-          retrievedContext: contextData,
-          timestamp: Date.now()
-        };
-        
-        // Update in-memory cache
-        setJobCache(prevCache => {
-          const updatedCache: Record<string, JobCache> = {
-            ...prevCache,
-            [jobId]: cacheData as JobCache
-          };
-          return updatedCache;
-        });
-        
-        // Save to localStorage
+        // Save to IndexedDB cache
         try {
-          const localStorageKey = `job_cache_${jobId}`;
-          
-          // Ensure aiMessages is an array before attempting to map
-          const aiMessagesArray = Array.isArray(cacheData.aiMessages) 
-            ? cacheData.aiMessages 
-            : (typeof cacheData.aiMessages === 'string' ? [cacheData.aiMessages] : []);
-          
-          // Limit the size of data saved to localStorage by extracting
-          // only essential fields to avoid quota errors
-          const essentialCacheData = {
-            aiMessages: aiMessagesArray.map(msg => ({
-              id: msg.id || 'unknown',
-              role: msg.role || 'unknown',
-              content: msg.content && msg.content.length > 500 ? 
-                msg.content.substring(0, 500) + '...' : (msg.content || '')
-            })) || [],
-            
-            // Store simplified findings data with null checks
-            findings: {
-              pd: Array.isArray(cacheData.findings?.pd) 
-                ? cacheData.findings.pd.map(item => ({
-                    id: item.id || 'unknown',
-                    content: item.content && item.content.length > 500 ? 
-                      item.content.substring(0, 500) + '...' : (item.content || '')
-                  }))
-                : [],
-              ae: Array.isArray(cacheData.findings?.ae)
-                ? cacheData.findings.ae.map(item => ({
-                    id: item.id || 'unknown',
-                    content: item.content && item.content.length > 500 ? 
-                      item.content.substring(0, 500) + '...' : (item.content || '')
-                  }))
-                : []
-            },
-            
-            // Skip storing large retrieved context in localStorage
-            retrievedContext: null,
-            
-            timestamp: cacheData.timestamp
+          const cacheData = {
+            aiMessages: aiMessagesData,
+            findings: findingsData,
+            retrievedContext: contextData
           };
           
-          localStorage.setItem(localStorageKey, JSON.stringify(essentialCacheData));
-          console.log(`Saved job ${jobId} data to localStorage (limited size)`);
+          await saveJobToCache(jobId, cacheData);
+          console.log(`Job ${jobId} data saved to IndexedDB cache`);
         } catch (err) {
-          console.error("Error saving to localStorage:", err);
-          // If localStorage fails, try to clear some old entries and try again
-          try {
-            // Clear old entries that might be taking up space
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('job_cache_') && key !== `job_cache_${jobId}`) {
-                keysToRemove.push(key);
-              }
-            }
-            
-            // Remove a few old entries to make space
-            if (keysToRemove.length > 0) {
-              // Remove oldest 5 entries or fewer if we have less
-              const toRemove = keysToRemove.slice(0, Math.min(5, keysToRemove.length));
-              toRemove.forEach(key => localStorage.removeItem(key));
-              console.log(`Cleared ${toRemove.length} old entries from localStorage`);
-            }
-          } catch (clearErr) {
-            console.error("Error clearing localStorage:", clearErr);
-          }
+          console.error("Error saving to IndexedDB cache:", err);
         }
       } else {
         // No data in the response
         setAiMessages([]);
         setFindings(null);
+        setLoadingFindings(false);
       }
     } catch (err) {
       console.error("Error fetching job details:", err);
       setMessageError("Failed to load messages for this job.");
-    } finally {
       setLoadingMessages(false);
       setLoadingFindings(false);
+    } finally {
+      setLoadingContext(false);
     }
   };
 
@@ -466,10 +491,10 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
   // Fetch retrieved context for a specific job (now just uses the cached data or calls fetchRetrievedContextData)
   const fetchRetrievedContext = async (jobId: string) => {
     // If we already have cached data, use it
-    if (jobCache[jobId] && jobCache[jobId].retrievedContext) {
-      setRetrievedContext(jobCache[jobId].retrievedContext);
-      return;
-    }
+    // if (jobCache[jobId] && jobCache[jobId].retrievedContext) {
+    //   setRetrievedContext(jobCache[jobId].retrievedContext);
+    //   return;
+    // }
     
     // Otherwise fetch the data
     await fetchRetrievedContextData(jobId);
@@ -1023,7 +1048,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
-      <div className="overflow-x-auto overflow-y-auto mt-4 max-h-[350px]">
+      <div className="overflow-x-auto overflow-y-auto mt-4" style={{ maxHeight: '350px' }}>
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -1031,7 +1056,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Protocol</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Site</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Category</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-200">Severity</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Severity</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Deviation</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Description</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32 border border-gray-200">Days Outstanding</th>
@@ -1065,7 +1090,7 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     if (!findingData.table || findingData.table.length === 0) return null;
     
     return (
-      <div className="overflow-x-auto overflow-y-auto mt-4 max-h-[350px]">
+      <div className="overflow-x-auto overflow-y-auto mt-4" style={{ maxHeight: '350px' }}>
         <table className="w-full divide-y divide-gray-200 border-collapse shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -1285,6 +1310,13 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
     setSelectedJob(jobId);
     fetchJobDetail(jobId);
   };
+
+  useEffect(() => {
+    // Load jobs if the panel is open
+    if (jobs.length === 0 && !loading) {
+      fetchJobs();
+    }
+  }, [jobs.length, loading]);
 
   return (
     <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col">
@@ -1697,12 +1729,19 @@ const JobHistoryPanel: React.FC<JobHistoryPanelProps> = ({ onClose, onSelectJob,
                     <div className="space-y-2 p-4 bg-white">
                       {Array.isArray(aiMessages) ? aiMessages.map((message, index) => (
                         <div key={index}>
-                          {formatAgentMessage(message)}
+                          {typeof message === 'string' ? formatAgentMessage(message) : 
+                           typeof message === 'object' && message !== null && 'content' in message ?
+                             formatAgentMessage((message.content as string) || '') :
+                            <div className="text-red-500 p-3 bg-red-50 rounded-lg">Invalid message format</div>
+                          }
                         </div>
                       )) : (
                         <div>
                           {typeof aiMessages === 'string' ? formatAgentMessage(aiMessages) : 
-                            <div className="text-red-500 p-3 bg-red-50 rounded-lg">Invalid message format</div>}
+                           typeof aiMessages === 'object' && aiMessages !== null && 'content' in aiMessages ?
+                             formatAgentMessage((aiMessages.content as string) || '') :
+                            <div className="text-red-500 p-3 bg-red-50 rounded-lg">Invalid message format</div>
+                          }
                         </div>
                       )}
                     </div>
