@@ -182,25 +182,51 @@ export const LoginPage: React.FC = () => {
   // Custom Google button renderer to allow for changing text based on mode
   const renderGoogleButton = () => {
     return (
-      <GoogleLogin
-        onSuccess={async (credentialResponse) => {
-          setIsLoading(true);
-          setError('');
-          clearAuthError();
-          const success = await loginWithGoogle(credentialResponse);
-          setIsLoading(false);
-          if (!success && !authError) {
-            setError('Google Sign In failed. Please try again.');
-          }
-        }}
-        onError={() => {
-          setError('Google Sign In failed. Please try again.');
-        }}
-        width="100%"
-        theme="filled_blue"
-        text={isRegistering ? "signup_with" : "signin_with"}
-        locale="en"
-      />
+      <>
+        <button 
+          onClick={() => {
+            // This will open the Google OAuth flow
+            const googleLoginButton = document.querySelector('[aria-labelledby="button-label"]');
+            if (googleLoginButton) {
+              (googleLoginButton as HTMLElement).click();
+            }
+          }}
+          className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
+          type="button"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21.8055 10.0415H21V10H12V14H17.6515C16.827 16.3285 14.6115 18 12 18C8.6865 18 6 15.3135 6 12C6 8.6865 8.6865 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C6.4775 2 2 6.4775 2 12C2 17.5225 6.4775 22 12 22C17.5225 22 22 17.5225 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#333333"/>
+            <path d="M3.15295 7.3455L6.43845 9.755C7.32745 7.554 9.48045 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C8.15895 2 4.82795 4.1685 3.15295 7.3455Z" fill="#555555"/>
+            <path d="M12 22C14.583 22 16.93 21.0115 18.7045 19.404L15.6095 16.785C14.5717 17.5742 13.3037 18.001 12 18C9.39903 18 7.19053 16.3415 6.35853 14.027L3.09753 16.5395C4.75253 19.778 8.11353 22 12 22Z" fill="#888888"/>
+            <path d="M21.8055 10.0415H21V10H12V14H17.6515C17.2571 15.1082 16.5467 16.0766 15.608 16.7855L15.6095 16.785L18.7045 19.404C18.4855 19.6025 22 17 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#444444"/>
+          </svg>
+          <span className="text-gray-700 font-medium text-sm">
+            {isRegistering ? 'Sign up with Google' : 'Sign in with Google'}
+          </span>
+        </button>
+        
+        {/* Hidden Google login button that will be triggered by our custom button */}
+        <div className="hidden">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              setIsLoading(true);
+              setError('');
+              clearAuthError();
+              const success = await loginWithGoogle(credentialResponse);
+              setIsLoading(false);
+              if (!success && !authError) {
+                setError('Google Sign In failed. Please try again.');
+              }
+            }}
+            onError={() => {
+              setError('Google Sign In failed. Please try again.');
+            }}
+            theme="outline"
+            text={isRegistering ? "signup_with" : "signin_with"}
+            locale="en"
+          />
+        </div>
+      </>
     );
   };
 
@@ -217,18 +243,18 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-indigo-50 to-white flex items-center justify-center p-2 sm:p-4 relative">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white flex items-center justify-center p-2 sm:p-4 relative">
       {/* Abstract Background Pattern */}
       <div className="absolute inset-0 z-0 opacity-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-blue-500 blur-3xl"></div>
-        <div className="absolute top-20 -right-20 w-80 h-80 rounded-full bg-indigo-600 blur-3xl"></div>
-        <div className="absolute bottom-10 left-1/4 w-72 h-72 rounded-full bg-blue-400 blur-3xl"></div>
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gray-500 blur-3xl"></div>
+        <div className="absolute top-20 -right-20 w-80 h-80 rounded-full bg-gray-600 blur-3xl"></div>
+        <div className="absolute bottom-10 left-1/4 w-72 h-72 rounded-full bg-gray-400 blur-3xl"></div>
       </div>
       
       {/* Login Container */}
       <div className="w-full max-w-4xl flex overflow-hidden rounded-2xl shadow-2xl z-10 relative bg-white bg-opacity-80 backdrop-blur-sm">
         {/* Left Side - Branding */}
-        <div className="hidden md:block w-1/2 bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-white relative overflow-hidden">
+        <div className="hidden md:block w-1/2 bg-gradient-to-r from-gray-800 to-gray-900 p-8 text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-20">
             <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               <path d="M0,0 L100,0 L100,100 L0,100 Z" fill="url(#pattern)" />
@@ -244,11 +270,11 @@ export const LoginPage: React.FC = () => {
             {/* Logo Placeholder */}
             <div className="text-3xl font-bold tracking-tight mb-4 flex items-center">
               <div className="bg-white rounded-full p-2 mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <span className="bg-white text-blue-600 px-2 py-1 rounded">Audit</span>
+              <span className="bg-white text-gray-600 px-2 py-1 rounded">Audit</span>
               <span className="ml-1">Copilot</span>
             </div>
             
@@ -281,10 +307,10 @@ export const LoginPage: React.FC = () => {
         <div className="w-full md:w-1/2 bg-white bg-opacity-90 backdrop-filter backdrop-blur-sm p-5 sm:p-6 relative">
           {/* Subtle Form Background Pattern */}
           <div className="absolute inset-0 opacity-5 overflow-hidden pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" className="text-indigo-800">
+            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" className="text-gray-200">
               <defs>
                 <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+                  <circle cx="5" cy="5" r="2" fill="white" />
                 </pattern>
               </defs>
               <rect width="100%" height="100%" fill="url(#smallGrid)" />
@@ -294,7 +320,7 @@ export const LoginPage: React.FC = () => {
           <div className="max-w-md mx-auto relative">
             <div className="text-center mb-5">
               <div className="md:hidden flex items-center justify-center mb-3">
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-full p-2 mr-2">
+                <div className="bg-gray-800 rounded-full p-2 mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
@@ -304,16 +330,16 @@ export const LoginPage: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center justify-center mb-1">
                   {isRegistering ? (
-                    <UserPlus className="h-5 w-5 text-indigo-600 mr-2" />
+                    <UserPlus className="h-5 w-5 text-gray-600 mr-2" />
                   ) : (
-                    <LogIn className="h-5 w-5 text-indigo-600 mr-2" />
+                    <LogIn className="h-5 w-5 text-gray-600 mr-2" />
                   )}
-                  <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700">
+                  <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-900">
                     {isRegistering ? 'Create Your Account' : 'Welcome Back'}
                   </h1>
                 </div>
                 <div className="flex items-center justify-center">
-                  <div className="h-1 w-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
+                  <div className="h-1 w-10 bg-gray-500 rounded-full"></div>
                 </div>
                 <p className="text-gray-600 text-xs mt-1 max-w-xs mx-auto leading-relaxed">
                   {isRegistering 
@@ -346,7 +372,7 @@ export const LoginPage: React.FC = () => {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-200"
                         placeholder="Enter your full name"
                       />
                     </div>
@@ -364,7 +390,7 @@ export const LoginPage: React.FC = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-200"
                       placeholder="Enter your email"
                       required
                       disabled={isLoading}
@@ -383,7 +409,7 @@ export const LoginPage: React.FC = () => {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-200"
                       placeholder="Enter your password"
                       required
                       disabled={isLoading}
@@ -394,7 +420,7 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2.5 px-4 text-sm rounded-lg shadow-md transition-all duration-500 transform focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex justify-center items-center ${
+                  className={`w-full bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-600 text-white font-medium py-2.5 px-4 text-sm rounded-lg shadow-md transition-all duration-500 transform focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 flex justify-center items-center ${
                     isLoading ? 'opacity-90' : 'hover:translate-y-[-1px]'
                   }`}
                 >
@@ -417,7 +443,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={toggleMode}
-                className="text-blue-600 hover:text-blue-800 text-xs font-medium focus:outline-none transition-all duration-700 transform hover:scale-105 active:scale-95"
+                className="text-gray-600 hover:text-gray-800 text-xs font-medium focus:outline-none transition-all duration-700 transform hover:scale-105 active:scale-95"
                 disabled={isLoading || animatingForm}
               >
                 {isRegistering ? 'Already have an account? Sign In' : 'Need an account? Create one'}
@@ -440,16 +466,16 @@ export const LoginPage: React.FC = () => {
             <div className="bg-gray-50 px-4 py-3 rounded-lg border border-gray-100 mt-4">
               <p className="text-xs text-center text-gray-500">
                 By signing in, you agree to our 
-                <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-blue-600 hover:text-blue-800 mx-1 text-xs hover:underline transition-colors duration-200">
+                <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-gray-600 hover:text-gray-800 mx-1 text-xs hover:underline transition-colors duration-200">
                   Terms of Service
                 </button>
                 and
-                <button type="button" onClick={() => setIsPrivacyModalOpen(true)} className="text-blue-600 hover:text-blue-800 ml-1 text-xs hover:underline transition-colors duration-200">
+                <button type="button" onClick={() => setIsPrivacyModalOpen(true)} className="text-gray-600 hover:text-gray-800 ml-1 text-xs hover:underline transition-colors duration-200">
                   Privacy Policy
                 </button>
               </p>
               <p className="text-xs text-center text-gray-500 mt-1">
-                <button onClick={() => setIsContactModalOpen(true)} className="hover:text-blue-600 transition-colors duration-200">Contact Support</button>
+                <button onClick={() => setIsContactModalOpen(true)} className="hover:text-gray-600 transition-colors duration-200">Contact Support</button>
               </p>
             </div>
           </div>
