@@ -70,12 +70,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <div className="flex-shrink-0">
         <Avatar 
           className={`h-8 w-8 transition-transform duration-200 group-hover:scale-110 ${
-            message.isUser ? 'bg-blue-100 border border-blue-300 shadow-sm' : message.agentPrefix ? 'bg-purple-100 border border-purple-200' : 'bg-emerald-100 border border-emerald-200'
+            message.isUser ? 'bg-gray-100 border border-gray-300 shadow-sm' : message.agentPrefix ? 'bg-gray-100 border border-gray-200' : 'bg-emerald-100 border border-emerald-200'
           }`}
         >
           <AvatarFallback className={
-            message.isUser ? 'text-blue-700' : 
-            message.agentPrefix ? 'text-purple-700' : 'text-emerald-700'
+            message.isUser ? 'text-gray-700' : 
+            message.agentPrefix ? 'text-gray-700' : 'text-emerald-700'
           }>
             {message.isUser ? (
               <User className="h-4 w-4" />

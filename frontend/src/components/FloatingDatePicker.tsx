@@ -46,11 +46,11 @@ export const FloatingDatePicker = forwardRef<HTMLDivElement, FloatingDatePickerP
         maxHeight: '350px', // Limit the overall height
         overflow: 'hidden' // Hide overflow
       }}
-      className="bg-white rounded-lg shadow-xl border"
+      className="bg-white rounded-lg shadow-xl border border-gray-200"
     >
       <div className="flex items-center p-2 border-b border-gray-200">
-        <Calendar className="w-4 h-4 mr-2 text-gray-800" />
-        <h3 className="text-sm font-medium text-gray-800">Select Date Range</h3>
+        <Calendar className="h-5 w-5 mr-2 text-gray-500" />
+        <h2 className="text-sm font-medium text-gray-900">Select Date Range</h2>
       </div>
       <DayPicker
         mode="range"
@@ -68,7 +68,7 @@ export const FloatingDatePicker = forwardRef<HTMLDivElement, FloatingDatePickerP
         }}
         modifiersStyles={{
           today: {
-            color: '#2563eb',
+            color: '#111827',
             fontWeight: 'bold'
           }
         }}
@@ -80,26 +80,26 @@ export const FloatingDatePicker = forwardRef<HTMLDivElement, FloatingDatePickerP
           day: { margin: '0', width: '32px', height: '32px', fontSize: '0.9rem' },
         }}
       />
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{__html: `
         .custom-selected-day {
           font-weight: bold;
         }
         .day-range-start {
-          background-color: #2563eb !important;
+          background-color: #111827 !important;
           color: white !important;
           border-radius: 50% 0 0 50% !important;
         }
         .day-range-end {
-          background-color: #2563eb !important;
+          background-color: #111827 !important;
           color: white !important;
           border-radius: 0 50% 50% 0 !important;
         }
         .day-range-middle {
-          background-color: rgba(37, 99, 235, 0.2) !important;
-          color: #1e40af !important;
+          background-color: rgba(17, 24, 39, 0.2) !important;
+          color: #111827 !important;
           border-radius: 0 !important;
         }
-      `}</style>
+      `}} />
     </div>,
     document.body
   );

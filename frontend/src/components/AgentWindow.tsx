@@ -106,12 +106,29 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        (!dateButtonRef.current || !dateButtonRef.current.contains(event.target as Node)) &&
-        (!datePickerRef.current || !datePickerRef.current.contains(event.target as Node))
-      ) {
-        setShowDatePicker(false);
+      // Don't close if the click is on the date picker button
+      if (dateButtonRef.current?.contains(event.target as Node)) {
+        return;
       }
+      
+      // Don't close if the click is inside the date picker
+      if (datePickerRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      
+      // Don't close if clicking on month navigation buttons or day cells
+      const target = event.target as HTMLElement;
+      if (
+        target.closest('.rdp-nav_button') || 
+        target.closest('.rdp-button') ||
+        target.closest('.rdp-day') ||
+        target.closest('.rdp-head_cell')
+      ) {
+        return;
+      }
+      
+      // If we get here, the click was outside, so close the date picker
+      setShowDatePicker(false);
     }
 
     document.addEventListener('mousedown', handleClickOutside);

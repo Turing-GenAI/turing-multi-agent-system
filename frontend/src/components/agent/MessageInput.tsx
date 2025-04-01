@@ -31,15 +31,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder="Type your message..."
         disabled={disabled}
-        className={`flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+        className={`flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-gray-200 ${
           disabled ? 'bg-gray-100 cursor-not-allowed' : ''
         }`}
       />
       <button
         type="submit"
         disabled={disabled || !userInput.trim()}
-        className={`w-10 h-10 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          disabled || !userInput.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'
+        className={`w-10 h-10 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+          disabled || !userInput.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-900 hover:bg-gray-800 text-white'
         }`}
         aria-label="Send message"
       >
