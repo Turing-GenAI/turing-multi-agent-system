@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from redis import Redis
 from app.setup_redis import connect_to_redis, initialize_redis_structure
-from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys
+from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys, merge_selfrag_nodes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
