@@ -2,13 +2,14 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
-import { Dashboard } from "./pages/Dashboard";
+import { DashboardNew } from "./pages/DashboardNew";
 import { Inputs } from "./pages/Inputs";
 import { AuditPage } from "./pages/AuditPage";
 import AgentMock from "./pages/AgentMock";
 import { LoginPage } from "./pages/LoginPage";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 // Wrapper component to conditionally render the Navbar and Footer
 const AppContent = () => {
@@ -17,15 +18,15 @@ const AppContent = () => {
   const isLoginPage = location.pathname === '/login';
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {!isLoginPage && <Navbar />}
-      <div className="flex-1">
+      <main className="flex-1 overflow-auto bg-muted/30">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           
           <Route path="/dashboard" element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardNew />
             </ProtectedRoute>
           } />
           
@@ -51,7 +52,7 @@ const AppContent = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </div>
+      </main>
       {/* 
         Only render the Footer if not on the AuditPage or LoginPage
         Note: AuditPage has its own footer implementation to avoid scrolling issues
@@ -65,11 +66,13 @@ const AppContent = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 
