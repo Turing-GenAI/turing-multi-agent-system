@@ -29,8 +29,9 @@ const arePropsEqual = (prevProps: MessageBubbleProps, nextProps: MessageBubblePr
     prevProps.isAnalysisStarted === nextProps.isAnalysisStarted &&
     prevProps.selectedTrial === nextProps.selectedTrial &&
     prevProps.selectedSite === nextProps.selectedSite &&
-    prevProps.dateRange.from === nextProps.dateRange.from &&
-    prevProps.dateRange.to === nextProps.dateRange.to
+    // Safely check dateRange properties with optional chaining
+    (prevProps.dateRange?.from === nextProps.dateRange?.from) &&
+    (prevProps.dateRange?.to === nextProps.dateRange?.to)
   );
 };
 

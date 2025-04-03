@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { User, Bot, MessageSquare } from 'lucide-react';
+import { Bot, MessageSquare } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ToolUI } from './ToolUI';
 import { MessageInput } from './agent/MessageInput';
 import { MessageBubble } from './agent/MessageBubble';
-import { getMessageBackgroundColor } from './agent/utils';
-import { AuditProgressSteps } from './agent/AuditProgressSteps';
 
 // Define trial to site ID mapping 
 const TRIAL_SITE_MAPPING: Record<string, string[]> = {
@@ -54,7 +52,6 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
     to: undefined,
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showGreeting, setShowGreeting] = useState(true);
   const [currentStep, setCurrentStep] = useState<'greeting' | 'trial' | 'site' | 'date' | 'confirm'>('greeting');
   const [isAnalysisStarted, setIsAnalysisStarted] = useState(false);
   const [useRandomSiteId] = useState<boolean>(true); // Set to false to use manual site selection
@@ -289,10 +286,25 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
         );
         break;
       case 'date':
-        setDateRange(value);
-        if (value.from && value.to) {
-          setCurrentStep('confirm');
-          // The confirmation message will be created/updated by the useEffect
+        // Ensure value is properly structured before setting state
+        // This prevents errors when changing dates after initial selection
+        if (value && typeof value === 'object') {
+          const safeValue = {
+            from: value.from || undefined,
+            to: value.to || undefined
+          };
+          setDateRange(safeValue);
+          
+          // If both dates are selected, close the date picker and proceed
+          if (safeValue.from && safeValue.to) {
+            // Close the date picker
+            setShowDatePicker(false);
+            // Move to confirmation step
+            setCurrentStep('confirm');
+            // The confirmation message will be created/updated by the useEffect
+          }
+        } else {
+          console.error('Invalid date range value:', value);
         }
         break;
     }
@@ -313,7 +325,7 @@ export const AgentWindow: React.FC<AgentWindowProps> = ({
 
       <div ref={messageContainerRef} className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-6">
-          {(!messages || messages.length === 0) && showGreeting && (
+          {(!messages || messages.length === 0) && currentStep === 'greeting' && (
             <div className="flex items-start space-x-2">
               <Avatar className="h-8 w-8 bg-emerald-100 border border-emerald-200 shadow-sm">
                 <AvatarFallback className="text-emerald-700">
