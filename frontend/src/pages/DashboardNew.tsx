@@ -21,8 +21,17 @@ import { RecentActivity } from '../components/dashboard/RecentActivity';
 import { HighPriorityFindings } from '../components/dashboard/HighPriorityFindings';
 import { QuickActions } from '../components/dashboard/QuickActions';
 import { QuarterlyStats } from '../components/dashboard/QuarterlyStats';
+import { DashboardOverview } from '../components/dashboard/DashboardOverview';
 
-// Mock data - Replace with actual data from your backend
+// Mock data for overview stats
+const mockOverviewStats = {
+  auditsInProgress: 3,
+  findingsFlagged: 7,
+  sitesAffected: 2,
+  capasOverdue: 2,
+};
+
+// Mock data for quarterly stats
 const mockQuarterlyData = [
   {
     id: 'q2-2024',
@@ -155,6 +164,9 @@ const mockQuickActions = [
 export const DashboardNew: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Overview Section */}
+      <DashboardOverview stats={mockOverviewStats} userName="Sarah" />
+
       {/* Historical Data */}
       <div className="mb-8">
         <QuarterlyStats data={mockQuarterlyData} />
