@@ -7,7 +7,8 @@ import {
   FileEdit, 
   Bot, 
   Menu, 
-  LogOut
+  LogOut,
+  ClipboardCheck
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -42,7 +43,12 @@ export const Navbar: React.FC = () => {
     };
   }, []);
 
-  const isActive = (path: string) => currentPath === path;
+  const isActive = (path: string) => {
+    if (path === '/compliance') {
+      return currentPath === '/compliance' || currentPath.startsWith('/compliance/');
+    }
+    return currentPath === path;
+  };
 
   return (
     <nav className="bg-white border-b border-gray-100 h-16 flex items-center sticky top-0 z-50">
@@ -92,6 +98,19 @@ export const Navbar: React.FC = () => {
             >
               <Bot className="h-4 w-4" />
               <span>Copilot</span>
+            </Link>
+            
+            <Link 
+              to="/compliance" 
+              className={cn(
+                "px-3 py-2 text-sm font-medium rounded-md flex items-center space-x-2 transition-colors",
+                isActive('/compliance') 
+                  ? "bg-gray-100 text-gray-900" 
+                  : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              <span>Compliance</span>
             </Link>
           </div>
         </div>
@@ -177,6 +196,12 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Bot className="h-4 w-4" />
               <span>Copilot</span>
+            </div>
+          </Link>
+          <Link to="/compliance" className={`block px-3 py-2 rounded-md text-sm font-medium ${isActive('/compliance') ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}>
+            <div className="flex items-center space-x-2">
+              <ClipboardCheck className="h-4 w-4" />
+              <span>Compliance</span>
             </div>
           </Link>
         </div>

@@ -10,12 +10,21 @@ import tempfile
 
 
 from app.config import REDIS_DB, REDIS_HOST, REDIS_PORT, REDIS_PWD, agent_outputs_path
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from redis import Redis
 from app.setup_redis import connect_to_redis, initialize_redis_structure
 from app.middle_parser import parse_ai_messages, filter_parsed_messages_by_name, add_content, summarize_content, filter_json_keys, merge_selfrag_nodes
+from app.compliance_review import (
+    ComplianceViolation,
+    ComplianceReviewResult,
+    detect_compliance_violations,
+    get_compliance_review,
+    save_compliance_review,
+    update_violation_status,
+    list_compliance_reviews
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -479,3 +488,138 @@ async def get_retrieved_context(job_id: str):
         raise HTTPException(status_code=500, detail=f"Error reading JSON file: {str(e)}")
 
     return retrieved_context
+
+# Pydantic models for document compliance review
+class DocumentInput(BaseModel):
+    document_id: str
+    title: str
+    content: str
+
+class ComplianceReviewInput(BaseModel):
+    trial_document: DocumentInput
+    compliance_document: DocumentInput
+
+class ViolationStatusUpdate(BaseModel):
+    status: str  # "accepted", "rejected", or "pending"
+
+# Document compliance review endpoints
+@app.post("/compliance-review/")
+async def create_compliance_review(review_input: ComplianceReviewInput):
+    """
+    Endpoint to analyze trial documents for compliance violations.
+    """
+    try:
+        # Generate a review ID based on timestamp
+        review_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        
+        # Detect compliance violations
+        review_result = detect_compliance_violations(
+            trial_document=review_input.trial_document.content,
+            compliance_document=review_input.compliance_document.content,
+            trial_doc_id=review_input.trial_document.document_id,
+            compliance_doc_id=review_input.compliance_document.document_id,
+            trial_doc_title=review_input.trial_document.title,
+            compliance_doc_title=review_input.compliance_document.title
+        )
+        
+        # Save the review results
+        save_compliance_review(review_id, review_result)
+        
+        # Return the review ID and results
+        return {
+            "review_id": review_id,
+            "review": review_result
+        }
+    except Exception as e:
+        logger.error(f"Error creating compliance review: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating compliance review: {str(e)}")
+
+@app.get("/compliance-review/{review_id}")
+async def retrieve_compliance_review(review_id: str):
+    """
+    Endpoint to retrieve a saved compliance review by ID.
+    """
+    try:
+        review = get_compliance_review(review_id)
+        return {
+            "review_id": review_id,
+            "review": review
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error retrieving compliance review: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving compliance review: {str(e)}")
+
+@app.patch("/compliance-review/{review_id}/violations/{violation_index}")
+async def update_violation(review_id: str, violation_index: int, update: ViolationStatusUpdate):
+    """
+    Endpoint to update the status of a specific violation in a compliance review.
+    """
+    try:
+        updated_review = update_violation_status(review_id, violation_index, update.status)
+        return {
+            "review_id": review_id,
+            "violation_index": violation_index,
+            "status": update.status,
+            "review": updated_review
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error updating violation status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating violation status: {str(e)}")
+
+@app.get("/compliance-reviews/")
+async def list_reviews():
+    """
+    Endpoint to list all saved compliance reviews.
+    """
+    try:
+        reviews = list_compliance_reviews()
+        return {
+            "reviews": reviews
+        }
+    except Exception as e:
+        logger.error(f"Error listing compliance reviews: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error listing compliance reviews: {str(e)}")
+
+@app.post("/compliance-review/upload/")
+async def upload_documents(
+    trial_doc: UploadFile = File(...),
+    compliance_doc: UploadFile = File(...),
+    trial_doc_id: str = Form(...),
+    compliance_doc_id: str = Form(...),
+    trial_doc_title: str = Form(...),
+    compliance_doc_title: str = Form(...)
+):
+    """
+    Endpoint to upload trial and compliance documents for review.
+    """
+    try:
+        # Read the uploaded files
+        trial_content = await trial_doc.read()
+        trial_text = trial_content.decode('utf-8')
+        
+        compliance_content = await compliance_doc.read()
+        compliance_text = compliance_content.decode('utf-8')
+        
+        # Create the review input
+        review_input = ComplianceReviewInput(
+            trial_document=DocumentInput(
+                document_id=trial_doc_id,
+                title=trial_doc_title,
+                content=trial_text
+            ),
+            compliance_document=DocumentInput(
+                document_id=compliance_doc_id,
+                title=compliance_doc_title,
+                content=compliance_text
+            )
+        )
+        
+        # Use the existing endpoint to create the review
+        return await create_compliance_review(review_input)
+    except Exception as e:
+        logger.error(f"Error uploading documents for compliance review: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error uploading documents: {str(e)}")
