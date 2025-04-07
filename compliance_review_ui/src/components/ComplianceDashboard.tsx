@@ -5,7 +5,7 @@ import { Document } from '../types/compliance';
 import { FiUpload, FiFileText, FiCheck, FiAlertTriangle, FiPlus, FiMinus, FiRefreshCw } from 'react-icons/fi';
 import * as Checkbox from '@radix-ui/react-checkbox';
 
-interface Document {
+interface DocumentInfo {
   id: string;
   title: string;
   type: 'clinical' | 'compliance';
@@ -16,8 +16,8 @@ interface Document {
 }
 
 interface ComplianceDashboardProps {
-  onDocumentSelect: (doc: Document) => void;
-  onStartReview: (clinicalDoc: Document, complianceDoc: Document) => void;
+  onDocumentSelect: (doc: DocumentInfo) => void;
+  onStartReview: (clinicalDoc: DocumentInfo, complianceDoc: DocumentInfo) => void;
 }
 
 export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({ 
@@ -26,12 +26,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
 }) => {
   const location = useLocation();
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
-  const [selectedClinicalDoc, setSelectedClinicalDoc] = useState<Document | null>(null);
-  const [selectedComplianceDoc, setSelectedComplianceDoc] = useState<Document | null>(null);
+  const [selectedClinicalDoc, setSelectedClinicalDoc] = useState<DocumentInfo | null>(null);
+  const [selectedComplianceDoc, setSelectedComplianceDoc] = useState<DocumentInfo | null>(null);
   const [activeTab, setActiveTab] = useState<'documents' | 'reviews'>(
     location.state?.activeTab === 'reviews' ? 'reviews' : 'documents'
   );
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 const [success, setSuccess] = useState<string | null>(null);
@@ -45,7 +45,7 @@ const [success, setSuccess] = useState<string | null>(null);
         console.log('Fetched documents:', docs);
         
         // Ensure document types are properly formatted
-        const formattedDocs = docs.map(doc => ({
+        const formattedDocs = docs.map((doc: any) => ({
           ...doc,
           type: String(doc.type).toLowerCase() as 'clinical' | 'compliance'
         }));
@@ -55,7 +55,6 @@ const [success, setSuccess] = useState<string | null>(null);
       } catch (err) {
         console.error('Error fetching documents:', err);
         setError('Failed to load documents. Please try again.');
-        // No fallback to mock data - we want to use the real API
       } finally {
         setLoading(false);
       }
@@ -89,7 +88,7 @@ const [success, setSuccess] = useState<string | null>(null);
     fetchReviews();
   }, [activeTab]);
 
-  const handleDocumentSelect = (doc: Document) => {
+  const handleDocumentSelect = (doc: DocumentInfo) => {
     console.log('Selected document:', doc);
     // Always convert to lowercase string for consistent comparison
     const docType = typeof doc.type === 'string' ? doc.type.toLowerCase() : String(doc.type).toLowerCase();
@@ -123,7 +122,7 @@ const [success, setSuccess] = useState<string | null>(null);
       console.warn('Unknown document type:', docType, 'for document:', doc);
     }
     
-    onDocumentSelect({...doc, type: docType}); // Ensure consistent type in callback
+    onDocumentSelect({...doc, type: docType as 'clinical' | 'compliance'}); // Ensure consistent type in callback
   };
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -179,16 +178,22 @@ const [success, setSuccess] = useState<string | null>(null);
       console.log('Continuing review:', review);
       
       // Create document objects from the review data
-      const clinicalDoc = {
+      const clinicalDoc: DocumentInfo = {
         id: review.clinical_doc_id || review.id.replace('review_', 'clinical_'),
         title: review.clinicalDoc,
-        type: 'clinical'
+        type: 'clinical',
+        format: 'pdf', // Default format
+        created: review.created || new Date().toISOString(),
+        updated: review.created || new Date().toISOString()
       };
       
-      const complianceDoc = {
+      const complianceDoc: DocumentInfo = {
         id: review.compliance_doc_id || review.id.replace('review_', 'compliance_'),
         title: review.complianceDoc,
-        type: 'compliance'
+        type: 'compliance',
+        format: 'pdf', // Default format
+        created: review.created || new Date().toISOString(),
+        updated: review.created || new Date().toISOString()
       };
       
       // Set the selected documents
@@ -214,16 +219,22 @@ const [success, setSuccess] = useState<string | null>(null);
       console.log('Refreshing analysis for review:', review);
       
       // Create document objects from the review data
-      const clinicalDoc = {
+      const clinicalDoc: DocumentInfo = {
         id: review.clinical_doc_id || review.id.replace('review_', 'clinical_'),
         title: review.clinicalDoc,
-        type: 'clinical'
+        type: 'clinical',
+        format: 'pdf', // Default format
+        created: review.created || new Date().toISOString(),
+        updated: review.created || new Date().toISOString()
       };
       
-      const complianceDoc = {
+      const complianceDoc: DocumentInfo = {
         id: review.compliance_doc_id || review.id.replace('review_', 'compliance_'),
         title: review.complianceDoc,
-        type: 'compliance'
+        type: 'compliance',
+        format: 'pdf', // Default format
+        created: review.created || new Date().toISOString(),
+        updated: review.created || new Date().toISOString()
       };
       
       // Call the backend API to analyze compliance with force_refresh set to true
@@ -251,7 +262,19 @@ const [success, setSuccess] = useState<string | null>(null);
         created: review.created
       });
       
-      // Refresh the reviews list
+      // Refresh the reviews list by calling the useEffect hook's function
+      const fetchReviews = async () => {
+        try {
+          setLoadingReviews(true);
+          const reviewsData = await complianceAPI.getReviews();
+          setReviews(reviewsData || []);
+        } catch (err) {
+          console.error('Error fetching reviews:', err);
+          setReviews([]);
+        } finally {
+          setLoadingReviews(false);
+        }
+      };
       await fetchReviews();
       
       // Show success message
@@ -273,7 +296,7 @@ const [success, setSuccess] = useState<string | null>(null);
     );
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'clinical' | 'compliance') => {
     // In a real implementation, this would handle file uploads
     // For now, just log that a file was selected
     if (event.target.files && event.target.files.length > 0) {
@@ -288,17 +311,6 @@ const [success, setSuccess] = useState<string | null>(null);
         <h2 className="text-xl font-semibold">Compliance Review</h2>
         
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 cursor-pointer">
-            <FiUpload className="w-4 h-4" />
-            <span>Upload Document</span>
-            <input 
-              type="file" 
-              className="hidden" 
-              onChange={handleFileUpload}
-              accept=".pdf,.txt,.doc,.docx"
-            />
-          </label>
-          
           <button 
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px]"
             disabled={!selectedClinicalDoc || !selectedComplianceDoc || isAnalyzing}
@@ -389,132 +401,176 @@ const [success, setSuccess] = useState<string | null>(null);
       {/* Documents Table */}
       {activeTab === 'documents' && (
         <div>
-          <table className="w-full table-fixed">
-            <colgroup>
-              <col style={{ width: '40px' }} />
-              <col style={{ width: '16%' }} />
-              <col style={{ width: '25%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '18%' }} />
-            </colgroup>
-            <thead>
-              <tr className="text-left">
-                <th className="pb-4 font-normal w-10">
-                  <Checkbox.Root
-                    className="flex h-4 w-4 items-center justify-center rounded border border-gray-300"
-                    checked={selectedDocs.length === documents.length}
-                    onCheckedChange={(checked) => {
-                      setSelectedDocs(checked ? documents.map(d => d.id) : [])
-                    }}
-                  >
-                    <Checkbox.Indicator className="text-black">
-                      <FiCheck className="h-3 w-3" />
-                    </Checkbox.Indicator>
-                  </Checkbox.Root>
-                </th>
-                <th className="pb-4 font-normal">ID</th>
-                <th className="pb-4 font-normal">Title</th>
-                <th className="pb-4 font-normal">Type</th>
-                <th className="pb-4 font-normal">File format</th>
-                <th className="pb-4 font-normal">Created</th>
-                <th className="pb-4 font-normal">Last updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc) => (
-                <tr 
-                  key={doc.id} 
-                  className={`border-t border-gray-100 hover:bg-gray-50 ${(
-                    (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) || 
-                    (selectedComplianceDoc && selectedComplianceDoc.id === doc.id)
-                  ) ? 'bg-gray-50' : ''}`}
-                >
-                  <td className="py-4" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox.Root
-                      className="flex h-4 w-4 items-center justify-center rounded border border-gray-300"
-                      checked={selectedDocs.includes(doc.id)}
-                      onCheckedChange={(checked) => {
-                        handleCheckboxChange(doc.id, !!checked);
-                      }}
-                    >
-                      <Checkbox.Indicator className="text-black">
-                        <FiCheck className="h-3 w-3" />
-                      </Checkbox.Indicator>
-                    </Checkbox.Root>
-                  </td>
-                  <td className="py-4 truncate">
-                    <div className="max-w-full break-words overflow-hidden text-ellipsis" title={doc.id}>
-                      {doc.id}
-                    </div>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center">
-                      <div className="truncate mr-2">{doc.title}</div>
-                      <div className="ml-auto">
-                        {String(doc.type).toLowerCase() === 'clinical' ? (
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) {
-                                setSelectedClinicalDoc(null);
-                              } else {
-                                setSelectedClinicalDoc({...doc, type: 'clinical'});
-                              }
-                            }}
-                            className={`flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md w-[160px] ${selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
-                          >
-                            {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
-                              <>
-                                <FiCheck className="w-3 h-3 flex-shrink-0" />
-                                <span>Selected</span>
-                              </>
-                            ) : (
-                              <span>Select Clinical</span>
-                            )}
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (selectedComplianceDoc && selectedComplianceDoc.id === doc.id) {
-                                setSelectedComplianceDoc(null);
-                              } else {
-                                setSelectedComplianceDoc({...doc, type: 'compliance'});
-                              }
-                            }}
-                            className={`flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md w-[160px] ${selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
-                          >
-                            {selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? (
-                              <>
-                                <FiCheck className="w-3 h-3 flex-shrink-0" />
-                                <span>Selected</span>
-                              </>
-                            ) : (
-                              <span>Select Compliance</span>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                      String(doc.type).toLowerCase() === 'clinical' 
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                        : 'bg-green-50 text-green-700 border border-green-200'
-                    }`}>
-                      {String(doc.type).toLowerCase() === 'clinical' ? 'Clinical' : 'Compliance'}
-                    </span>
-                  </td>
-                  <td className="py-4">{doc.format}</td>
-                  <td className="py-4">{doc.created}</td>
-                  <td className="py-4">{doc.updated}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Upload Buttons Row */}
+          <div className="flex justify-between mb-6">
+            <div className="flex-1 mr-4">
+              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer w-full">
+                <FiUpload className="w-4 h-4" />
+                <span>Upload Clinical Document</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  onChange={(e) => handleFileUpload(e, 'clinical')}
+                  accept=".pdf,.txt,.doc,.docx"
+                />
+              </label>
+            </div>
+            <div className="flex-1 ml-4">
+              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer w-full">
+                <FiUpload className="w-4 h-4" />
+                <span>Upload Compliance Document</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  onChange={(e) => handleFileUpload(e, 'compliance')}
+                  accept=".pdf,.txt,.doc,.docx"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Documents Lists */}
+          <div className="flex">
+            {/* Clinical Documents */}
+            <div className="flex-1 mr-4">
+              <h3 className="text-lg font-semibold mb-4 text-blue-700">Clinical Documents</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr className="text-left">
+                      <th className="py-3 px-4 font-medium">Title</th>
+                      <th className="py-3 px-4 font-medium w-24">Format</th>
+                      <th className="py-3 px-4 font-medium w-32">Created</th>
+                      <th className="py-3 px-4 font-medium w-24">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents
+                      .filter(doc => doc.type.toLowerCase() === 'clinical')
+                      .map((doc) => (
+                        <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center">
+                              <FiFileText className="text-blue-500 mr-2" />
+                              <span className="truncate" title={doc.title}>{doc.title}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">{doc.format}</td>
+                          <td className="py-3 px-4">{doc.created}</td>
+                          <td className="py-3 px-4">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) {
+                                  setSelectedClinicalDoc(null);
+                                } else {
+                                  setSelectedClinicalDoc({...doc, type: 'clinical'});
+                                }
+                              }}
+                              className={`flex items-center justify-center gap-1 px-3 py-1 text-xs rounded-md w-full ${
+                                selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                              }`}
+                            >
+                              {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
+                                <>
+                                  <FiCheck className="w-3 h-3" />
+                                  <span>Selected</span>
+                                </>
+                              ) : (
+                                <span>Select Clinical</span>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                    ))}
+                    {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-gray-500">
+                          No clinical documents uploaded yet
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Compliance Documents */}
+            <div className="flex-1 ml-4">
+              <h3 className="text-lg font-semibold mb-4 text-green-700">Compliance Documents</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr className="text-left">
+                      <th className="py-3 px-4 font-medium">Title</th>
+                      <th className="py-3 px-4 font-medium w-24">Format</th>
+                      <th className="py-3 px-4 font-medium w-32">Created</th>
+                      <th className="py-3 px-4 font-medium w-24">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents
+                      .filter(doc => doc.type.toLowerCase() === 'compliance')
+                      .map((doc) => (
+                        <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center">
+                              <FiFileText className="text-green-500 mr-2" />
+                              <span className="truncate" title={doc.title}>{doc.title}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">{doc.format}</td>
+                          <td className="py-3 px-4">{doc.created}</td>
+                          <td className="py-3 px-4">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (selectedComplianceDoc && selectedComplianceDoc.id === doc.id) {
+                                  setSelectedComplianceDoc(null);
+                                } else {
+                                  setSelectedComplianceDoc({...doc, type: 'compliance'});
+                                }
+                              }}
+                              className={`flex items-center justify-center gap-1 px-3 py-1 text-xs rounded-md w-full ${
+                                selectedComplianceDoc && selectedComplianceDoc.id === doc.id 
+                                  ? 'bg-green-600 text-white' 
+                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                              }`}
+                            >
+                              {selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? (
+                                <>
+                                  <FiCheck className="w-3 h-3" />
+                                  <span>Selected</span>
+                                </>
+                              ) : (
+                                <span>Select Compliance</span>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                    ))}
+                    {documents.filter(doc => doc.type.toLowerCase() === 'compliance').length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-gray-500">
+                          No compliance documents uploaded yet
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Document Count Summary */}
+          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+            <div>
+              Clinical Documents: {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length} | 
+              Compliance Documents: {documents.filter(doc => doc.type.toLowerCase() === 'compliance').length}
+            </div>
+          </div>
         </div>
       )}
 
