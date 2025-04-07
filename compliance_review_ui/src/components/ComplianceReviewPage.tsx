@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { documentAPI } from '../services/api';
+import { documentAPI, complianceAPI } from '../services/api';
 import { FiX, FiCheck, FiExternalLink, FiChevronRight, FiChevronLeft, FiInfo, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
 interface ComplianceIssue {
@@ -26,7 +26,7 @@ interface ComplianceReviewPageProps {
   };
   issues: ComplianceIssue[];
   onClose: () => void;
-  onSaveDecisions: (decisions: { issueId: string; status: 'accepted' | 'rejected' }[]) => void;
+  onSaveDecisions: (decisions: { issueId: string; status: 'accepted' | 'rejected'; appliedChange?: string | null }[]) => void;
 }
 
 export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({ 
@@ -42,6 +42,8 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   const [clinicalContent, setClinicalContent] = useState<string>('');
   const [complianceContent, setComplianceContent] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [appliedChanges, setAppliedChanges] = useState<Map<string, string>>(new Map());
+  const [processingEdit, setProcessingEdit] = useState<boolean>(false);
   
   const currentIssue = reviewedIssues[currentIssueIndex] || null;
   
@@ -80,14 +82,91 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     }
   };
   
+  // Function to scroll to the currently selected issue
+  const scrollToCurrentIssue = () => {
+    if (currentIssue) {
+      setTimeout(() => {
+        const issueElement = document.getElementById(`issue-${currentIssue.id}`);
+        if (issueElement) {
+          issueElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Add a temporary highlight effect
+          issueElement.classList.add('ring-2', 'ring-opacity-100');
+          setTimeout(() => {
+            issueElement.classList.remove('ring-opacity-100');
+          }, 1000);
+        }
+      }, 100); // Small delay to ensure DOM is updated
+    }
+  };
+  
+  // Scroll to the selected issue when currentIssueIndex changes
+  useEffect(() => {
+    if (!loading) {
+      scrollToCurrentIssue();
+    }
+  }, [currentIssueIndex, loading]);
+  
   // Handle issue decisions (accept/reject)
-  const handleDecision = (decision: 'accepted' | 'rejected') => {
+  const handleDecision = async (decision: 'accepted' | 'rejected') => {
     const updatedIssues = [...reviewedIssues];
-    updatedIssues[currentIssueIndex] = {
-      ...updatedIssues[currentIssueIndex],
-      status: decision
-    };
+    const issueToUpdate = updatedIssues[currentIssueIndex];
+    
+    // Update the issue status
+    issueToUpdate.status = decision;
     setReviewedIssues(updatedIssues);
+    
+    // If accepted, use the LLM to intelligently apply the edit
+    if (decision === 'accepted') {
+      try {
+        setProcessingEdit(true);
+        
+        // Get surrounding context (100 chars before and after the text)
+        const textToReplace = issueToUpdate.clinical_text;
+        const content = displayClinicalContent;
+        const textIndex = content.indexOf(textToReplace);
+        
+        if (textIndex !== -1) {
+          const contextStart = Math.max(0, textIndex - 100);
+          const contextEnd = Math.min(content.length, textIndex + textToReplace.length + 100);
+          const surroundingContext = content.substring(contextStart, contextEnd);
+          
+          // Call the API to get the intelligently revised text
+          const result = await complianceAPI.applySuggestion({
+            clinical_text: textToReplace,
+            suggested_edit: issueToUpdate.suggested_edit,
+            surrounding_context: surroundingContext
+          });
+          
+          // Store the LLM-generated revised text
+          const newAppliedChanges = new Map(appliedChanges);
+          newAppliedChanges.set(textToReplace, result.revised_text);
+          setAppliedChanges(newAppliedChanges);
+          console.log('Applied intelligent edit:', result.revised_text);
+        } else {
+          console.error('Could not find text to replace in document content');
+        }
+      } catch (error) {
+        console.error('Error applying suggestion:', error);
+        // Fallback: use the suggested edit directly
+        const newAppliedChanges = new Map(appliedChanges);
+        newAppliedChanges.set(issueToUpdate.clinical_text, issueToUpdate.suggested_edit);
+        setAppliedChanges(newAppliedChanges);
+      } finally {
+        setProcessingEdit(false);
+      }
+    } else if (decision === 'rejected' && appliedChanges.has(issueToUpdate.clinical_text)) {
+      // If rejected and there was a previously applied change, remove it
+      const newAppliedChanges = new Map(appliedChanges);
+      newAppliedChanges.delete(issueToUpdate.clinical_text);
+      setAppliedChanges(newAppliedChanges);
+    }
+    
+    // Auto-advance to the next issue after a brief delay
+    if (currentIssueIndex < reviewedIssues.length - 1) {
+      setTimeout(() => {
+        navigateIssue('next');
+      }, 500);
+    }
   };
   
   // Finalize review and save decisions
@@ -96,53 +175,221 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       .filter(issue => issue.status)
       .map(issue => ({
         issueId: issue.id,
-        status: issue.status as 'accepted' | 'rejected'
+        status: issue.status as 'accepted' | 'rejected',
+        appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
+          ? appliedChanges.get(issue.clinical_text) 
+          : undefined
       }));
     
     onSaveDecisions(decisions);
   };
   
-  // Get the content to display - use fetched content or fallback to props
+  // Get the content to display - use modified content when available
   const displayClinicalContent = clinicalContent || clinicalDocument.content;
   const displayComplianceContent = complianceContent || complianceDocument.content;
   
   // Highlight non-compliant text in clinical document
   const highlightClinicalText = (content: string) => {
+    if (!content || content.trim() === '') return content;
     let highlightedContent = content;
     
-    reviewedIssues.forEach(issue => {
-      const textToHighlight = issue.clinical_text;
-      const confidenceClass = issue.confidence === 'high' ? 'bg-red-200' : 'bg-yellow-200';
-      const statusClass = issue.status === 'accepted' ? 'border-green-500' : 
-                          issue.status === 'rejected' ? 'border-red-500' : '';
+    reviewedIssues.forEach((issue, index) => {
+      if (!issue.clinical_text || issue.clinical_text.trim() === '') return;
       
-      // Replace the text with highlighted version
-      // Using a simple replace, but in a real implementation you might need a more sophisticated approach
-      // to handle multiple occurrences and HTML content
+      const textToHighlight = issue.clinical_text;
+      
+      // If this text has an accepted change, use the suggested edit instead
+      if (issue.status === 'accepted' && appliedChanges.has(textToHighlight)) {
+        const suggestedEdit = appliedChanges.get(textToHighlight);
+        
+        // Use vibrant green to indicate accepted change
+        const acceptedClass = 'bg-green-200 hover:bg-green-300 text-green-900';
+        const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-500' : '';
+        
+        try {
+          // Normalize whitespace and escape regex characters
+          const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+          const normalizedContent = normalizeText(content);
+          const normalizedTextToHighlight = normalizeText(textToHighlight);
+          
+          const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const escapedText = escapeRegExp(normalizedTextToHighlight);
+          
+          // Try to find the text
+          if (normalizedContent.includes(normalizedTextToHighlight)) {
+            const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+            
+            highlightedContent = highlightedContent.replace(
+              flexRegex,
+              `<span 
+                id="issue-${issue.id}" 
+                class="${acceptedClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
+                onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+              >
+                ${suggestedEdit} <span class="text-xs italic text-green-700">(edited)</span>
+              </span>`
+            );
+          }
+        } catch (error) {
+          console.error('Error applying accepted edit:', error);
+        }
+      } else {
+        // Regular highlighting for other issues
+        // Use more vibrant colors with stronger contrast
+        const confidenceClass = issue.confidence === 'high' 
+          ? 'bg-red-300 hover:bg-red-400 text-red-900' 
+          : 'bg-yellow-300 hover:bg-yellow-400 text-yellow-900';
+        const statusClass = issue.status === 'accepted' 
+          ? 'border-green-600 border-b-2' 
+          : issue.status === 'rejected' 
+            ? 'border-red-600 border-b-2' 
+            : 'border-gray-400 border-b-2';
+        const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-500' : '';
+        
+        try {
+          // Normalize whitespace in both the content and the text to highlight
+          const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+          const normalizedContent = normalizeText(content);
+          const normalizedTextToHighlight = normalizeText(textToHighlight);
+          
+          // Escape special regex characters
+          const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const escapedText = escapeRegExp(normalizedTextToHighlight);
+          
+          // Try different matching approaches in order of precision
+          let matched = false;
+          
+          // 1. Try exact matching first (with normalized whitespace)
+          if (normalizedContent.includes(normalizedTextToHighlight)) {
+            // Use a regex that can handle flexible whitespace
+            const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+            
+            highlightedContent = highlightedContent.replace(
+              flexRegex,
+              `<span 
+                id="issue-${issue.id}" 
+                class="${confidenceClass} ${statusClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
+                onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+              >
+                $&
+              </span>`
+            );
+            matched = true;
+          }
+          
+          // 2. If exact matching fails, try fuzzy matching with word boundaries
+          if (!matched && normalizedTextToHighlight.length > 10) {
+            // For longer strings, try matching initial words (minimum 10 chars)
+            const words = normalizedTextToHighlight.split(' ');
+            const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+            
+            if (firstFewWords.length >= 10) {
+              const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+              
       highlightedContent = highlightedContent.replace(
-        textToHighlight,
-        `<span id="issue-${issue.id}" class="${confidenceClass} ${statusClass} px-1 border-b-2">${textToHighlight}</span>`
-      );
+                partialRegex,
+                (match) => {
+                  return `<span 
+                    id="issue-${issue.id}" 
+                    class="${confidenceClass} ${statusClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
+                    onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+                  >
+                    ${match}
+                  </span>`;
+                }
+              );
+              matched = true;
+            }
+          }
+          
+          // 3. Log if no match was found for debugging
+          if (!matched) {
+            console.warn(`Could not find text match for issue: "${normalizedTextToHighlight.substring(0, 50)}..."`);
+          }
+        } catch (error) {
+          console.error('Error highlighting clinical text:', error);
+        }
+      }
     });
     
     return highlightedContent;
   };
   
-  // Highlight compliance text
+  // Highlight compliance text with improved styling
   const highlightComplianceText = (content: string, issueIndex: number) => {
-    if (!reviewedIssues[issueIndex]) return content;
+    if (!reviewedIssues[issueIndex] || !content || content.trim() === '') return content;
     
     let highlightedContent = content;
     const textToHighlight = reviewedIssues[issueIndex].compliance_text;
     
-    // Replace the text with highlighted version
+    if (!textToHighlight || textToHighlight.trim() === '') return content;
+    
+    try {
+      // Normalize whitespace in both the content and the text to highlight
+      const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+      const normalizedContent = normalizeText(content);
+      const normalizedTextToHighlight = normalizeText(textToHighlight);
+      
+      // Escape special regex characters
+      const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedText = escapeRegExp(normalizedTextToHighlight);
+      
+      // Try different matching approaches in order of precision
+      let matched = false;
+      
+      // 1. Try exact matching first (with normalized whitespace)
+      if (normalizedContent.includes(normalizedTextToHighlight)) {
+        // Use a regex that can handle flexible whitespace
+        const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+        
+        highlightedContent = highlightedContent.replace(
+          flexRegex,
+          `<span class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-2 py-1 rounded-md shadow-sm font-medium">$&</span>`
+        );
+        matched = true;
+      }
+      
+      // 2. If exact matching fails, try fuzzy matching with word boundaries
+      if (!matched && normalizedTextToHighlight.length > 10) {
+        // For longer strings, try matching initial words (minimum 10 chars)
+        const words = normalizedTextToHighlight.split(' ');
+        const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+        
+        if (firstFewWords.length >= 10) {
+          const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+          
     highlightedContent = highlightedContent.replace(
-      textToHighlight,
-      `<span class="bg-blue-100 px-1">${textToHighlight}</span>`
-    );
+            partialRegex,
+            (match) => `<span class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-2 py-1 rounded-md shadow-sm font-medium">${match}</span>`
+          );
+          matched = true;
+        }
+      }
+      
+      // 3. Log if no match was found for debugging
+      if (!matched) {
+        console.warn(`Could not find compliance text match: "${normalizedTextToHighlight.substring(0, 50)}..."`);
+      }
+    } catch (error) {
+      console.error('Error highlighting compliance text:', error);
+    }
     
     return highlightedContent;
   };
+  
+  // Event listener for issue clicks in the document
+  useEffect(() => {
+    const handleIssueClick = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentIssueIndex(customEvent.detail);
+    };
+    
+    document.addEventListener('issueClick', handleIssueClick);
+    
+    return () => {
+      document.removeEventListener('issueClick', handleIssueClick);
+    };
+  }, []);
   
   return (
     <div className="flex-1 bg-white">
@@ -173,18 +420,42 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       {/* Main content area */}
       <div className="grid grid-cols-2 h-[calc(100vh-64px)]">
         {/* Clinical Document Content with Highlights */}
-        <div className="border-r overflow-auto p-6">
+        <div className="border-r overflow-auto p-6 flex flex-col">
           <h3 className="text-lg font-semibold mb-4">{clinicalDocument.title}</h3>
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
           ) : (
-            <div className="prose max-w-none">
+            <>
+              <div className="prose max-w-none flex-grow">
               <div dangerouslySetInnerHTML={{ 
                 __html: highlightClinicalText(displayClinicalContent) 
               }} />
             </div>
+              
+              {/* Legend for highlighting */}
+              {reviewedIssues.length > 0 && (
+                <div className="mt-6 p-3 border-t bg-gray-50 flex flex-wrap items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 bg-red-300 rounded-sm"></span>
+                    <span>High Confidence Issue</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 bg-yellow-300 rounded-sm"></span>
+                    <span>Low Confidence Issue</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 border-b-2 border-green-600"></span>
+                    <span>Accepted Issue</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 border-b-2 border-red-600"></span>
+                    <span>Rejected Issue</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -234,15 +505,26 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                         currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300' : ''
                       }`}
                       onClick={() => handleDecision('accepted')}
+                      disabled={processingEdit}
                     >
-                      <FiCheck className="w-4 h-4" />
-                      Accept
+                      {processingEdit ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-2"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FiCheck className="w-4 h-4" />
+                          Accept
+                        </>
+                      )}
                     </button>
                     <button 
                       className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
                         currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300' : ''
                       }`}
                       onClick={() => handleDecision('rejected')}
+                      disabled={processingEdit}
                     >
                       <FiX className="w-4 h-4" />
                       Reject

@@ -67,6 +67,19 @@ export const complianceAPI = {
     return response.data;
   },
   
+  // Apply a suggested edit to non-compliant text
+  applySuggestion: async (data: {
+    clinical_text: string;
+    suggested_edit: string;
+    surrounding_context: string;
+  }) => {
+    const response = await api.post('/compliance/apply-suggestion/', data);
+    return response.data as {
+      original_text: string;
+      revised_text: string;
+    };
+  },
+  
   // Notify document owner about compliance issues
   notifyDocumentOwner: async (documentId: string, ownerEmail: string, issues: ComplianceIssue[], message?: string) => {
     const response = await api.post('/compliance/notify-document-owner/', {
