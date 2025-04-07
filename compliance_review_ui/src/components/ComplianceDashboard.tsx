@@ -463,12 +463,12 @@ const [success, setSuccess] = useState<string | null>(null);
                                 setSelectedClinicalDoc({...doc, type: 'clinical'});
                               }
                             }}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md ${selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                            className={`flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md w-[160px] ${selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
                           >
                             {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
                               <>
-                                <FiCheck className="w-3 h-3" />
-                                <span>Selected as Clinical</span>
+                                <FiCheck className="w-3 h-3 flex-shrink-0" />
+                                <span>Selected</span>
                               </>
                             ) : (
                               <span>Select Clinical</span>
@@ -484,12 +484,12 @@ const [success, setSuccess] = useState<string | null>(null);
                                 setSelectedComplianceDoc({...doc, type: 'compliance'});
                               }
                             }}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md ${selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                            className={`flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md w-[160px] ${selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
                           >
                             {selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? (
                               <>
-                                <FiCheck className="w-3 h-3" />
-                                <span>Selected as Compliance</span>
+                                <FiCheck className="w-3 h-3 flex-shrink-0" />
+                                <span>Selected</span>
                               </>
                             ) : (
                               <span>Select Compliance</span>
