@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { documentAPI, complianceAPI } from '../services/api';
-import { FiX, FiCheck, FiExternalLink, FiChevronRight, FiChevronLeft, FiInfo, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiX, FiCheck, FiExternalLink, FiChevronRight, FiChevronLeft, FiInfo, FiCheckCircle, FiXCircle, FiDownload } from 'react-icons/fi';
 
 interface ComplianceIssue {
   id: string;
@@ -26,7 +26,11 @@ interface ComplianceReviewPageProps {
   };
   issues: ComplianceIssue[];
   onClose: () => void;
-  onSaveDecisions: (decisions: { issueId: string; status: 'accepted' | 'rejected'; appliedChange?: string | null }[]) => void;
+  onSaveDecisions: (
+    decisions: { issueId: string; status: 'accepted' | 'rejected'; appliedChange?: string | null }[], 
+    counts: { totalIssues: number; reviewedIssues: number; highConfidenceIssues: number; lowConfidenceIssues: number },
+    reviewStatus: 'in-progress' | 'completed'
+  ) => void;
 }
 
 export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({ 
@@ -44,6 +48,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [appliedChanges, setAppliedChanges] = useState<Map<string, string>>(new Map());
   const [processingEdit, setProcessingEdit] = useState<boolean>(false);
+  const [showFinalDocument, setShowFinalDocument] = useState<boolean>(false);
+  const [finalDocument, setFinalDocument] = useState<string>('');
+  const [savingProgress, setSavingProgress] = useState<boolean>(false);
+  const [progressSaved, setProgressSaved] = useState<boolean>(false);
+  const [issuesLoaded, setIssuesLoaded] = useState<boolean>(issues.length > 0);
   
   const currentIssue = reviewedIssues[currentIssueIndex] || null;
   
@@ -169,19 +178,163 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     }
   };
   
-  // Finalize review and save decisions
-  const finalizeReview = () => {
-    const decisions = reviewedIssues
-      .filter(issue => issue.status)
-      .map(issue => ({
+  // Generate a final document with all accepted changes applied
+  const generateFinalDocument = (): string => {
+    // Start with the original content
+    let finalContent = clinicalContent || clinicalDocument.content;
+    
+    // Get all issues that have been accepted and have applied changes
+    const acceptedIssues = reviewedIssues.filter(
+      issue => issue.status === 'accepted' && appliedChanges.has(issue.clinical_text)
+    );
+    
+    // Sort issues by their position in the document (to avoid replacing issues out of order)
+    const sortedIssues = [...acceptedIssues].sort((a, b) => {
+      const posA = finalContent.indexOf(a.clinical_text);
+      const posB = finalContent.indexOf(b.clinical_text);
+      return posA - posB;
+    });
+    
+    // Apply each change to the content
+    for (const issue of sortedIssues) {
+      const originalText = issue.clinical_text;
+      const revisedText = appliedChanges.get(originalText) || issue.suggested_edit;
+      
+      try {
+        // Normalize whitespace and escape special characters for regex
+        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+        const normalizedContent = normalizeText(finalContent);
+        const normalizedOriginal = normalizeText(originalText);
+        
+        const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedText = escapeRegExp(normalizedOriginal);
+        
+        if (normalizedContent.includes(normalizedOriginal)) {
+          const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+          finalContent = finalContent.replace(flexRegex, revisedText);
+        }
+      } catch (error) {
+        console.error('Error applying change to final document:', error);
+      }
+    }
+    
+    return finalContent;
+  };
+  
+  // Finalize review and save decisions - used during ongoing review to save progress
+  const saveProgress = () => {
+    // Show saving indicator
+    setSavingProgress(true);
+    
+    try {
+      // Count high and low confidence issues
+      const highConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'high').length;
+      const lowConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'low').length;
+      
+      // First prepare all decisions including pending ones for our count
+      const allDecisions = reviewedIssues.map(issue => ({
         issueId: issue.id,
-        status: issue.status as 'accepted' | 'rejected',
+        status: issue.status || 'pending',
+        confidence: issue.confidence,
         appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
           ? appliedChanges.get(issue.clinical_text) 
           : undefined
       }));
+      
+      // Now filter to only include accepted/rejected decisions for the API
+      const finalizedDecisions = allDecisions
+        .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
+        .map(({ issueId, status, appliedChange }) => ({
+          issueId,
+          status: status as 'accepted' | 'rejected',
+          appliedChange
+        }));
+      
+      // Include the issue counts in the saved data - keep as in-progress
+      // Use setTimeout to ensure this doesn't block the UI or cause immediate state changes
+      setTimeout(() => {
+        onSaveDecisions(finalizedDecisions, {
+          totalIssues: reviewedIssues.length,
+          reviewedIssues: reviewedIssues.filter(issue => issue.status === 'accepted' || issue.status === 'rejected').length,
+          highConfidenceIssues,
+          lowConfidenceIssues
+        }, 'in-progress');
+      }, 0);
+      
+      // Show success message
+      setProgressSaved(true);
+      setTimeout(() => setProgressSaved(false), 3000); // Hide after 3 seconds
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+  
+  // Finalize review function - only shows the finalized document popup
+  const finalizeReview = (event?: React.MouseEvent) => {
+    // Prevent any default behavior or event propagation
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     
-    onSaveDecisions(decisions);
+    try {
+      // Generate the final document with all changes applied
+      const finalDocContent = generateFinalDocument();
+      setFinalDocument(finalDocContent);
+      
+      // Show the final document popup
+      setShowFinalDocument(true);
+    } catch (error) {
+      console.error('Error finalizing review:', error);
+    }
+  };
+  
+  // Complete the review after user has viewed the final document
+  const completeReview = () => {
+    try {
+      // Count high and low confidence issues
+      const highConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'high').length;
+      const lowConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'low').length;
+      
+      // First prepare all decisions including pending ones for our count
+      const allDecisions = reviewedIssues.map(issue => ({
+        issueId: issue.id,
+        status: issue.status || 'pending',
+        confidence: issue.confidence,
+        appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
+          ? appliedChanges.get(issue.clinical_text) 
+          : undefined
+      }));
+      
+      // Now filter to only include accepted/rejected decisions for the API
+      const finalizedDecisions = allDecisions
+        .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
+        .map(({ issueId, status, appliedChange }) => ({
+          issueId,
+          status: status as 'accepted' | 'rejected',
+          appliedChange
+        }));
+      
+      // Close the popup first
+      setShowFinalDocument(false);
+      
+      // Include the issue counts in the saved data - mark as completed
+      // Use setTimeout to ensure this doesn't block the UI or cause immediate state changes
+      setTimeout(() => {
+        onSaveDecisions(finalizedDecisions, {
+          totalIssues: reviewedIssues.length,
+          reviewedIssues: reviewedIssues.filter(issue => issue.status === 'accepted' || issue.status === 'rejected').length,
+          highConfidenceIssues,
+          lowConfidenceIssues
+        }, 'completed');
+      }, 100);
+      
+      // Don't call onClose() here - let the parent component decide whether to close
+    } catch (error) {
+      console.error('Error completing review:', error);
+    }
   };
   
   // Get the content to display - use modified content when available
@@ -391,6 +544,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     };
   }, []);
   
+  useEffect(() => {
+    // Update the issues loaded state whenever reviewedIssues changes
+    setIssuesLoaded(reviewedIssues.length > 0);
+  }, [reviewedIssues]);
+  
   return (
     <div className="flex-1 bg-white">
       <div className="flex items-center justify-between p-4 border-b">
@@ -399,6 +557,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           <span className="text-sm text-gray-500">#{clinicalDocument.id}</span>
         </div>
         <div className="flex items-center gap-3">
+          {progressSaved && (
+            <span className="text-sm text-green-600 flex items-center bg-green-50 px-2 py-1 rounded border border-green-200">
+              <FiCheck className="w-3 h-3 mr-1" /> Progress saved
+            </span>
+          )}
           <button 
             onClick={() => setShowHistory(!showHistory)}
             className="px-3 py-1 text-sm rounded border hover:bg-gray-50"
@@ -406,12 +569,32 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             {showHistory ? 'Hide History' : 'View History'}
           </button>
           <button 
+            onClick={saveProgress}
+            disabled={savingProgress}
+            className={`px-3 py-1 text-sm rounded border border-blue-300 text-blue-600 hover:bg-blue-50 ${
+              savingProgress ? 'opacity-75 cursor-not-allowed' : ''
+            }`}
+          >
+            {savingProgress ? (
+              <span className="flex items-center">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                Saving...
+              </span>
+            ) : (
+              'Save Progress'
+            )}
+          </button>
+          <button 
             onClick={finalizeReview}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            Finalize review
+            Finalize Review
           </button>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }} className="text-gray-500 hover:text-gray-700">
             <FiX className="w-5 h-5" />
           </button>
         </div>
@@ -462,7 +645,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         {/* Compliance Panel */}
         <div className="overflow-auto">
           {/* Navigation between issues */}
-          {!showHistory && (
+          {!showHistory && issuesLoaded ? (
             <div className="sticky top-0 bg-white border-b z-10 p-4 flex items-center justify-between">
               <button 
                 onClick={() => navigateIssue('prev')}
@@ -479,6 +662,20 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
               >
                 <FiChevronRight />
               </button>
+            </div>
+          ) : !showHistory && !issuesLoaded && !loading ? (
+            <div className="sticky top-0 bg-white border-b z-10 p-4 flex items-center justify-center">
+              <div className="text-gray-500 flex items-center">
+                <FiInfo className="mr-2" />
+                <span>No compliance issues found or still generating...</span>
+              </div>
+            </div>
+          ) : null}
+          
+          {!showHistory && loading && (
+            <div className="flex flex-col items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-gray-600">Analyzing documents and generating issues...</p>
             </div>
           )}
           
@@ -514,8 +711,8 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                         </>
                       ) : (
                         <>
-                          <FiCheck className="w-4 h-4" />
-                          Accept
+                      <FiCheck className="w-4 h-4" />
+                      Accept
                         </>
                       )}
                     </button>
@@ -620,6 +817,64 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           )}
         </div>
       </div>
+
+      {/* Final Document Popup */}
+      {showFinalDocument && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-3/4 h-3/4 flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Finalized Document</h3>
+              <div className="flex items-center gap-3">
+                <button 
+                  className="px-3 py-1 flex items-center gap-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                  onClick={completeReview}
+                >
+                  <FiCheck className="w-4 h-4" />
+                  Complete Review
+                </button>
+                <button 
+                  className="px-3 py-1 flex items-center gap-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                  onClick={() => {
+                    // Create a blob and download link
+                    const blob = new Blob([finalDocument], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${clinicalDocument.title.replace(/\s+/g, '_')}_compliant.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                >
+                  <FiDownload className="w-4 h-4" />
+                  Download
+                </button>
+                <button 
+                  onClick={() => setShowFinalDocument(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6">
+              <h4 className="text-lg font-medium mb-4">{clinicalDocument.title} (Edited)</h4>
+              <div className="prose max-w-none whitespace-pre-wrap">
+                {finalDocument}
+              </div>
+            </div>
+            
+            <div className="border-t p-4">
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">Summary:</span> {reviewedIssues.filter(i => i.status === 'accepted').length} changes applied, 
+                {reviewedIssues.filter(i => i.status === 'rejected').length} issues rejected,
+                {reviewedIssues.filter(i => !i.status || i.status === 'pending').length} issues pending
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
