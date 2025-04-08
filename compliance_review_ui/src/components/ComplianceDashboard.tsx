@@ -139,7 +139,8 @@ const [success, setSuccess] = useState<string | null>(null);
         );
         
         // Create a review record in the backend
-        const reviewId = `review_${Date.now()}`;
+        // Generate a shorter review ID format (R-xxxxx) instead of timestamp
+        const reviewId = `R-${Math.floor(10000 + Math.random() * 90000)}`;
         const now = new Date();
         const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
         
@@ -450,9 +451,9 @@ const [success, setSuccess] = useState<string | null>(null);
                       .map((doc) => (
                         <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <FiFileText className="text-blue-500 mr-2" />
-                              <span className="truncate" title={doc.title}>{doc.title}</span>
+                            <div className="flex items-center max-w-full">
+                              <FiFileText className="text-blue-500 mr-2 flex-shrink-0" />
+                              <span className="truncate max-w-[180px] md:max-w-[220px] lg:max-w-[280px]" title={doc.title}>{doc.title}</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">{doc.format}</td>
@@ -516,9 +517,9 @@ const [success, setSuccess] = useState<string | null>(null);
                       .map((doc) => (
                         <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <FiFileText className="text-green-500 mr-2" />
-                              <span className="truncate" title={doc.title}>{doc.title}</span>
+                            <div className="flex items-center max-w-full">
+                              <FiFileText className="text-green-500 mr-2 flex-shrink-0" />
+                              <span className="truncate max-w-[180px] md:max-w-[220px] lg:max-w-[280px]" title={doc.title}>{doc.title}</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">{doc.format}</td>

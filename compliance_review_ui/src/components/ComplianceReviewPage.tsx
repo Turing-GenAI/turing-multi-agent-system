@@ -667,7 +667,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             <div className="sticky top-0 bg-white border-b z-10 p-4 flex items-center justify-center">
               <div className="text-gray-500 flex items-center">
                 <FiInfo className="mr-2" />
-                <span>No compliance issues found or still generating...</span>
+                <span>Document appears to be compliant. No regulatory issues detected in analysis.</span>
               </div>
             </div>
           ) : null}
@@ -675,7 +675,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           {!showHistory && loading && (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-600">Analyzing documents and generating issues...</p>
+              <p className="text-gray-600">Analyzing documents and identifying compliance issues...</p>
             </div>
           )}
           

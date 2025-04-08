@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_MODEL_NAME: str = Field(default=os.getenv("AZURE_OPENAI_API_MODEL_NAME"))
     AZURE_OPENAI_API_DEPLOYMENT_NAME: str = Field(default=os.getenv("AZURE_OPENAI_API_DEPLOYMENT_NAME"))
     AZURE_OPENAI_API_MODEL_VERSION: str = Field(default=os.getenv("AZURE_OPENAI_API_MODEL_VERSION"))
+    
+    # Google Gemini API Settings
+    GOOGLE_API_KEY: str = Field(default=os.getenv("GOOGLE_API_KEY"))
+    GEMINI_MODEL_NAME: str = Field(default=os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-pro-exp-03-25"))
+    
+    # PDF Processing Settings
+    PDF_PROCESSOR: str = Field(default=os.getenv("PDF_PROCESSOR", "azure"))  # Options: "azure" or "gemini"
 
     # Text Splitting Settings
     CHUNK_SIZE: int = 3500

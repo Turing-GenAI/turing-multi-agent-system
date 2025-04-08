@@ -1,6 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
 from typing import List, Optional, Dict, Any
 import copy
+import os
+import tempfile
+import shutil
 
 from app.models.compliance import (
     ComplianceReviewInput,
@@ -11,8 +14,9 @@ from app.models.compliance import (
     ApplySuggestionRequest,
     ApplySuggestionResponse
 )
-from app.services.compliance_service import compliance_service
+from app.services.compliance_service_factory import compliance_service_factory
 from app.services.document_service import document_service
+from app.core.config import settings
 
 # In-memory storage for reviews (in a real app, this would be in a database)
 reviews_db: List[Dict[str, Any]] = []
@@ -29,8 +33,10 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
     Uses LLM to identify non-compliant sections and returns detailed analysis.
     """
     try:
-        # Use the compliance service to perform the analysis
-        issues = await compliance_service.analyze_compliance(review_input)
+        # Get the appropriate service instance from the factory
+        service = compliance_service_factory.get_service()
+        # Use the service to perform the analysis
+        issues = await service.analyze_compliance(review_input)
 
         result = {
             "clinical_doc_id": review_input.clinical_doc_id,
@@ -112,8 +118,10 @@ async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str
             compliance_doc_content=compliance_doc_content
         )
 
-        # Use the compliance service to perform the analysis
-        issues = await compliance_service.analyze_compliance(review_input)
+        # Get the appropriate service instance from the factory
+        service = compliance_service_factory.get_service()
+        # Use the service to perform the analysis
+        issues = await service.analyze_compliance(review_input)
 
         # Store the results in our cache
         result = {
@@ -224,8 +232,10 @@ async def apply_suggestion(request: ApplySuggestionRequest):
         ApplySuggestionResponse with the revised text after applying the suggestion
     """
     try:
-        # Use the compliance service to intelligently apply the edit
-        revised_text = await compliance_service.apply_suggestion(
+        # Get the appropriate service instance from the factory
+        service = compliance_service_factory.get_service()
+        # Use the service to intelligently apply the edit
+        revised_text = await service.apply_suggestion(
             clinical_text=request.clinical_text,
             suggested_edit=request.suggested_edit,
             surrounding_context=request.surrounding_context
@@ -237,4 +247,96 @@ async def apply_suggestion(request: ApplySuggestionRequest):
         )
     except Exception as e:
         print(f"Error applying suggestion: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/analyze-pdf/", response_model=dict)
+async def analyze_pdf(
+    pdf_file: UploadFile = File(...),
+    prompt: str = Form(...)
+):
+    """
+    Analyze a PDF document using Gemini's multimodal capabilities.
+    
+    Args:
+        pdf_file: The PDF file to analyze
+        prompt: Instructions on what to extract or analyze from the PDF
+        
+    Returns:
+        Dictionary with the analysis results
+    """
+    try:
+        # Check if we're using Gemini
+        if settings.PDF_PROCESSOR.lower() != "gemini":
+            raise HTTPException(status_code=400, detail="This endpoint requires Gemini to be set as the PDF processor")
+            
+        # Get the Gemini service
+        from app.services.gemini_service import gemini_service
+        
+        # Create a temporary file for the uploaded PDF
+        temp_dir = tempfile.mkdtemp()
+        temp_file_path = os.path.join(temp_dir, pdf_file.filename)
+        
+        try:
+            # Save the uploaded file to the temporary location
+            with open(temp_file_path, "wb") as f:
+                shutil.copyfileobj(pdf_file.file, f)
+            
+            # Process the PDF with Gemini
+            result = await gemini_service.analyze_pdf(temp_file_path, prompt)
+            
+            return result
+        finally:
+            # Clean up temporary files
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+    
+    except Exception as e:
+        print(f"Error analyzing PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/extract-pdf-table/", response_model=dict)
+async def extract_pdf_table(
+    pdf_file: UploadFile = File(...),
+    table_description: str = Form(...)
+):
+    """
+    Extract a table from a PDF document using Gemini's multimodal capabilities.
+    
+    Args:
+        pdf_file: The PDF file containing tables
+        table_description: Description of the table to extract (e.g., "financial data table on page l")
+        
+    Returns:
+        Dictionary with the extracted table data
+    """
+    try:
+        # Check if we're using Gemini
+        if settings.PDF_PROCESSOR.lower() != "gemini":
+            raise HTTPException(status_code=400, detail="This endpoint requires Gemini to be set as the PDF processor")
+            
+        # Get the Gemini service
+        from app.services.gemini_service import gemini_service
+        
+        # Create a temporary file for the uploaded PDF
+        temp_dir = tempfile.mkdtemp()
+        temp_file_path = os.path.join(temp_dir, pdf_file.filename)
+        
+        try:
+            # Save the uploaded file to the temporary location
+            with open(temp_file_path, "wb") as f:
+                shutil.copyfileobj(pdf_file.file, f)
+            
+            # Extract the table with Gemini
+            result = await gemini_service.extract_pdf_table(temp_file_path, table_description)
+            
+            return result
+        finally:
+            # Clean up temporary files
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+    
+    except Exception as e:
+        print(f"Error extracting table from PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

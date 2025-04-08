@@ -48,58 +48,83 @@ class DocumentService:
         self._initialize_document_ids()
 
     def _initialize_document_ids(self):
-        """Initialize document IDs for all documents in the directory."""
+        """Initialize document IDs for all documents in the subdirectories."""
         clinical_index = 1
         compliance_index = 1
-
-        # Sort filenames to ensure consistent ordering
-        filenames = sorted(os.listdir(self.documents_dir))
-
-        for filename in filenames:
-            file_path = os.path.join(self.documents_dir, filename)
-            if not os.path.isfile(file_path):
-                continue
-
-            # Get file extension
-            _, extension = os.path.splitext(filename)
-            if extension.lower() not in self.supported_extensions:
-                continue
-
-            # Determine document type
-            doc_type = self._detect_document_type(filename, file_path)
-
-            # Assign sequential ID based on type
-            if doc_type == "clinical":
-                self._document_id_map[filename] = f"CLIN_{clinical_index:03d}"
+        
+        # Check if subdirectories exist, create them if they don't
+        clinical_dir = os.path.join(self.documents_dir, "clinical")
+        compliance_dir = os.path.join(self.documents_dir, "compliance")
+        
+        for dir_path in [clinical_dir, compliance_dir]:
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+                logger.info(f"Created directory: {dir_path}")
+        
+        # Process clinical documents
+        if os.path.exists(clinical_dir):
+            filenames = sorted(os.listdir(clinical_dir))
+            for filename in filenames:
+                file_path = os.path.join(clinical_dir, filename)
+                if not os.path.isfile(file_path):
+                    continue
+                    
+                # Get file extension
+                _, extension = os.path.splitext(filename)
+                if extension.lower() not in self.supported_extensions:
+                    continue
+                    
+                # Store the document ID
+                self._document_id_map[os.path.join("clinical", filename)] = f"CLIN_{clinical_index:03d}"
                 clinical_index += 1
-            else:
-                self._document_id_map[filename] = f"COMP_{compliance_index:03d}"
+                
+        # Process compliance documents
+        if os.path.exists(compliance_dir):
+            filenames = sorted(os.listdir(compliance_dir))
+            for filename in filenames:
+                file_path = os.path.join(compliance_dir, filename)
+                if not os.path.isfile(file_path):
+                    continue
+                    
+                # Get file extension
+                _, extension = os.path.splitext(filename)
+                if extension.lower() not in self.supported_extensions:
+                    continue
+                    
+                # Store the document ID
+                self._document_id_map[os.path.join("compliance", filename)] = f"COMP_{compliance_index:03d}"
                 compliance_index += 1
-
+                
         logger.info(f"Initialized document IDs: {self._document_id_map}")
 
-    def _generate_document_id(self, filename: str) -> str:
+    def _generate_document_id(self, relative_path: str) -> str:
         """Get a consistent document ID for the filename."""
         # If we don't have an ID for this file yet, generate one
-        if filename not in self._document_id_map:
-            # Determine document type
-            doc_type = self._detect_document_type(filename, None)
-
+        if relative_path not in self._document_id_map:
+            # Determine document type from folder
+            if relative_path.startswith("clinical/") or relative_path.startswith("clinical\\"):
+                doc_type = "clinical"
+            elif relative_path.startswith("compliance/") or relative_path.startswith("compliance\\"):
+                doc_type = "compliance"
+            else:
+                # If the path doesn't contain a subfolder, default to clinical
+                doc_type = "clinical"
+                
             # Count existing IDs of this type to determine the next index
             existing_ids = [id for file, id in self._document_id_map.items()
-                            if self._detect_document_type(file, None) == doc_type]
+                            if (file.startswith("clinical/") or file.startswith("clinical\\")) == (doc_type == "clinical")]
 
             next_index = len(existing_ids) + 1
             prefix = "CLIN" if doc_type == "clinical" else "COMP"
 
             # Store the new ID in the map
-            self._document_id_map[filename] = f"{prefix}_{next_index:03d}"
+            self._document_id_map[relative_path] = f"{prefix}_{next_index:03d}"
 
             logger.info(
-                f"Generated new document ID for {filename}: {self._document_id_map[filename]}")
+                f"Generated new document ID for {relative_path}: {self._document_id_map[relative_path]}")
 
         # Return the consistent ID
-        return self._document_id_map[filename]
+        return self._document_id_map[relative_path]
 
     def list_documents(self, doc_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -114,36 +139,48 @@ class DocumentService:
         try:
             documents = []
 
-            # Walk through the documents directory
-            for filename in os.listdir(self.documents_dir):
-                file_path = os.path.join(self.documents_dir, filename)
-                if not os.path.isfile(file_path):
+            # Define which folders to scan based on doc_type
+            if doc_type == "clinical":
+                subdirs = ["clinical"]
+            elif doc_type == "compliance":
+                subdirs = ["compliance"]
+            else:
+                subdirs = ["clinical", "compliance"]
+                
+            # Scan each subdirectory for documents
+            for subdir in subdirs:
+                subdir_path = os.path.join(self.documents_dir, subdir)
+                if not os.path.exists(subdir_path) or not os.path.isdir(subdir_path):
                     continue
-
-                # Get file extension
-                _, extension = os.path.splitext(filename)
-                if extension.lower() not in self.supported_extensions:
-                    continue
-
-                # Determine document type based on filename or content analysis
-                # This is a simple heuristic - in production, use metadata or a database
-                document_type = self._detect_document_type(filename, file_path)
-
-                # Skip if filtering by type and this doesn't match
-                if doc_type and document_type != doc_type:
-                    continue
-
-                # Create document metadata
-                document = {
-                    "id": self._generate_document_id(filename),
-                    "title": self._format_document_title(filename),
-                    "type": document_type,
-                    "filename": filename,
-                    "path": file_path,
-                    "size": os.path.getsize(file_path)
-                }
-
-                documents.append(document)
+                    
+                # Process all files in this subdirectory
+                for filename in os.listdir(subdir_path):
+                    file_path = os.path.join(subdir_path, filename)
+                    if not os.path.isfile(file_path):
+                        continue
+                        
+                    # Get file extension
+                    _, extension = os.path.splitext(filename)
+                    if extension.lower() not in self.supported_extensions:
+                        continue
+                        
+                    # Document type is determined by folder
+                    document_type = subdir
+                    
+                    # Get relative path for the document ID lookup
+                    relative_path = os.path.join(subdir, filename)
+                    
+                    # Create document metadata
+                    document = {
+                        "id": self._generate_document_id(relative_path),
+                        "title": self._format_document_title(filename),
+                        "type": document_type,
+                        "filename": filename,
+                        "path": file_path,
+                        "size": os.path.getsize(file_path)
+                    }
+                    
+                    documents.append(document)
 
             return documents
 
@@ -216,22 +253,25 @@ class DocumentService:
             logger.error(f"Error extracting text from {file_path}: {str(e)}")
             raise
 
-    def _detect_document_type(self, filename: str, file_path: str) -> str:
+    def _detect_document_type(self, relative_path: str, file_path: str = None) -> str:
         """
-        Detect document type based on filename or content.
-        This is a simple implementation - in production, use metadata or ML.
+        Detect document type based on folder location.
         """
-        filename_lower = filename.lower()
-
-        # Special case for the clinical document with 'guidance' in its name
-        if "cct_washout" in filename_lower:
+        # Determine document type from the folder structure
+        if relative_path.startswith("clinical/") or relative_path.startswith("clinical\\"):
             return "clinical"
-
-        # Simple heuristics for document type - customize based on your naming conventions
-        if any(term in filename_lower for term in ["guidance", "regulation", "compliance", "ich", "fda", "e6"]):
+        elif relative_path.startswith("compliance/") or relative_path.startswith("compliance\\"):
             return "compliance"
         else:
-            return "clinical"
+            # If can't determine from path, fall back to filename heuristics (legacy support)
+            filename = os.path.basename(relative_path)
+            filename_lower = filename.lower()
+            
+            # Use simple heuristics as fallback
+            if any(term in filename_lower for term in ["guidance", "regulation", "compliance", "ich", "fda", "e6"]):
+                return "compliance"
+            else:
+                return "clinical"
 
     def _format_document_title(self, filename: str) -> str:
         """Format a human-readable title from filename."""

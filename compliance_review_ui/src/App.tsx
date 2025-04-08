@@ -358,7 +358,7 @@ function App() {
             // Create a review record in the backend
             if (selectedClinicalDoc && selectedComplianceDoc) {
               await complianceAPI.createReview({
-                id: `review_${Date.now()}`,
+                id: `R-${Math.floor(10000 + Math.random() * 90000)}`,
                 clinical_doc_id: selectedClinicalDoc.id,
                 compliance_doc_id: selectedComplianceDoc.id,
                 clinicalDoc: selectedClinicalDoc.title,
