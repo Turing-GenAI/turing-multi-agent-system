@@ -30,6 +30,21 @@ export const documentAPI = {
   getDocumentMetadata: async (documentId: string) => {
     const response = await api.get(`/documents/${documentId}`);
     return response.data;
+  },
+
+  // Upload a document
+  uploadDocument: async (file: File, type: 'clinical' | 'compliance') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doc_type', type);
+
+    const response = await axios.post(`${API_BASE_URL}/documents/upload/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data;
   }
 };
 

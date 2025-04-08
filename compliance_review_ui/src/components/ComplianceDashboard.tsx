@@ -296,12 +296,39 @@ const [success, setSuccess] = useState<string | null>(null);
     );
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'clinical' | 'compliance') => {
-    // In a real implementation, this would handle file uploads
-    // For now, just log that a file was selected
-    if (event.target.files && event.target.files.length > 0) {
-      console.log('File selected:', event.target.files[0].name);
-      // You would typically upload this file to your backend here
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'clinical' | 'compliance') => {
+    try {
+      if (event.target.files && event.target.files.length > 0) {
+        const file = event.target.files[0];
+        setLoading(true);
+        setError(null);
+
+        // Upload the file
+        const uploadedDoc = await documentAPI.uploadDocument(file, type);
+        console.log('File uploaded successfully:', uploadedDoc);
+
+        // Refresh the documents list
+        const docs = await documentAPI.getDocuments();
+        const formattedDocs = docs.map((doc: any) => ({
+          ...doc,
+          type: String(doc.type).toLowerCase() as 'clinical' | 'compliance'
+        }));
+        
+        setDocuments(formattedDocs);
+        setSuccess(`${type === 'clinical' ? 'Clinical' : 'Compliance'} document uploaded successfully`);
+        
+        // Clear the success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setError('Failed to upload document. Please try again.');
+    } finally {
+      setLoading(false);
+      // Reset the file input
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
