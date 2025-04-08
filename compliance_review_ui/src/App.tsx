@@ -386,7 +386,17 @@ function App() {
       <ComplianceDashboard 
         onDocumentSelect={handleComplianceDocSelect}
         onStartReview={(clinicalDoc, complianceDoc) => {
-          handleStartReview(clinicalDoc, complianceDoc);
+          handleStartReview({
+            ...clinicalDoc,
+            filename: clinicalDoc.title,
+            path: `/documents/${clinicalDoc.id}`,
+            size: 0
+          }, {
+            ...complianceDoc,
+            filename: complianceDoc.title,
+            path: `/documents/${complianceDoc.id}`,
+            size: 0
+          });
           navigate('/compliance/review');
         }}
       />

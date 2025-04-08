@@ -1,104 +1,168 @@
-import { FiSearch, FiHome, FiFolder, FiClock, FiRefreshCw, FiSettings, FiMoreHorizontal } from 'react-icons/fi'
-import { TrialItem } from './TrialItem'
+import React, { useState } from 'react';
+import { FiSearch } from 'react-icons/fi';
+import * as Switch from '@radix-ui/react-switch';
 
-interface SidebarProps {
-  selectedTrial: string
+interface Trial {
+  id: string;
+  site: string;
+  title: string;
+  warningCount: number;
+  progress: number;
+  daysAgo: number | 'Today';
 }
 
-export function Sidebar({ selectedTrial }: SidebarProps) {
-  const trials = [
+interface SidebarProps {
+  onTrialSelect?: (trialId: string) => void;
+  selectedTrial: string;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onTrialSelect, selectedTrial }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showReviewed, setShowReviewed] = useState(false);
+
+  // Mock data matching the image exactly
+  const trials: Trial[] = [
     {
-      name: 'Phase III Study of Drug X for Lung Cancer',
-      location: 'Mayo Clinic, MN',
-      warnings: 10,
-      timeAgo: 'Today',
+      id: '1',
+      site: 'Mayo Clinic, MN',
+      title: 'Phase III Study of Drug X for Lung Cancer',
+      warningCount: 10,
+      progress: 30,
+      daysAgo: 'Today'
     },
     {
-      name: 'Phase II Trial of Therapy Y for Heart Disease',
-      location: 'Cleveland Clinic, OH',
-      warnings: 5,
-      timeAgo: '2 days ago',
+      id: '2',
+      site: 'Cleveland Clinic, OH',
+      title: 'Phase II Trial of Therapy Y for Heart Disease',
+      warningCount: 10,
+      progress: 45,
+      daysAgo: 2
     },
     {
-      name: 'Phase I Study of Treatment Z for Diabetes',
-      location: 'Johns Hopkins, MD',
-      warnings: 3,
-      timeAgo: '3 days ago',
+      id: '3',
+      site: 'Johns Hopkins, MD',
+      title: 'Phase I Study of Treatment Z for Diabetes',
+      warningCount: 10,
+      progress: 100,
+      daysAgo: 3
     },
     {
-      name: 'Phase III Trial of Vaccine A for Influenza',
-      location: 'Massachusetts General Hospital',
-      warnings: 12,
-      timeAgo: '4 days ago',
+      id: '4',
+      site: 'Massachusetts General Hosp.',
+      title: 'Phase III Trial of Vaccine A for Influenza',
+      warningCount: 10,
+      progress: 75,
+      daysAgo: 4
     },
     {
-      name: 'Phase II Study of Drug B for Alzheimer\'s',
-      location: 'Mount Sinai, NY',
-      warnings: 8,
-      timeAgo: '5 days ago',
+      id: '5',
+      site: 'Mount Sinai, NY',
+      title: "Phase II Study of Drug B for Alzheimer's",
+      warningCount: 10,
+      progress: 60,
+      daysAgo: 5
     },
     {
-      name: 'Phase IV Study of Drug C for Arthritis',
-      location: 'UCLA Medical Center, CA',
-      warnings: 10,
-      timeAgo: '1 week ago',
+      id: '6',
+      site: 'UCLA Medical Center, CA',
+      title: 'Phase IV Study of Drug C for Arthritis',
+      warningCount: 10,
+      progress: 100,
+      daysAgo: 7
     },
     {
-      name: 'Phase III Trial of Therapy D for Multiple Sclerosis',
-      location: 'Stanford Health Care, CA',
-      warnings: 6,
-      timeAgo: '1 week ago',
+      id: '7',
+      site: 'Stanford Health Care, CA',
+      title: 'Phase III Trial of Therapy D for Multiple Sclerosis',
+      warningCount: 10,
+      progress: 25,
+      daysAgo: 7
+    },
+    {
+      id: '8',
+      site: 'Massachusetts General Hosp.',
+      title: 'Phase II Study of Treatment E',
+      warningCount: 10,
+      progress: 90,
+      daysAgo: 4
     }
-  ]
+  ];
+
+  const filteredTrials = trials.filter(trial => {
+    // First filter by search query
+    const matchesSearch = trial.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         trial.site.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Then filter by review status if toggle is on
+    const matchesReviewStatus = showReviewed ? trial.progress === 100 : true;
+    
+    return matchesSearch && matchesReviewStatus;
+  });
 
   return (
-    <div className="w-80 bg-sidebar border-r border-gray-200 flex flex-col">
-      <div className="p-4 flex items-center justify-between border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-            <FiHome className="text-white" />
+    <div className="w-80 bg-white border-r border-gray-200 h-screen flex flex-col">
+      <div className="p-4 border-b border-gray-100">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-semibold">Trials</h1>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Reviewed</span>
+            <Switch.Root
+              checked={showReviewed}
+              onCheckedChange={setShowReviewed}
+              className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${showReviewed ? 'bg-black' : 'bg-gray-200'}`}
+            >
+              <Switch.Thumb 
+                className="block w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform duration-200 transform data-[state=checked]:translate-x-4 shadow-sm"
+              />
+            </Switch.Root>
           </div>
-          <span className="font-medium">Trials</span>
         </div>
-        <div className="flex items-center">
-          <span className="text-sm text-gray-500 mr-2">Reviewed</span>
-          <div className="w-8 h-4 bg-gray-200 rounded-full"></div>
-        </div>
-      </div>
-      <div className="p-4 border-b border-gray-200">
+        
+        {/* Search Input */}
         <div className="relative">
-          <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Type to search..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-3 py-2 bg-gray-50 rounded-md text-sm focus:outline-none"
           />
         </div>
       </div>
-      <nav className="px-2 py-4 border-b border-gray-200 flex">
-        <button className="w-full p-2 rounded hover:bg-gray-100 flex items-center gap-3 text-sm">
-          <FiFolder className="text-gray-400" />
-          <span>All trials</span>
-        </button>
-        <button className="w-full p-2 rounded hover:bg-gray-100 flex items-center gap-3 text-sm">
-          <FiClock className="text-gray-400" />
-          <span>Recent</span>
-        </button>
-        <button className="w-full p-2 rounded hover:bg-gray-100 flex items-center gap-3 text-sm">
-          <FiRefreshCw className="text-gray-400" />
-          <span>In progress</span>
-        </button>
-  
-      </nav>
-      <div className="flex-1 overflow-auto">
-        {trials.map((trial) => (
-          <TrialItem
-            key={trial.name}
-            {...trial}
-            isSelected={trial.name === selectedTrial}
-          />
-        ))}
+
+      {/* Scrollable Trials List */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4">
+          {filteredTrials.map((trial, index) => (
+            <div
+              key={trial.id}
+              className={`cursor-pointer py-4 ${index !== filteredTrials.length - 1 ? 'border-b border-gray-100' : ''}`}
+              onClick={() => onTrialSelect?.(trial.id)}
+            >
+              <div className="mb-2">
+                <div className="text-xs text-gray-500 flex justify-between items-center mb-1">
+                  <span>{trial.site}</span>
+                  <span>{trial.daysAgo === 'Today' ? 'Today' : `${trial.daysAgo} days ago`}</span>
+                </div>
+                <h3 className="text-sm font-normal leading-tight">{trial.title}</h3>
+              </div>
+
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span>{trial.warningCount} warnings</span>
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex-1">
+                    <div
+                      className="h-full bg-black rounded-full"
+                      style={{ width: `${trial.progress}%` }}
+                    />
+                  </div>
+                  <span>{trial.progress}%</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
-  )
-}
+  );
+};
