@@ -663,13 +663,6 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                 <FiChevronRight />
               </button>
             </div>
-          ) : !showHistory && !issuesLoaded && !loading ? (
-            <div className="sticky top-0 bg-white border-b z-10 p-4 flex items-center justify-center">
-              <div className="text-gray-500 flex items-center">
-                <FiInfo className="mr-2" />
-                <span>No compliance issues found or still generating...</span>
-              </div>
-            </div>
           ) : null}
           
           {!showHistory && loading && (
@@ -679,83 +672,94 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             </div>
           )}
           
-          {!showHistory && currentIssue && (
+          {!showHistory && (
             <div className="p-6">
-              {/* Current issue details */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium flex items-center gap-2">
-                    {currentIssue.confidence === 'high' ? (
-                      <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                        High Confidence
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                        Low Confidence
-                      </span>
-                    )}
-                    <span>Compliance Issue</span>
-                  </h4>
-                  <div className="flex gap-2">
-                    <button 
-                      className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
-                        currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300' : ''
-                      }`}
-                      onClick={() => handleDecision('accepted')}
-                      disabled={processingEdit}
-                    >
-                      {processingEdit ? (
-                        <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-2"></div>
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                      <FiCheck className="w-4 h-4" />
-                      Accept
-                        </>
-                      )}
-                    </button>
-                    <button 
-                      className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
-                        currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300' : ''
-                      }`}
-                      onClick={() => handleDecision('rejected')}
-                      disabled={processingEdit}
-                    >
-                      <FiX className="w-4 h-4" />
-                      Reject
-                    </button>
+              {currentIssue ? (
+                <>
+                  {/* Current issue details */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium flex items-center gap-2">
+                        {currentIssue.confidence === 'high' ? (
+                          <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                            High Confidence
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                            Low Confidence
+                          </span>
+                        )}
+                        <span>Compliance Issue</span>
+                      </h4>
+                      <div className="flex gap-2">
+                        <button 
+                          className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
+                            currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300' : ''
+                          }`}
+                          onClick={() => handleDecision('accepted')}
+                          disabled={processingEdit}
+                        >
+                          {processingEdit ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-2"></div>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                          <FiCheck className="w-4 h-4" />
+                          Accept
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
+                            currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300' : ''
+                          }`}
+                          onClick={() => handleDecision('rejected')}
+                          disabled={processingEdit}
+                        >
+                          <FiX className="w-4 h-4" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Non-compliant text:</p>
+                        <p className="text-sm bg-gray-100 p-2 rounded">{currentIssue.clinical_text}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Explanation:</p>
+                        <p className="text-sm bg-gray-100 p-2 rounded">{currentIssue.explanation}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Suggested edit:</p>
+                        <p className="text-sm bg-green-50 p-2 rounded border-l-2 border-green-400">
+                          {currentIssue.suggested_edit}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : !loading && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="text-center py-4 text-gray-500">
+                    <FiInfo className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No compliance issues found in this document.</p>
                   </div>
                 </div>
-                
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Non-compliant text:</p>
-                    <p className="text-sm bg-gray-100 p-2 rounded">{currentIssue.clinical_text}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Explanation:</p>
-                    <p className="text-sm bg-gray-100 p-2 rounded">{currentIssue.explanation}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Suggested edit:</p>
-                    <p className="text-sm bg-green-50 p-2 rounded border-l-2 border-green-400">
-                      {currentIssue.suggested_edit}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Relevant compliance document with highlighted text */}
+              {/* Compliance document - always shown */}
               <div className="mt-6">
                 <h5 className="text-sm font-medium mb-2 flex items-center gap-1">
-                  <span>Relevant Compliance</span>
+                  <span>Compliance Document</span>
                   <FiExternalLink className="w-4 h-4 text-gray-500" />
                 </h5>
                 <div className="bg-white p-4 rounded border">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">{currentIssue.regulation}</span>
+                    <span className="text-sm font-medium">{complianceDocument.title}</span>
                   </div>
                   {loading ? (
                     <div className="flex justify-center items-center py-4">
@@ -765,7 +769,9 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                     <div 
                       className="text-sm prose max-w-none"
                       dangerouslySetInnerHTML={{ 
-                        __html: highlightComplianceText(displayComplianceContent, currentIssueIndex) 
+                        __html: currentIssue ? 
+                          highlightComplianceText(displayComplianceContent, currentIssueIndex) : 
+                          displayComplianceContent
                       }} 
                     />
                   )}

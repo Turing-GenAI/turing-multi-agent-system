@@ -4,7 +4,7 @@ import uuid
 from typing import List
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 
 from app.core.config import settings
@@ -21,16 +21,25 @@ class ComplianceService:
     """
 
     def __init__(self):
-        """Initialize the compliance service with Azure OpenAI client."""
-        self.azure_chat_openai_client = AzureChatOpenAI(
-            model=settings.AZURE_OPENAI_API_MODEL_NAME,
-            azure_deployment=settings.AZURE_OPENAI_API_DEPLOYMENT_NAME,
-            api_version=settings.AZURE_OPENAI_API_MODEL_VERSION,
-            azure_endpoint=settings.AZURE_OPENAI_API_ENDPOINT,
-            azure_ad_token_provider=None,
-            api_key=settings.AZURE_OPENAI_API_KEY,
-            # Removed azure_region parameter as it's not supported
-        )
+        """Initialize the compliance service with appropriate OpenAI client (Azure or standard)."""
+        if settings.USE_AZURE_OPENAI:
+            self.llm_client = AzureChatOpenAI(
+                model=settings.AZURE_OPENAI_API_MODEL_NAME,
+                azure_deployment=settings.AZURE_OPENAI_API_DEPLOYMENT_NAME,
+                api_version=settings.AZURE_OPENAI_API_MODEL_VERSION,
+                azure_endpoint=settings.AZURE_OPENAI_API_ENDPOINT,
+                azure_ad_token_provider=None,
+                api_key=settings.AZURE_OPENAI_API_KEY,
+                # Removed azure_region parameter as it's not supported
+            )
+            logger.info("Using Azure OpenAI client")
+        else:
+            self.llm_client = ChatOpenAI(
+                model=settings.OPENAI_MODEL_NAME,
+                api_key=settings.OPENAI_API_KEY,
+                temperature=0.0
+            )
+            logger.info("Using standard OpenAI client")
 
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=settings.CHUNK_SIZE,
@@ -125,8 +134,8 @@ class ComplianceService:
                 HumanMessage(content=human_prompt)
             ]
 
-            # Call Azure OpenAI API
-            response = await self.azure_chat_openai_client.ainvoke(messages)
+            # Call OpenAI API (Azure or standard)
+            response = await self.llm_client.ainvoke(messages)
             revised_text = response.content.strip()
 
             logger.info(
@@ -189,8 +198,8 @@ class ComplianceService:
             HumanMessage(content=human_prompt)
         ]
 
-        # Call Azure OpenAI API
-        response = await self.azure_chat_openai_client.ainvoke(messages)
+        # Call OpenAI API (Azure or standard)
+        response = await self.llm_client.ainvoke(messages)
         response_content = response.content
 
         # Parse response to extract compliance issues

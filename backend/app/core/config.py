@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     # CORS Settings
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
     
+    # OpenAI Settings Toggle
+    USE_AZURE_OPENAI: bool = Field(default=os.getenv("USE_AZURE_OPENAI", "False").lower() == "true")
+    
+    # Standard OpenAI Settings
+    OPENAI_API_KEY: str = Field(default=os.getenv("OPENAI_API_KEY"))
+    OPENAI_MODEL_NAME: str = Field(default="gpt-4o")
+    
     # Azure OpenAI Settings
     AZURE_OPENAI_API_KEY: str = Field(default=os.getenv("AZURE_OPENAI_API_KEY"))
     AZURE_OPENAI_API_ENDPOINT: str = Field(default=os.getenv("AZURE_OPENAI_API_ENDPOINT"))
