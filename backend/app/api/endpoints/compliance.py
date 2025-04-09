@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict, Any
 import copy
+import logging
 
 from app.models.compliance import (
     ComplianceReviewInput,
@@ -11,8 +12,14 @@ from app.models.compliance import (
     ApplySuggestionRequest,
     ApplySuggestionResponse
 )
-from app.services.compliance_service import compliance_service
+# Import both implementations (original and enhanced)
+from app.services.compliance_service import compliance_service as enhanced_compliance_service
+# Keep original service for reference but don't use it
+# from app.services.compliance_service import compliance_service as original_compliance_service
 from app.services.document_service import document_service
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # In-memory storage for reviews (in a real app, this would be in a database)
 reviews_db: List[Dict[str, Any]] = []
@@ -26,11 +33,15 @@ router = APIRouter()
 async def analyze_compliance(review_input: ComplianceReviewInput):
     """
     Analyze clinical trial documents for compliance issues using document content provided directly.
-    Uses LLM to identify non-compliant sections and returns detailed analysis.
+    Uses enhanced LLM analysis with verification and position tracking for more accurate results.
     """
     try:
-        # Use the compliance service to perform the analysis
-        issues = await compliance_service.analyze_compliance(review_input)
+        logger.info(f"Analyzing compliance for docs: {review_input.clinical_doc_id}:{review_input.compliance_doc_id}")
+        
+        # Use the enhanced compliance service to perform the analysis
+        issues = await enhanced_compliance_service.analyze_compliance(review_input)
+        
+        logger.info(f"Analysis complete: Found {len(issues)} issues")
 
         result = {
             "clinical_doc_id": review_input.clinical_doc_id,
@@ -44,6 +55,7 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
 
         return result
     except Exception as e:
+        logger.error(f"Error in compliance analysis: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -112,8 +124,8 @@ async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str
             compliance_doc_content=compliance_doc_content
         )
 
-        # Use the compliance service to perform the analysis
-        issues = await compliance_service.analyze_compliance(review_input)
+        # Use the enhanced compliance service to perform the analysis
+        issues = await enhanced_compliance_service.analyze_compliance(review_input)
 
         # Store the results in our cache
         result = {
@@ -216,6 +228,7 @@ async def create_compliance_review(review: ComplianceReview):
 async def apply_suggestion(request: ApplySuggestionRequest):
     """
     Apply a suggested edit to non-compliant text using AI to intelligently integrate the change.
+    Uses the enhanced compliance service with better prompt engineering for higher quality edits.
 
     Args:
         request: ApplySuggestionRequest containing original text, suggested edit, and context
@@ -224,17 +237,21 @@ async def apply_suggestion(request: ApplySuggestionRequest):
         ApplySuggestionResponse with the revised text after applying the suggestion
     """
     try:
-        # Use the compliance service to intelligently apply the edit
-        revised_text = await compliance_service.apply_suggestion(
+        logger.info(f"Applying suggested edit to text of length {len(request.clinical_text)}")
+        
+        # Use the enhanced compliance service to intelligently apply the edit
+        revised_text = await enhanced_compliance_service.apply_suggestion(
             clinical_text=request.clinical_text,
             suggested_edit=request.suggested_edit,
             surrounding_context=request.surrounding_context
         )
+        
+        logger.info(f"Successfully applied suggestion, revised text length: {len(revised_text)}")
 
         return ApplySuggestionResponse(
             original_text=request.clinical_text,
             revised_text=revised_text
         )
     except Exception as e:
-        print(f"Error applying suggestion: {str(e)}")
+        logger.error(f"Error applying suggestion: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

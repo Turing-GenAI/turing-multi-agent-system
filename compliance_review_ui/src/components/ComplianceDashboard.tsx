@@ -37,6 +37,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 const [success, setSuccess] = useState<string | null>(null);
+  // Counter for generating sequential review IDs - always start from 0
+  const [reviewCounter, setReviewCounter] = useState<number>(0);
 
   // Fetch documents from the backend API
   useEffect(() => {
@@ -78,6 +80,9 @@ const [success, setSuccess] = useState<string | null>(null);
           // Use the compliance API to fetch reviews
           const reviewsData = await complianceAPI.getReviews();
           setReviews(reviewsData || []);
+          
+          // Reset counter to 0 - always start from 0 as requested
+          setReviewCounter(0);
         } catch (err) {
           console.error('Error fetching reviews:', err);
           setReviews([]);
@@ -141,7 +146,10 @@ const [success, setSuccess] = useState<string | null>(null);
         );
         
         // Create a review record in the backend
-        const reviewId = `review_${Date.now()}`;
+        // Generate a sequential review ID in the format R-00000
+        const reviewId = `R-${reviewCounter.toString().padStart(5, '0')}`;
+        // Increment the counter for the next review
+        setReviewCounter(reviewCounter + 1);
         const now = new Date();
         const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
         

@@ -46,6 +46,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   const [clinicalContent, setClinicalContent] = useState<string>('');
   const [complianceContent, setComplianceContent] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [contentLoaded, setContentLoaded] = useState<boolean>(false);
   const [appliedChanges, setAppliedChanges] = useState<Map<string, string>>(new Map());
   const [processingEdit, setProcessingEdit] = useState<boolean>(false);
   const [showFinalDocument, setShowFinalDocument] = useState<boolean>(false);
@@ -58,6 +59,9 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   
   // Fetch document content from the backend
   useEffect(() => {
+    // Skip if we've already loaded content for these documents
+    if (contentLoaded) return;
+    
     const fetchDocumentContent = async () => {
       try {
         setLoading(true);
@@ -71,6 +75,9 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           // Fetch compliance document content
           const complianceContentData = await documentAPI.getDocumentContent(complianceDocument.id);
           setComplianceContent(complianceContentData);
+          
+          // Mark content as loaded to prevent refetching
+          setContentLoaded(true);
         }
       } catch (err) {
         console.error('Error fetching document content:', err);
@@ -80,7 +87,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     };
     
     fetchDocumentContent();
-  }, [clinicalDocument.id, complianceDocument.id]);
+  }, [clinicalDocument.id, complianceDocument.id, contentLoaded]);
   
   // Function to navigate between issues
   const navigateIssue = (direction: 'next' | 'prev') => {
@@ -338,11 +345,18 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   };
   
   // Get the content to display - use modified content when available
-  const displayClinicalContent = clinicalContent || clinicalDocument.content;
-  const displayComplianceContent = complianceContent || complianceDocument.content;
+  // Use memo to prevent recalculating on every render
+  const displayClinicalContent = React.useMemo(() => {
+    return clinicalContent || clinicalDocument.content;
+  }, [clinicalContent, clinicalDocument.content]);
   
-  // Highlight non-compliant text in clinical document
-  const highlightClinicalText = (content: string) => {
+  const displayComplianceContent = React.useMemo(() => {
+    return complianceContent || complianceDocument.content;
+  }, [complianceContent, complianceDocument.content]);
+  
+  // Highlight non-compliant text in clinical document - memoized to prevent re-highlighting on every render
+  const highlightedClinicalContent = React.useMemo(() => {
+    const highlightClinicalText = (content: string) => {
     if (!content || content.trim() === '') return content;
     let highlightedContent = content;
     
@@ -466,10 +480,15 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     });
     
     return highlightedContent;
-  };
+    }
+    
+    return highlightClinicalText(displayClinicalContent);
+  }, [displayClinicalContent, reviewedIssues, currentIssueIndex, appliedChanges]);
   
-  // Highlight compliance text with improved styling
-  const highlightComplianceText = (content: string, issueIndex: number) => {
+  // Highlight compliance text with improved styling - memoized to prevent re-highlighting on every render
+  const highlightedComplianceContent = React.useMemo(() => {
+    // Helper function to highlight compliance text
+    function highlightComplianceText(content: string, issueIndex: number) {
     if (!reviewedIssues[issueIndex] || !content || content.trim() === '') return content;
     
     let highlightedContent = content;
@@ -529,6 +548,9 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     
     return highlightedContent;
   };
+  
+  return currentIssue ? highlightComplianceText(displayComplianceContent, currentIssueIndex) : displayComplianceContent;
+}, [displayComplianceContent, currentIssue, currentIssueIndex, reviewedIssues]);
   
   // Event listener for issue clicks in the document
   useEffect(() => {
@@ -613,7 +635,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             <>
               <div className="prose max-w-none flex-grow">
               <div dangerouslySetInnerHTML={{ 
-                __html: highlightClinicalText(displayClinicalContent) 
+                __html: highlightedClinicalContent
               }} />
             </div>
               
@@ -769,9 +791,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                     <div 
                       className="text-sm prose max-w-none"
                       dangerouslySetInnerHTML={{ 
-                        __html: currentIssue ? 
-                          highlightComplianceText(displayComplianceContent, currentIssueIndex) : 
-                          displayComplianceContent
+                        __html: highlightedComplianceContent
                       }} 
                     />
                   )}
