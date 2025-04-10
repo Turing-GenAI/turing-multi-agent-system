@@ -1,0 +1,80 @@
+Appendix A. INVESTIGATOR’S BROCHURE
+
+A.1 Introduction
+
+The Investigator’s Brochure (IB) provides clinical and nonclinical data relevant to the investigational product(s) under study in human participants. Its purpose is to assist investigators and trial staff in understanding key protocol elements, including dosage, administration methods, and safety monitoring.
+
+A.1.1 Development of the Investigator’s Brochure
+
+The sponsor ensures an IB is prepared and updated. In investigator-initiated trials, the sponsor-investigator must ascertain the availability of an IB from the product license holder. Current scientific information, including comprehensive product characteristics, should be incorporated. The IB should undergo regular reviews and updates in accordance with the sponsor's procedures, particularly when significant new information arises.
+
+A.1.2 Reference Safety Information and Risk-Benefit Assessment
+
+The IB contains essential reference safety information (RSI) for expedited reporting of suspected unexpected serious adverse reactions (SUSARs). It facilitates clinical management by presenting objective and balanced risk-benefit assessments. The RSI and overall IB content must be reviewed and approved by relevant medical and scientific personnel.
+
+A.2 General Considerations
+
+The IB should clearly document:
+
+A.2.1 Title Page
+
+Sponsor Name: PharmaXYZ Ltd.
+
+Investigational Product: ABC-101
+
+Edition Number: Version 3.0
+
+Release Date: 1 July 2023
+
+A.2.2 Confidentiality Statement
+
+This document is confidential and intended solely for investigator/institution use, as well as regulatory authorities and IRBs/IECs.
+
+A.3 Contents of the Investigator’s Brochure
+
+A.3.2 Summary
+
+Concise summary of relevant physical, chemical, pharmaceutical, pharmacological, toxicological, and clinical information appropriate to the current stage of product development.
+
+A.3.3 Introduction
+
+ABC-101 (compound XYZ-123) belongs to a class of anti-inflammatory agents intended for therapeutic use in chronic inflammatory conditions. The rationale for its clinical investigation is clearly detailed, alongside anticipated therapeutic indications.
+
+A.3.4 Physical, Chemical and Pharmaceutical Properties and Formulation
+
+Detailed description of the investigational product’s chemical structure, properties, and pharmaceutical formulation, including excipients, storage, and handling guidelines.
+
+A.3.5 Nonclinical Studies
+
+Comprehensive summary of relevant nonclinical pharmacology, toxicology, and pharmacokinetic studies, highlighting methodology, results, and human clinical implications.
+
+(a) Nonclinical Pharmacology
+
+Clearly summarized therapeutic and safety pharmacological studies including efficacy, receptor specificity, and safety pharmacology assessments.
+
+(b) Pharmacokinetics and Product Metabolism in Animals
+
+Comprehensive animal pharmacokinetics data including systemic bioavailability and metabolite analysis.
+
+(c) Toxicology
+
+Summarized toxicological findings from various animal studies including single-dose, repeated-dose, reproductive, carcinogenicity, irritancy, sensitization, and genotoxicity assessments.
+
+A.3.6 Effects in Humans
+
+(a) Pharmacokinetics and Product Metabolism in Humans
+
+Up-to-date human pharmacokinetic information detailing absorption, metabolism, distribution, and elimination.
+
+(b) Safety and Efficacy
+
+Detailed, updated information on clinical trial findings concerning safety, efficacy, and dose-response relationships. Clearly listed and categorized adverse drug reactions from multiple studies.
+
+(c) Marketing Experience
+
+Documented information on marketing status, approvals, formulations, dosages, routes of administration, and adverse reactions where applicable.
+
+A.3.7 Summary of Data and Guidance for the Investigator
+
+Clear synthesis of nonclinical and clinical data, including comprehensive risk assessments and detailed guidance for clinical trial monitoring and participant management.
+

@@ -1,0 +1,214 @@
+4. INVESTIGATOR: ICH E6 (R2) Good clinical practice
+4.1 Investigator’s Qualifications and Agreements
+
+4.1.1 The investigator(s) should be qualified by education, training, and experience to assume responsibility for the proper conduct of the trial, should meet all the qualifications specified by the applicable regulatory requirement(s), and should provide evidence of such qualifications through up-to-date curriculum vitae and/or other relevant documentation requested by the sponsor, the IRB/IEC, and/or the regulatory authority(ies).
+
+4.1.2 The investigator should be thoroughly familiar with the appropriate use of the investigational product(s), as described in the protocol, in the current Investigator’s Brochure, in the product information and in other information sources provided by the sponsor.
+
+4.1.3 The investigator should be aware of, and should comply with, GCP and the applicable regulatory requirements.
+
+4.1.4 The investigator/institution should permit monitoring and auditing by the sponsor, and inspection by the appropriate regulatory authority(ies).
+
+4.1.5 The investigator should maintain a list of appropriately qualified persons to whom the investigator has delegated significant trial-related duties.
+
+4.2 Adequate Resources
+
+4.2.1 The investigator should be able to demonstrate (e.g., based on retrospective data) a potential for recruiting the required number of suitable subjects within the agreed recruitment period.
+
+4.2.2 The investigator should have sufficient time to properly conduct and complete the trial within the agreed trial period.
+
+4.2.3 The investigator should have available an adequate number of qualified staff and adequate facilities for the foreseen duration of the trial to conduct the trial properly and safely.
+
+4.2.4 The investigator should ensure that all persons assisting with the trial are adequately informed about the protocol, the investigational product(s), and their trial-related duties and functions.
+
+ADDENDUM
+
+4.2.5 The investigator is responsible for supervising any individual or party to whom the investigator delegates trial-related duties and functions conducted at the trial site.
+
+4.2.6 If the investigator/institution retains the services of any individual or party to perform trial-related duties and functions, the investigator/institution should ensure this individual or party is qualified to perform those trial-related duties and functions and should implement procedures to ensure the integrity of the trial-related duties and functions performed and any data generated.
+
+4.3 Medical Care of Trial Subjects
+
+4.3.1 A qualified physician (or dentist, when appropriate), who is an investigator or a sub-investigator for the trial, should be responsible for all trial-related medical (or dental) decisions.
+
+4.3.2 During and following a subject's participation in a trial, the investigator/institution should ensure that adequate medical care is provided to a subject for any adverse events, including clinically significant laboratory values, related to the trial. The investigator/institution should inform a subject when medical care is needed for intercurrent illness(es) of which the investigator becomes aware.
+
+4.3.3 It is recommended that the investigator inform the subject's primary physician about the subject's participation in the trial if the subject has a primary physician and if the subject agrees to the primary physician being informed.
+
+4.3.4 Although a subject is not obliged to give his/her reason(s) for withdrawing prematurely from a trial, the investigator should make a reasonable effort to ascertain the reason(s), while fully respecting the subject's rights.
+
+4.4 Communication with IRB/IEC
+
+4.4.1 Before initiating a trial, the investigator/institution should have written and dated approval/favourable opinion from the IRB/IEC for the trial protocol, written informed consent form, consent form updates, subject recruitment procedures (e.g., advertisements), and any other written information to be provided to subjects.
+
+4.4.2 As part of the investigator's/institution’s written application to the IRB/IEC, the investigator/institution should provide the IRB/IEC with a current copy of the Investigator's Brochure. If the Investigator's Brochure is updated during the trial, the investigator/institution should supply a copy of the updated Investigator’s Brochure to the IRB/IEC.
+
+4.4.3 During the trial the investigator/institution should provide to the IRB/IEC all documents subject to review.
+
+4.5 Compliance with Protocol
+
+4.5.1 The investigator/institution should conduct the trial in compliance with the protocol agreed to by the sponsor and, if required, by the regulatory authority(ies) and which was given approval/favourable opinion by theIRB/IEC. The investigator/institution and the sponsor should sign the protocol, or an alternative contract, to confirm agreement.
+
+4.5.2 The investigator should not implement any deviation from, or changes of the protocol without agreement by the sponsor and prior review and documented approval/favourable opinion from the IRB/IEC of an amendment, except where necessary to eliminate an immediate hazard(s) to trial subjects, or when the change(s) involves only logistical or administrative aspects of the trial (e.g., change in monitor(s), change of telephone number(s)).
+
+4.5.3 The investigator, or person designated by the investigator, should document and explain any deviation from the approved protocol.
+
+4.5.4 The investigator may implement a deviation from, or a change of, the protocol to eliminate an immediate hazard(s) to trial subjects without prior IRB/IEC approval/favourable opinion. As soon as possible, the implemented deviation or change, the reasons for it, and, if appropriate, the proposed protocol amendment(s) should be submitted:
+
+(a) to the IRB/IEC for review and approval/favourable opinion,
+
+(b) to the sponsor for agreement and, if required,
+
+(c) to the regulatory authority(ies).
+
+4.6 Investigational Product(s)
+
+4.6.1 Responsibility for investigational product(s) accountability at the trial site(s) rests with the investigator/institution.
+
+4.6.2 Where allowed/required, the investigator/institution may/should assign some or all of the investigator's/institution’s duties for investigational product(s) accountability at the trial site(s) to an appropriate pharmacist or another appropriate individual who is under the supervision of the investigator/institution.
+
+4.6.3 The investigator/institution and/or a pharmacist or other appropriate individual, who is designated by the investigator/institution, should maintain records of the product's delivery to the trial site, the inventory at the site, the use by each subject, and the return to the sponsor or alternative disposition of unused product(s). These records should include dates, quantities, batch/serial numbers, expiration dates (if applicable), and the unique code numbers assigned to the investigational product(s) and trial subjects. Investigators should maintain records that document adequately that the subjects were provided the doses specified by the protocol and reconcile all investigational product(s) received from the sponsor.
+
+4.6.4 The investigational product(s) should be stored as specified by the sponsor (see 5.13.2 and 5.14.3) and in accordance with applicable regulatory requirement(s).
+
+4.6.5 The investigator should ensure that the investigational product(s) are used only in accordance with the approved protocol.
+
+4.6.6 The investigator, or a person designated by the investigator/institution, should explain the correct use of the investigational product(s) to each subject and should check, at intervals appropriate for the trial, that each subject is following the instructions properly.
+
+4.7 Randomization Procedures and Unblinding
+
+The investigator should follow the trial's randomization procedures, if any, and should ensure that the code is broken only in accordance with the protocol. If the trial is blinded, the investigator should promptly document and explain to the sponsor any premature unblinding (e.g., accidental unblinding, unblinding due to a serious adverse event) of the investigational product(s).
+
+4.8 Informed Consent of Trial Subjects
+
+4.8.1 In obtaining and documenting informed consent, the investigator should comply with the applicable regulatory requirement(s), and should adhere to GCP and to the ethical principles that have their origin in the Declaration of Helsinki. Prior to the beginning of the trial, the investigator should have the IRB/IEC's written approval/favourable opinion of the written informed consent form and any other written information to be provided to subjects.
+
+4.8.2 The written informed consent form and any other written information to be provided to subjects should be revised whenever important new information becomes available that may be relevant to the subject’s consent. Any revised written informed consent form, and written information should receive the IRB/IEC's approval/favourable opinion in advance of use. The subject or the subject’s legally acceptable representative should be informed in a timely manner if new information becomes available that may be relevant to the subject’s willingness to continue participation in the trial. The communication of this information should be documented.
+
+4.8.3 Neither the investigator, nor the trial staff, should coerce or unduly influence a subject to participate or to continue to participate in a trial.
+
+4.8.4 None of the oral and written information concerning the trial, including the written informed consent form, should contain any language that causes the subject or the subject's legally acceptable representative to waive or to appear to waive any legal rights, or that releases or appears to release the investigator, the institution, the sponsor, or their agents from liability for negligence.
+
+4.8.5 The investigator, or a person designated by the investigator, should fully inform the subject or, if the subject is unable to provide informed consent, the subject's legally acceptable representative, of all pertinent aspects of the trial including the written information and the approval/ favourable opinion by the IRB/IEC.
+
+4.8.6 The language used in the oral and written information about the trial, including the written informed consent form, should be as non-technical as practical and should be understandable to the subject or the subject's legally acceptable representative and the impartial witness, where applicable.
+
+4.8.7 Before informed consent may be obtained, the investigator, or a person designated by the investigator, should provide the subject or the subject's legally acceptable representative ample time and opportunity to inquire about details of the trial and to decide whether or not to participate in the trial. All questions about the trial should be answered to the satisfaction of the subject or the subject's legally acceptable representative.
+
+4.8.8 Prior to a subject’s participation in the trial, the written informed consent form should be signed and personally dated by the subject or by the subject's legallyacceptable representative, and by the person who conducted the informed consent discussion.
+
+4.8.9 If a subject is unable to read or if a legally acceptable representative is unable to read, an impartial witness should be present during the entire informed consent discussion. After the written informed consent form and any other written information to be provided to subjects, is read and explained to the subject or the subject’s legally acceptable representative, and after the subject or the subject’s legally acceptable representative has orally consented to the subject’s participation in the trial and, if capable of doing so, has signed and personally dated the informed consent form, the witness should sign and personally date the consent form. By signing the consent form, the witness attests that the information in the consent form and any other written information was accurately explained to, and apparently understood by, the subject or the subject's legally acceptable representative, and that informed consent was freely given by the subject or the subject’s legally acceptable representative.
+
+4.8.10 Both the informed consent discussion and the written informed consent form and any other written information to be provided to subjects should include explanations of the following:
+
+(a) That the trial involves research.
+
+(b) The purpose of the trial.
+
+(c) The trial treatment(s) and the probability for random assignment to each treatment.
+
+(d) The trial procedures to be followed, including all invasive procedures.
+
+(e) The subject's responsibilities.
+
+(f) Those aspects of the trial that are experimental.
+
+(g) The reasonably foreseeable risks or inconveniences to the subject and, when applicable, to an embryo, fetus, or nursing infant.
+
+(h) The reasonably expected benefits. When there is no intended clinical benefit to the subject, the subject should be made aware of this.
+
+(i) The alternative procedure(s) or course(s) of treatment that may be available to the subject, and their important potential benefits and risks.
+
+(j) The compensation and/or treatment available to the subject in the event of trial-related injury.
+
+(k) The anticipated prorated payment, if any, to the subject for participating in the trial.
+
+(l) The anticipated expenses, if any, to the subject for participating in the trial.
+
+(m) That the subject's participation in the trial is voluntary and that the subject may refuse to participate or withdraw from the trial, at any time, without penalty or loss of benefits to which the subject is otherwise entitled.
+
+(n) That the monitor(s), the auditor(s), the IRB/IEC, and the regulatory authority(ies) will be granted direct access to the subject's original medical records for verification of clinical trial procedures and/or data, without violating the confidentiality of the subject, to the extent permitted by theapplicable laws and regulations and that, by signing a written informed consent form, the subject or the subject's legally acceptable representative is authorizing such access.
+
+(o) That records identifying the subject will be kept confidential and, to the extent permitted by the applicable laws and/or regulations, will not be made publicly available. If the results of the trial are published, the subject’s identity will remain confidential.
+
+(p) That the subject or the subject's legally acceptable representative will be informed in a timely manner if information becomes available that may be relevant to the subject's willingness to continue participation in the trial.
+
+(q) The person(s) to contact for further information regarding the trial and the rights of trial subjects, and whom to contact in the event of trial-related injury.
+
+(r) The foreseeable circumstances and/or reasons under which the subject's participation in the trial may be terminated.
+
+(s) The expected duration of the subject's participation in the trial.
+
+(t) The approximate number of subjects involved in the trial.
+
+4.8.11 Prior to participation in the trial, the subject or the subject's legally acceptable representative should receive a copy of the signed and dated written informed consent form and any other written information provided to the subjects. During a subject’s participation in the trial, the subject or the subject’s legally acceptable representative should receive a copy of the signed and dated consent form updates and a copy of any amendments to the written information provided to subjects.
+
+4.8.12 When a clinical trial (therapeutic or non-therapeutic) includes subjects who can only be enrolled in the trial with the consent of the subject’s legally acceptable representative (e.g., minors, or patients with severe dementia), the subject should be informed about the trial to the extent compatible with the subject’s understanding and, if capable, the subject should sign and personally date the written informed consent.
+
+4.8.13 Except as described in 4.8.14, a non-therapeutic trial (i.e. a trial in which there is no anticipated direct clinical benefit to the subject), should be conducted in subjects who personally give consent and who sign and date the written informed consent form.
+
+4.8.14 Non-therapeutic trials may be conducted in subjects with consent of a legally acceptable representative provided the following conditions are fulfilled:
+
+(a) The objectives of the trial can not be met by means of a trial in subjects who can give informed consent personally.
+
+(b) The foreseeable risks to the subjects are low.
+
+(c) The negative impact on the subject’s well-being is minimized and low.
+
+(d) The trial is not prohibited by law.
+
+(e) The approval/favourable opinion of the IRB/IEC is expressly sought on the inclusion of such subjects, and the written approval/ favourable opinion covers this aspect.
+
+Such trials, unless an exception is justified, should be conducted in patients having a disease or condition for which the investigational product is intended. Subjects in these trials should be particularly closely monitored and should be withdrawn if they appear to be unduly distressed.
+
+4.8.15 In emergency situations, when prior consent of the subject is not possible, the consent of the subject's legally acceptable representative, if present, should be requested. When prior consent of the subject is not possible, and the subject’s legally acceptable representative is not available, enrolment of the subject should require measures described in the protocol and/or elsewhere, with documented approval/favourable opinion by the IRB/IEC, to protect the rights, safety and well-being of the subject and to ensure compliance with applicable regulatory requirements. The subject or the subject's legally acceptable representative should be informed about the trial as soon as possible and consent to continue and other consent as appropriate (see 4.8.10) should be requested.
+
+4.9 Records and Reports
+
+ADDENDUM
+
+4.9.0 The investigator/institution should maintain adequate and accurate source documents and trial records that include all pertinent observations on each of the site’s trial subjects. Source data should be attributable, legible, contemporaneous, original, accurate, and complete. Changes to source data should be traceable, should not obscure the original entry, and should be explained if necessary (e.g., via an audit trail).
+
+4.9.1 The investigator should ensure the accuracy, completeness, legibility, and timeliness of the data reported to the sponsor in the CRFs and in all required reports.
+
+4.9.2 Data reported on the CRF, that are derived from source documents, should be consistent with the source documents or the discrepancies should be explained.
+
+4.9.3 Any change or correction to a CRF should be dated, initialed, and explained (if necessary) and should not obscure the original entry (i.e. an audit trail should be maintained); this applies to both written and electronic changes or corrections (see 5.18.4 (n)). Sponsors should provide guidance to investigators and/or the investigators' designated representatives on making such corrections. Sponsors should have written procedures to assure that changes or corrections in CRFs made by sponsor's designated representatives are documented, are necessary, and are endorsed by the investigator. The investigator should retain records of the changes and corrections.
+
+4.9.4 The investigator/institution should maintain the trial documents as specified in Essential Documents for the Conduct of a Clinical Trial (see 8.) and as required by the applicable regulatory requirement(s). The investigator/institution should take measures to prevent accidental or premature destruction of these documents.
+
+4.9.5 Essential documents should be retained until at least 2 years after the last approval of a marketing application in an ICH region and until there are no pending or contemplated marketing applications in an ICH region or at least 2 years have elapsed since the formal discontinuation of clinical development of the investigational product. These documents should be retained for a longer period however if required by the applicable regulatory requirements or by an agreement with the sponsor. It is the responsibility of the sponsor to inform the investigator/institution as to when these documents no longer need to be retained (see 5.5.12).
+
+4.9.6 The financial aspects of the trial should be documented in an agreement between the sponsor and the investigator/institution.
+
+4.9.7 Upon request of the monitor, auditor, IRB/IEC, or regulatory authority, the investigator/institution should make available for direct access all requested trial-related records.
+
+4.10 Progress Reports
+
+4.10.1 The investigator should submit written summaries of the trial status to the IRB/IEC annually, or more frequently, if requested by the IRB/IEC.
+
+4.10.2 The investigator should promptly provide written reports to the sponsor, the IRB/IEC (see 3.3.8) and, where applicable, the institution on any changes significantly affecting the conduct of the trial, and/or increasing the risk to subjects.
+
+4.11 Safety Reporting
+
+4.11.1 All serious adverse events (SAEs) should be reported immediately to the sponsor except for those SAEs that the protocol or other document (e.g., Investigator's Brochure) identifies as not needing immediate reporting. The immediate reports should be followed promptly by detailed, written reports. The immediate and follow-up reports should identify subjects by unique code numbers assigned to the trial subjects rather than by the subjects' names, personal identification numbers, and/or addresses. The investigator should also comply with the applicable regulatory requirement(s) related to the reporting of unexpected serious adverse drug reactions to the regulatory authority(ies) and the IRB/IEC.
+
+4.11.2 Adverse events and/or laboratory abnormalities identified in the protocol as critical to safety evaluations should be reported to the sponsor according to the reporting requirements and within the time periods specified by the sponsor in the protocol.
+
+4.11.3 For reported deaths, the investigator should supply the sponsor and the IRB/IEC with any additional requested information (e.g., autopsy reports and terminal medical reports).
+
+4.12 Premature Termination or Suspension of a Trial
+
+If the trial is prematurely terminated or suspended for any reason, the investigator/institution should promptly inform the trial subjects, should assure appropriate therapy and follow-up for the subjects, and, where required by the applicable regulatory requirement(s), should inform the regulatory authority(ies). In addition:
+
+4.12.1 If the investigator terminates or suspends a trial without prior agreement of the sponsor, the investigator should inform the institution where applicable, and the investigator/institution should promptly inform the sponsor and the IRB/IEC, and should provide the sponsor and the IRB/IEC a detailed written explanation of the termination or suspension.
+
+4.12.2 If the sponsor terminates or suspends a trial (see 5.21), the investigator should promptly inform the institution where applicable and the investigator/institution should promptly inform the IRB/IEC and provide the IRB/IEC a detailed written explanation of the termination or suspension.
+
+4.12.3 If the IRB/IEC terminates or suspends its approval/favourable opinion of a trial (see 3.1.2 and 3.3.9), the investigator should inform the institution where applicable and the investigator/institution should promptly notify the sponsor and provide the sponsor with a detailed written explanation of the termination or suspension.
+
+4.13 Final Report(s) by Investigator
+
+Upon completion of the trial, the investigator, where applicable, should inform the institution; the investigator/institution should provide the IRB/IEC with a summary of the trial’s outcome, and the regulatory authority(ies) with any reports required.
+
+Author: © European Medicines Agency, 2018.

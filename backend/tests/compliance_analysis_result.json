@@ -1,0 +1,24 @@
+{
+  "clinical_doc_id": "CLINICAL-cct_washout_pd_and_c",
+  "compliance_doc_id": "COMPLIANCE-E6(R2) Good Clinical",
+  "issues": [
+    {
+      "id": "7074f7b9-647b-49cf-89da-4e08ae5c45af",
+      "clinical_text": "Instead, guidances describe the Agency\u2019s current thinking on a topic and should be viewed only 46 as recommendations, unless specific regulatory or statutory requirements are cited. The use of 47 the word should in Agency guidances means that something is suggested or re commended, but 48 not required.",
+      "compliance_text": "5.0 Quality Management ............................................................................................... 24 5.l Quality Assurance and Quality Control ............................................................. 25",
+      "explanation": "The clinical trial document mentions that the guidance should be viewed only as recommendations and not requirements unless specific regulatory or statutory requirements are cited. However, it doesn't provide clear instructions or expectations for quality management or quality assurance and quality control, which are essential parts of the trial's compliance with CFR regulations.",
+      "suggested_edit": "Provide specific citations or references to the relevant regulations that require adherence to quality management and quality assurance and quality control measures. For example, include a statement such as, 'In accordance with 21 CFR 312.50, the sponsor is responsible for ensuring proper monitoring of the clinical investigation and maintaining an effective quality assurance and quality control system.'",
+      "confidence": "high",
+      "regulation": "21 CFR 312.50"
+    },
+    {
+      "id": "4eadf031-478d-45b9-a68c-882d309d1fad",
+      "clinical_text": "Washout periods and con comitant medication exclusions are commonly included in cancer clinical trials . However, these exclusions often vary across trials for similar therapeutic classes and diseases and should be appropriate for the trial under consideration. A washout period is a treatment- free period between the most recent anti -cancer treatment and treatment with the investigational drug.",
+      "compliance_text": "4.12 Premature Termination or Suspension of a Trial ............................................ 23",
+      "explanation": "The clinical document describes washout periods and concomitant medication exclusions but fails to adequately address the process for premature termination or suspension of the trial if necessary due to safety concerns or other factors.",
+      "suggested_edit": "Include a statement that outlines the procedures for determining and implementing a premature termination or suspension of the trial. For example, 'In the event that significant safety concerns arise during the washout period or consequently from concomitant medication exclusions, the trial may be prematurely terminated or suspended following the procedure outlined in 21 CFR 312.50 for the safety and well-being of the trial subjects.'",
+      "confidence": "high",
+      "regulation": "21 CFR 312.50"
+    }
+  ]
+}

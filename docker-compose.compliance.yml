@@ -1,0 +1,66 @@
+services:
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: audit-copilot/backend:latest
+    container_name: audit-copilot-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=auditcopilot
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/documents:/app/documents
+    depends_on:
+      - postgres
+    networks:
+      - audit-copilot-network
+    restart: unless-stopped
+
+  # Frontend UI service
+  compliance_ui:
+    build:
+      context: ./compliance_review_ui
+      dockerfile: Dockerfile
+    image: audit-copilot/compliance-ui:latest
+    container_name: audit-copilot-compliance-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - audit-copilot-network
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+  # PostgreSQL database service
+  postgres:
+    image: postgres:14-alpine
+    container_name: audit-copilot-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=auditcopilot
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - audit-copilot-network
+    restart: unless-stopped
+
+networks:
+  audit-copilot-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
