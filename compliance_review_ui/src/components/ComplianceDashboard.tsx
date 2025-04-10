@@ -543,7 +543,7 @@ const [success, setSuccess] = useState<string | null>(null);
       {/* Documents Table */}
       {activeTab === 'documents' && (
         <div className="h-[calc(100vh-200px)] flex flex-col overflow-hidden">
-          {/* Upload Buttons Row */}
+          {/* Upload Buttons Row - Temporarily commented out
           <div className="flex justify-between mb-6">
             <div className="flex-1 mr-4">
               <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer w-full">
@@ -570,6 +570,7 @@ const [success, setSuccess] = useState<string | null>(null);
               </label>
             </div>
           </div>
+          */}
 
           {/* Documents Lists */}
           <div className="flex flex-1 overflow-hidden">

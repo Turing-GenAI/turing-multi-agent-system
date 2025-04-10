@@ -133,19 +133,30 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     loadDocumentContent();
   }, [clinicalDocument.id, clinicalDocument.content, complianceDocument.id, complianceDocument.content, contentLoaded, reviewId]);
   
-  // Function to navigate between issues
+  // Function to navigate between issues with cyclic navigation
   const navigateIssue = (direction: 'next' | 'prev') => {
-    if (direction === 'next' && currentIssueIndex < reviewedIssues.length - 1) {
-      setCurrentIssueIndex(currentIssueIndex + 1);
-    } else if (direction === 'prev' && currentIssueIndex > 0) {
-      setCurrentIssueIndex(currentIssueIndex - 1);
+    if (direction === 'next') {
+      // If at the last issue, cycle to the first issue
+      if (currentIssueIndex === reviewedIssues.length - 1) {
+        setCurrentIssueIndex(0);
+      } else {
+        setCurrentIssueIndex(currentIssueIndex + 1);
+      }
+    } else if (direction === 'prev') {
+      // If at the first issue, cycle to the last issue
+      if (currentIssueIndex === 0) {
+        setCurrentIssueIndex(reviewedIssues.length - 1);
+      } else {
+        setCurrentIssueIndex(currentIssueIndex - 1);
+      }
     }
   };
   
-  // Function to scroll to the currently selected issue
+  // Function to scroll to the currently selected issue in both documents
   const scrollToCurrentIssue = () => {
     if (currentIssue) {
       setTimeout(() => {
+        // Scroll to highlighted text in clinical document
         const issueElement = document.getElementById(`issue-${currentIssue.id}`);
         if (issueElement) {
           issueElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -154,6 +165,35 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           setTimeout(() => {
             issueElement.classList.remove('ring-opacity-100');
           }, 1000);
+        }
+        
+        // Scroll to highlighted text in compliance document
+        const complianceHighlightedElements = document.querySelectorAll('.bg-blue-200.hover\\:bg-blue-300.text-blue-900');
+        
+        if (complianceHighlightedElements.length > 0) {
+          // Get the first highlighted element - assuming it corresponds to current issue
+          const complianceElement = complianceHighlightedElements[0];
+          
+          // Apply scroll with a slight delay to ensure both scrolls don't conflict
+          setTimeout(() => {
+            // Get the compliance document container for proper scrolling - specifically the second panel in the grid
+            const complianceContainer = document.querySelector('.grid-cols-2 > div:nth-child(2)');
+            if (complianceContainer && complianceElement) {
+              // Calculate scroll position to center the element in the container
+              const containerRect = complianceContainer.getBoundingClientRect();
+              const elementRect = complianceElement.getBoundingClientRect();
+              const scrollTop = elementRect.top - containerRect.top - (containerRect.height / 2) + complianceContainer.scrollTop;
+              
+              // Scroll the container
+              complianceContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
+              
+              // Add a temporary highlight effect
+              complianceElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-100');
+              setTimeout(() => {
+                complianceElement.classList.remove('ring-blue-500', 'ring-opacity-100');
+              }, 1000);
+            }
+          }, 600); // Delay slightly longer than clinical text scroll to avoid conflict
         }
       }, 100); // Small delay to ensure DOM is updated
     }
@@ -911,16 +951,14 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             <div className="sticky top-0 bg-white border-b z-10 p-4 flex items-center justify-between">
               <button 
                 onClick={() => navigateIssue('prev')}
-                disabled={currentIssueIndex === 0}
-                className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
+                className="p-2 rounded-full hover:bg-gray-100"
               >
                 <FiChevronLeft />
               </button>
               <span>Issue {currentIssueIndex + 1} of {reviewedIssues.length}</span>
               <button 
                 onClick={() => navigateIssue('next')}
-                disabled={currentIssueIndex === reviewedIssues.length - 1}
-                className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
+                className="p-2 rounded-full hover:bg-gray-100"
               >
                 <FiChevronRight />
               </button>
