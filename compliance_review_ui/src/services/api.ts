@@ -89,5 +89,11 @@ export const complianceAPI = {
       message
     });
     return response.data;
+  },
+  
+  // Get issues for a specific review ID
+  getIssuesByReviewId: async (reviewId: string) => {
+    const response = await api.get(`/compliance/reviews/${reviewId}/issues`);
+    return response.data.issues || [];
   }
 };

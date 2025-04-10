@@ -12,3 +12,7 @@ pydantic-settings>=2.7.0
 numpy==1.26.4
 scikit-learn==1.4.2
 rapidfuzz==3.13.0  # Replaced fuzzywuzzy with faster/better rapidfuzz
+
+# Added for database support
+sqlalchemy==2.0.40
+alembic==1.15.2

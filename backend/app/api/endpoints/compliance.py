@@ -1,7 +1,17 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional, Dict, Any
 import copy
 import logging
+import uuid
+import datetime
+import os
+import json
+from sqlalchemy.orm import Session
+
+# Import database modules
+from app.db.database import get_db
+from app.db.models.models import Base, Review, ComplianceIssue as DbComplianceIssue
+from app.db.repositories.compliance_repository import ComplianceRepository
 
 from app.models.compliance import (
     ComplianceReviewInput,
@@ -21,10 +31,12 @@ from app.services.document_service import document_service
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# In-memory storage for reviews (in a real app, this would be in a database)
-reviews_db: List[Dict[str, Any]] = []
-# Separate storage for analysis results to avoid mixing with reviews
-analysis_results: Dict[str, Any] = {}
+# Initialize the database on startup
+from app.db.database import engine
+Base.metadata.create_all(bind=engine)
+
+# For caching analysis results temporarily to avoid duplicate analysis
+analysis_results_cache: Dict[str, Any] = {}
 
 router = APIRouter()
 
@@ -49,9 +61,9 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
             "issues": issues
         }
 
-        # Store result in our cache
+        # Store result in our temporary cache until saved to database with a review
         cache_key = f"{review_input.clinical_doc_id}:{review_input.compliance_doc_id}"
-        analysis_results[cache_key] = result
+        analysis_results_cache[cache_key] = result
 
         return result
     except Exception as e:
@@ -60,7 +72,7 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
 
 
 @router.post("/analyze-by-ids/", response_model=ComplianceReviewResponse)
-async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str, force_refresh: bool = False):
+async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str, force_refresh: bool = False, db: Session = Depends(get_db)):
     """
     Analyze clinical trial documents for compliance issues using document IDs.
     Loads document content from the document service and performs compliance analysis.
@@ -79,36 +91,47 @@ async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str
         # Only check cache if not forcing a refresh
         if not force_refresh:
             # Check if we already have valid results for this document pair
-            if cache_key in analysis_results and analysis_results[cache_key].get('issues'):
-                issues = analysis_results[cache_key].get('issues')
+            if cache_key in analysis_results_cache and analysis_results_cache[cache_key].get('issues'):
+                issues = analysis_results_cache[cache_key].get('issues')
                 # Validate that the cached results contain actual issues
                 if isinstance(issues, list) and len(issues) > 0:
-                    print(
+                    logger.info(
                         f"Returning cached analysis for documents {clinical_doc_id} and {compliance_doc_id} with {len(issues)} issues")
-                    return analysis_results[cache_key]
+                    return analysis_results_cache[cache_key]
                 else:
-                    print(f"Cached analysis has no issues, forcing refresh")
+                    logger.info(f"Cached analysis has no issues, forcing refresh")
 
-            # Check existing reviews for valid issues
-            for review in reviews_db:
-                if (review.get('clinical_doc_id') == clinical_doc_id and
-                        review.get('compliance_doc_id') == compliance_doc_id):
-                    issues = review.get('issues_data') or review.get('issues')
-                    if isinstance(issues, list) and len(issues) > 0:
-                        print(
-                            f"Returning analysis from existing review with {len(issues)} issues")
-                        return {
-                            "clinical_doc_id": clinical_doc_id,
-                            "compliance_doc_id": compliance_doc_id,
-                            "issues": issues
-                        }
+            # Check existing reviews in the database for valid issues
+            # Query database for reviews matching these document IDs
+            db_reviews = db.query(Review).filter(
+                Review.clinical_doc_id == clinical_doc_id,
+                Review.compliance_doc_id == compliance_doc_id
+            ).all()
+            
+            # If any matching reviews exist
+            if db_reviews:
+                # Get the latest review
+                latest_review = db_reviews[0]  # Assuming sorted by created_at desc
+                
+                # Get the issues for this review
+                db_issues = ComplianceRepository.get_issues_for_review(db, latest_review.id)
+                
+                if db_issues and len(db_issues) > 0:
+                    logger.info(f"Returning analysis from existing review {latest_review.id} with {len(db_issues)} issues")
+                    
+                    # Convert issues to the expected format
+                    issues_list = [issue.to_dict() for issue in db_issues]
+                    
+                    return {
+                        "clinical_doc_id": clinical_doc_id,
+                        "compliance_doc_id": compliance_doc_id,
+                        "issues": issues_list
+                    }
         else:
-            print(
-                f"Force refreshing analysis for documents {clinical_doc_id} and {compliance_doc_id}")
+            logger.info(f"Force refreshing analysis for documents {clinical_doc_id} and {compliance_doc_id}")
 
         # Either no valid cached results, or force_refresh is true - create a new analysis
-        print(
-            f"Creating new analysis for documents {clinical_doc_id} and {compliance_doc_id}")
+        logger.info(f"Creating new analysis for documents {clinical_doc_id} and {compliance_doc_id}")
 
         # Get document content from document service
         clinical_doc_content = document_service.get_document_content(
@@ -136,14 +159,14 @@ async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str
 
         # Only store if we have real issues
         if isinstance(issues, list) and len(issues) > 0:
-            print(f"Caching analysis with {len(issues)} issues")
-            analysis_results[cache_key] = result
+            logger.info(f"Caching analysis with {len(issues)} issues")
+            analysis_results_cache[cache_key] = result
         else:
-            print(f"Warning: Analysis completed but generated no issues")
+            logger.warning(f"Warning: Analysis completed but generated no issues")
 
         return result
     except Exception as e:
-        print(f"Error in analyze_compliance_by_ids: {str(e)}")
+        logger.error(f"Error in analyze_compliance_by_ids: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -168,59 +191,112 @@ async def notify_document_owner(notification: DocumentOwnerNotification):
 
 
 @router.get("/reviews/", response_model=dict)
-async def get_compliance_reviews():
+async def get_compliance_reviews(db: Session = Depends(get_db)):
     """
-    Get a list of all compliance reviews.
+    Get a list of all compliance reviews from the database.
 
     Returns:
         List of compliance review records
     """
     try:
-        # In a real implementation, this would fetch from a database
-        return {"reviews": reviews_db}
+        # Get all reviews from the database
+        db_reviews = ComplianceRepository.get_all_reviews(db)
+        
+        # Convert to dictionary format for API response
+        reviews = [review.to_dict() for review in db_reviews]
+        
+        return {"reviews": reviews}
     except Exception as e:
+        logger.error(f"Error getting reviews: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/reviews/", response_model=ComplianceReview)
-async def create_compliance_review(review: ComplianceReview):
+@router.get("/reviews/{review_id}/issues", response_model=dict)
+async def get_review_issues(review_id: str, db: Session = Depends(get_db)):
     """
-    Create a new compliance review record.
+    Get all issues for a specific review ID.
+    
+    Args:
+        review_id: The ID of the review to get issues for
+        
+    Returns:
+        List of compliance issues for the review
+    """
+    try:
+        # Get the issues for this review from the database
+        issues = ComplianceRepository.get_issues_for_review(db, review_id)
+        
+        # Convert to dictionary format for API response
+        issues_dict = [issue.to_dict() for issue in issues]
+        
+        return {"issues": issues_dict}
+    except Exception as e:
+        logger.error(f"Error getting issues for review {review_id}: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Issues not found for review {review_id}")
+
+
+@router.post("/reviews/", response_model=ComplianceReview)
+async def create_compliance_review(review: ComplianceReview, db: Session = Depends(get_db)):
+    """
+    Create or update a compliance review record in the database.
 
     Args:
         review: The compliance review data
+        db: Database session dependency
 
     Returns:
-        The created compliance review record
+        The created or updated compliance review record
     """
     try:
         # Convert to dict for easier manipulation
         review_dict = review.dict()
-
-        # Look for existing review to update
-        for i, existing_review in enumerate(reviews_db):
-            if (existing_review.get('id') == review_dict['id'] or
-                (existing_review.get('clinical_doc_id') == review_dict['clinical_doc_id'] and
-                 existing_review.get('compliance_doc_id') == review_dict['compliance_doc_id'])):
-                # Update the existing review
-                print(f"Updating existing review {existing_review.get('id')}")
-                reviews_db[i] = review_dict
-                return review
-
-        # Check if we have analysis results for this document pair
+        
+        # Check if there's an existing review for these documents to avoid duplicates
+        existing_review = None
+        
+        # If it's a processing -> completed transition, try to find the existing review
+        if review_dict.get('status') == 'completed' and review_dict.get('clinical_doc_id') and review_dict.get('compliance_doc_id'):
+            # Look for any review with the same document IDs that might be in 'processing' status
+            existing_reviews = db.query(Review).filter(
+                Review.clinical_doc_id == review_dict['clinical_doc_id'],
+                Review.compliance_doc_id == review_dict['compliance_doc_id']
+            ).all()
+            
+            if existing_reviews:
+                # Use the most recent one (likely the 'processing' review we want to update)
+                existing_review = existing_reviews[0]
+                logger.info(f"Found existing review {existing_review.id} to update from processing to completed")
+                # Use the existing review ID
+                review_dict['id'] = existing_review.id
+        
+        # Create or update the review
+        if existing_review:
+            # Update the existing review
+            updated_review = ComplianceRepository.update_review(db, existing_review.id, review_dict)
+            logger.info(f"Updated existing review {updated_review.id}")
+            new_review = updated_review
+        else:
+            # Create a new review
+            new_review = ComplianceRepository.create_review(db, review_dict)
+            logger.info(f"Creating new review {new_review.id}")
+        
+        # Check if we have cached analysis results for this document pair
         cache_key = f"{review_dict['clinical_doc_id']}:{review_dict['compliance_doc_id']}"
-        if cache_key in analysis_results and 'issues' in analysis_results[cache_key]:
-            # Include the issues in the review
-            issues_data = analysis_results[cache_key]['issues']
-            if isinstance(issues_data, list):
-                review_dict['issues_data'] = copy.deepcopy(issues_data)
-
-        # Add the review to our database
-        print(f"Creating new review {review_dict['id']}")
-        reviews_db.append(review_dict)
-        return review
+        
+        if review_dict.get('status') == 'completed' and cache_key in analysis_results_cache and 'issues' in analysis_results_cache[cache_key]:
+            # Get the issues from the cache
+            issues_data = analysis_results_cache[cache_key]['issues']
+            
+            if isinstance(issues_data, list) and len(issues_data) > 0:
+                # Add the issues to the review in the database
+                ComplianceRepository.add_issues_to_review(db, new_review.id, issues_data)
+                # Clear from cache once stored in the database
+                del analysis_results_cache[cache_key]
+        
+        # Return the review as a dictionary
+        return new_review.to_dict()
     except Exception as e:
-        print(f"Error creating review: {str(e)}")
+        logger.error(f"Error creating review: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

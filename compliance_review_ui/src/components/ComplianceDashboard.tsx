@@ -37,8 +37,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 const [success, setSuccess] = useState<string | null>(null);
-  // Counter for generating sequential review IDs - always start from 0
-  const [reviewCounter, setReviewCounter] = useState<number>(0);
+  // Reviews will use backend-generated UUIDs
 
   // Fetch documents from the backend API
   useEffect(() => {
@@ -67,33 +66,97 @@ const [success, setSuccess] = useState<string | null>(null);
     fetchDocuments();
   }, []);
 
-  // State for reviews data
+  // State for reviews data and loading state
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState<boolean>(false);
   
-  // Fetch reviews from the backend API
-  useEffect(() => {
-    const fetchReviews = async () => {
-      if (activeTab === 'reviews') {
-        try {
-          setLoadingReviews(true);
-          // Use the compliance API to fetch reviews
-          const reviewsData = await complianceAPI.getReviews();
-          setReviews(reviewsData || []);
-          
-          // Reset counter to 0 - always start from 0 as requested
-          setReviewCounter(0);
-        } catch (err) {
-          console.error('Error fetching reviews:', err);
-          setReviews([]);
-        } finally {
-          setLoadingReviews(false);
+  // Track reviews with processing status to update individually
+  const [processingReviews, setProcessingReviews] = useState<{[key: string]: boolean}>({});
+  
+  // Initial fetch to load all reviews - only called when tab changes or component mounts
+  const fetchAllReviews = async () => {
+    try {
+      setLoadingReviews(true);
+      const reviewsData = await complianceAPI.getReviews();
+      setReviews(reviewsData || []);
+      
+      // Track which reviews are in processing state
+      const processing = {};
+      reviewsData.forEach(review => {
+        if (review.status === 'processing') {
+          processing[review.id] = true;
         }
-      }
-    };
+      });
+      setProcessingReviews(processing);
+    } catch (err) {
+      console.error('Error fetching all reviews:', err);
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+  
+  // Function to check status of individual processing reviews
+  const checkProcessingReviews = async () => {
+    // Get IDs of all processing reviews
+    const processingIds = Object.keys(processingReviews);
     
-    fetchReviews();
+    if (processingIds.length === 0) return;
+    
+    try {
+      // Fetch only the processing reviews to check their status
+      const updatedReviews = await complianceAPI.getReviews();
+      let hasStatusChanges = false;
+      
+      // Update only reviews that changed status
+      setReviews(prevReviews => {
+        return prevReviews.map(review => {
+          const updatedReview = updatedReviews.find(r => r.id === review.id);
+          
+          // If this review was processing and now it's complete
+          if (updatedReview && processingReviews[review.id] && updatedReview.status === 'completed') {
+            hasStatusChanges = true;
+            return updatedReview; // Return the updated review
+          }
+          
+          return review; // Keep the existing review unchanged
+        });
+      });
+      
+      // Update processing reviews tracking if any changed to completed
+      if (hasStatusChanges) {
+        setProcessingReviews(prev => {
+          const updated = {...prev};
+          updatedReviews.forEach(review => {
+            if (updated[review.id] && review.status === 'completed') {
+              delete updated[review.id]; // Remove from processing
+            }
+          });
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error('Error checking processing reviews:', err);
+    }
+  };
+
+  // Fetch reviews initial load and track processing reviews
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      fetchAllReviews();
+    }
   }, [activeTab]);
+  
+  // Set up polling only for processing reviews - much more efficient
+  useEffect(() => {
+    if (activeTab === 'reviews' && Object.keys(processingReviews).length > 0) {
+      const statusCheckInterval = setInterval(() => {
+        checkProcessingReviews();
+      }, 3000); // Check every 3 seconds
+      
+      return () => clearInterval(statusCheckInterval);
+    }
+  }, [activeTab, processingReviews]);
 
   const handleDocumentSelect = (doc: DocumentInfo) => {
     console.log('Selected document:', doc);
@@ -139,51 +202,84 @@ const [success, setSuccess] = useState<string | null>(null);
       try {
         setIsAnalyzing(true);
         
-        // Call the backend API to analyze compliance
+        // Switch to the Reviews tab first to show analysis progress
+        setActiveTab('reviews');
+        
+        // Create review with 'processing' status before analysis
+        const placeholderUuid = 'frontend-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        const now = new Date();
+        const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+        
+        // Create initial review with processing status
+        await complianceAPI.createReview({
+          id: placeholderUuid,
+          clinical_doc_id: selectedClinicalDoc.id,
+          compliance_doc_id: selectedComplianceDoc.id,
+          clinicalDoc: selectedClinicalDoc.title,
+          complianceDoc: selectedComplianceDoc.title,
+          status: 'processing', // Show as processing initially
+          issues: 0,
+          highConfidenceIssues: 0,
+          lowConfidenceIssues: 0,
+          created: formattedDate
+        });
+        
+        // With polling enabled, we don't need to manually fetch reviews here
+        
+        // Now call the backend API to analyze compliance (this might take time)
         const complianceResult = await complianceAPI.analyzeCompliance(
           selectedClinicalDoc.id,
           selectedComplianceDoc.id
         );
         
-        // Create a review record in the backend
-        // Generate a sequential review ID in the format R-00000
-        const reviewId = `R-${reviewCounter.toString().padStart(5, '0')}`;
-        // Increment the counter for the next review
-        setReviewCounter(reviewCounter + 1);
-        const now = new Date();
-        const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-        
         // Count high and low confidence issues
         const highConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'high').length;
         const lowConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'low').length;
         
+        // Update the review with the analysis results
         await complianceAPI.createReview({
-          id: reviewId,
+          id: placeholderUuid, // Same ID to update the existing review
           clinical_doc_id: selectedClinicalDoc.id,
           compliance_doc_id: selectedComplianceDoc.id,
           clinicalDoc: selectedClinicalDoc.title,
           complianceDoc: selectedComplianceDoc.title,
-          status: 'completed',
+          status: 'completed', // Now marked as completed
           issues: complianceResult.issues.length,
           highConfidenceIssues,
           lowConfidenceIssues,
           created: formattedDate
         });
         
-        // If successful, proceed with the review
-        onStartReview(selectedClinicalDoc, selectedComplianceDoc);
+        // Refresh the reviews list again to show the completed review
+        await fetchAllReviews();
+        
+        // Set success message
+        setSuccess(`Analysis complete. ${complianceResult.issues.length} issue(s) found.`);
+        setTimeout(() => setSuccess(null), 5000); // Clear after 5 seconds
       } catch (error) {
         console.error('Error analyzing compliance:', error);
         setError('Failed to analyze compliance. Please try again.');
       } finally {
+        // Finally, set analyzing to false
         setIsAnalyzing(false);
+
+        // Clear selections and stay on reviews tab
+        setSelectedDocs([]); // Using the correct state setter
+        setSelectedClinicalDoc(null);
+        setSelectedComplianceDoc(null);
       }
     }
   };
 
-  // Handle continuing an existing review
+  // Handle continuing an existing review - this explicitly opens the document viewer
   const handleContinueReview = async (review: any) => {
     try {
+      // Only allow continuing if the review is completed
+      if (review.status !== 'completed') {
+        setError('This review is still processing. Please wait until it completes.');
+        return;
+      }
+      
       setIsAnalyzing(true);
       console.log('Continuing review:', review);
       
@@ -212,12 +308,26 @@ const [success, setSuccess] = useState<string | null>(null);
         updated: review.created || new Date().toISOString()
       };
       
+      // IMPORTANT: Preload the compliance issues before navigation
+      // This ensures we don't show an empty review first
+      const issuesResponse = await complianceAPI.getIssuesByReviewId(review.id);
+      
+      if (!issuesResponse || !issuesResponse.length) {
+        console.log('Preloading issues for review:', review.id);
+        // If no issues are found for some reason, fetch them using document IDs
+        await complianceAPI.analyzeCompliance(
+          clinicalDoc.id,
+          complianceDoc.id,
+          review.id // Pass review ID for association
+        );
+      }
+      
       // Set the selected documents
       setSelectedClinicalDoc(clinicalDoc);
       setSelectedComplianceDoc(complianceDoc);
       
-      // If successful, proceed with the review
-      onStartReview(clinicalDoc, complianceDoc);
+      // Now that we've preloaded the issues data, navigate to the document viewer
+      onStartReview(clinicalDoc, complianceDoc, review.id);
     } catch (error) {
       console.error('Error continuing review:', error);
       setError('Failed to continue review. Please try again.');
@@ -422,7 +532,7 @@ const [success, setSuccess] = useState<string | null>(null);
 
       {/* Documents Table */}
       {activeTab === 'documents' && (
-        <div>
+        <div className="h-[calc(100vh-200px)] flex flex-col overflow-hidden">
           {/* Upload Buttons Row */}
           <div className="flex justify-between mb-6">
             <div className="flex-1 mr-4">
@@ -452,11 +562,11 @@ const [success, setSuccess] = useState<string | null>(null);
           </div>
 
           {/* Documents Lists */}
-          <div className="flex">
+          <div className="flex flex-1 overflow-hidden">
             {/* Clinical Documents */}
-            <div className="flex-1 mr-4">
+            <div className="flex-1 mr-4 flex flex-col overflow-hidden">
               <h3 className="text-lg font-semibold mb-4 text-blue-700">Clinical Documents</h3>
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-300px)]">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr className="text-left">
@@ -520,9 +630,9 @@ const [success, setSuccess] = useState<string | null>(null);
             </div>
 
             {/* Compliance Documents */}
-            <div className="flex-1 ml-4">
+            <div className="flex-1 ml-4 flex flex-col overflow-hidden">
               <h3 className="text-lg font-semibold mb-4 text-green-700">Compliance Documents</h3>
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-300px)]">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr className="text-left">
@@ -615,7 +725,7 @@ const [success, setSuccess] = useState<string | null>(null);
               No reviews found. Start a compliance review to see results here.
             </div>
           ) : (
-            <div>
+            <div className="h-[calc(100vh-250px)] overflow-auto">
               <table className="w-full">
                 <thead>
                   <tr className="text-left">
