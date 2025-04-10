@@ -70,6 +70,9 @@ class ComplianceIssue(Base):
     # Additional metadata
     metadata_json = Column(Text)  # Stored as JSON
     
+    # Issue status (accepted, rejected, or pending)
+    status = Column(String, default='pending')  # 'accepted', 'rejected', or 'pending'
+    
     # Relationships
     review = relationship("Review", back_populates="issues")
     decisions = relationship("Decision", back_populates="issue", cascade="all, delete-orphan")
@@ -88,7 +91,8 @@ class ComplianceIssue(Base):
             "clinical_text_end_char": self.clinical_text_end_char,
             "compliance_text_start_char": self.compliance_text_start_char,
             "compliance_text_end_char": self.compliance_text_end_char,
-            "metadata": self.metadata_json
+            "metadata": self.metadata_json,
+            "status": self.status  # Include issue status in the response
         }
 
 class Decision(Base):
@@ -101,6 +105,7 @@ class Decision(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     issue_id = Column(String, ForeignKey("compliance_issues.id"), nullable=False)
     action = Column(String, nullable=False)  # "accepted" or "rejected"
+    applied_change = Column(Text)  # Stores the text that was applied when accepted
     comments = Column(Text)
     timestamp = Column(DateTime, default=datetime.datetime.now)
     
@@ -113,6 +118,7 @@ class Decision(Base):
             "id": self.id,
             "issue_id": self.issue_id,
             "action": self.action,
+            "applied_change": self.applied_change,
             "comments": self.comments,
             "timestamp": self.timestamp.strftime("%b %d, %Y, %I:%M %p")
         }

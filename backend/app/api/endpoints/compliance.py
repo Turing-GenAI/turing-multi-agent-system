@@ -461,3 +461,246 @@ async def apply_suggestion(request: ApplySuggestionRequest):
     except Exception as e:
         logger.error(f"Error applying suggestion: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/update-issue-statuses/")
+def update_issue_statuses(issue_statuses: List[Dict[str, Any]], db: Session = Depends(get_db)):
+    """
+    Update the status of multiple compliance issues.
+    This ensures that when the document is reopened, the system knows which issues have been addressed.
+    
+    Args:
+        issue_statuses: List of dictionaries with issue_id and status fields
+        db: Database session dependency
+        
+    Returns:
+        List of updated issues
+    """
+    try:
+        logger.info(f"Updating status for {len(issue_statuses)} issues")
+        
+        # Normalize keys if needed (handle both camelCase and snake_case)
+        normalized_updates = []
+        for status_update in issue_statuses:
+            issue_id = status_update.get("issue_id") or status_update.get("issueId")
+            status = status_update.get("status")
+            
+            if not issue_id or not status:
+                continue
+                
+            normalized_updates.append({
+                "issue_id": issue_id,
+                "status": status
+            })
+        
+        # Update the issue statuses
+        updated_issues = ComplianceRepository.update_issues_status(db, normalized_updates)
+        
+        logger.info(f"Successfully updated {len(updated_issues)} issue statuses")
+        return [issue.to_dict() for issue in updated_issues]
+    except Exception as e:
+        logger.error(f"Error updating issue statuses: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/update-review-content/{review_id}")
+def update_review_content(review_id: str, content_data: Dict[str, str], db: Session = Depends(get_db)):
+    """
+    Update the document content of a review to save applied changes.
+    This ensures that when the document is reopened, the applied changes are still visible.
+    
+    Args:
+        review_id: ID of the review to update
+        content_data: Dictionary containing the updated clinical_doc_content
+        db: Database session dependency
+        
+    Returns:
+        Updated review object
+    """
+    try:
+        logger.info(f"Updating document content for review {review_id}")
+        
+        # Get the review
+        review = ComplianceRepository.get_review_by_id(db, review_id)
+        
+        if not review:
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+        
+        # Update the clinical_doc_content field
+        if "clinical_doc_content" in content_data:
+            update_data = {
+                "clinical_doc_content": content_data["clinical_doc_content"]
+            }
+            
+            updated_review = ComplianceRepository.update_review(db, review_id, update_data)
+            
+            logger.info(f"Successfully updated document content for review {review_id}")
+            return updated_review.to_dict()
+        else:
+            raise HTTPException(status_code=400, detail="Missing clinical_doc_content field")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating review content: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/save-decisions/")
+def save_decisions(review_id: str, decisions: List[Dict[str, Any]], db: Session = Depends(get_db)):
+    """
+    Save a list of decisions on compliance issues, including any applied changes.
+    
+    Args:
+        review_id: ID of the review the decisions belong to
+        decisions: List of decision data dictionaries with issue_id, action, and applied_change
+        db: Database session dependency
+    
+    Returns:
+        Success message and count of decisions saved
+    """
+    try:
+        logger.info(f"Saving {len(decisions)} decisions for review {review_id}")
+        
+        saved_count = 0
+        for decision_data in decisions:
+            # Support both camelCase (issueId) and snake_case (issue_id) for flexibility
+            issue_id = decision_data.get("issue_id") or decision_data.get("issueId")
+            if not issue_id:
+                logger.warning(f"Missing issue_id in decision data: {decision_data}")
+                continue
+                
+            # Make sure the issue belongs to the specified review
+            issue = db.query(DbComplianceIssue).filter(DbComplianceIssue.id == issue_id).first()
+            
+            if not issue or issue.review_id != review_id:
+                logger.warning(f"Issue {issue_id} does not exist or does not belong to review {review_id}")
+                continue
+            
+            # Support both camelCase and snake_case for action field
+            action = decision_data.get("action") or decision_data.get("status")
+            if not action:
+                logger.warning(f"Missing action/status in decision data: {decision_data}")
+                continue
+                
+            # Save the decision with the applied change if present
+            # Get applied_change from either snake_case or camelCase
+            applied_change = decision_data.get("applied_change") or decision_data.get("appliedChange")
+            
+            ComplianceRepository.add_decision(db, {
+                "issue_id": issue_id,
+                "action": action,
+                "applied_change": applied_change,
+                "comments": decision_data.get("comments")
+            })
+            saved_count += 1
+            
+        # Update review status if all decisions have been made
+        review = ComplianceRepository.get_review_by_id(db, review_id)
+        if review and len(review.issues) > 0:
+            # Get all issues for this review
+            issues = ComplianceRepository.get_issues_for_review(db, review_id)
+            
+            # Count how many issues have decisions
+            issues_with_decisions = 0
+            for issue in issues:
+                if issue.decisions and len(issue.decisions) > 0:
+                    issues_with_decisions += 1
+            
+            # If all issues have decisions, mark the review as completed
+            if issues_with_decisions == len(issues):
+                ComplianceRepository.update_review(db, review_id, {"status": "completed"})
+                logger.info(f"Updated review {review_id} status to completed")
+        
+        return {"message": f"Successfully saved {saved_count} decisions", "saved_count": saved_count}
+    except Exception as e:
+        logger.error(f"Error saving decisions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/review/{review_id}/decisions/")
+def get_review_decisions(review_id: str, db: Session = Depends(get_db)):
+    """
+    Get all decisions for a specific review, including applied changes.
+    
+    Args:
+        review_id: The ID of the review to get decisions for
+    
+    Returns:
+        List of decisions with issue information
+    """
+    try:
+        logger.info(f"Getting decisions for review {review_id}")
+        
+        # Get all issues for this review
+        issues = ComplianceRepository.get_issues_for_review(db, review_id)
+        
+        if not issues:
+            return []
+            
+        # For each issue, get its decisions and format them with the issue details
+        result = []
+        for issue in issues:
+            # Get decisions for this issue
+            decisions = ComplianceRepository.get_decisions_for_issue(db, issue.id)
+            
+            # Format each decision with issue details
+            for decision in decisions:
+                result.append({
+                    "decision": decision.to_dict(),
+                    "issue": {
+                        "id": issue.id,
+                        "clinical_text": issue.clinical_text,
+                        "confidence": issue.confidence,
+                        "regulation": issue.regulation
+                    }
+                })
+                
+        # Sort by timestamp, newest first
+        result.sort(key=lambda x: datetime.datetime.strptime(x["decision"]["timestamp"], "%b %d, %Y, %I:%M %p"), reverse=True)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error getting decisions for review {review_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/issue/{issue_id}/decisions/")
+def get_issue_decisions(issue_id: str, db: Session = Depends(get_db)):
+    """
+    Get all decisions for a specific issue, including applied changes.
+    
+    Args:
+        issue_id: The ID of the issue to get decisions for
+    
+    Returns:
+        List of decisions for the issue
+    """
+    try:
+        logger.info(f"Getting decisions for issue {issue_id}")
+        
+        # Get the issue
+        issue = db.query(DbComplianceIssue).filter(DbComplianceIssue.id == issue_id).first()
+        
+        if not issue:
+            raise HTTPException(status_code=404, detail=f"Issue {issue_id} not found")
+            
+        # Get decisions for this issue
+        decisions = ComplianceRepository.get_decisions_for_issue(db, issue_id)
+        
+        # Format the response
+        result = [{
+            "decision": decision.to_dict(),
+            "issue": {
+                "id": issue.id,
+                "clinical_text": issue.clinical_text,
+                "confidence": issue.confidence,
+                "regulation": issue.regulation
+            }
+        } for decision in decisions]
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting decisions for issue {issue_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

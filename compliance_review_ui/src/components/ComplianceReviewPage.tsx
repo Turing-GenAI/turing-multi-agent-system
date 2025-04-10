@@ -54,6 +54,12 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   const [savingProgress, setSavingProgress] = useState<boolean>(false);
   const [progressSaved, setProgressSaved] = useState<boolean>(false);
   const [issuesLoaded, setIssuesLoaded] = useState<boolean>(issues.length > 0);
+  const [decisionHistory, setDecisionHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+  const [reviewId, setReviewId] = useState<string>('');
+  
+  // No longer needed as we always want to refresh history when the panel is opened
+  // const historyLoadedRef = React.useRef(false);
   
   const currentIssue = reviewedIssues[currentIssueIndex] || null;
   
@@ -66,7 +72,37 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       try {
         setLoading(true);
         
-        // Check if content is already provided in props first
+        // First check if we have a review ID and if there's a saved version with edits
+        if (reviewId) {
+          console.log(`Checking for edited document content for review ID: ${reviewId}`);
+          try {
+            const reviewData = await complianceAPI.getReviewById(reviewId);
+            
+            // Check if we have edited clinical document content saved
+            if (reviewData.clinical_doc_content) {
+              console.log('Found edited document content in the review record');
+              setClinicalContent(reviewData.clinical_doc_content);
+              
+              // Still need to set compliance content (unlikely to have edits)
+              if (reviewData.compliance_doc_content) {
+                setComplianceContent(reviewData.compliance_doc_content);
+              } else if (complianceDocument.content) {
+                setComplianceContent(complianceDocument.content);
+              } else if (complianceDocument.id) {
+                const complianceContentData = await documentAPI.getDocumentContent(complianceDocument.id);
+                setComplianceContent(complianceContentData);
+              }
+              
+              setContentLoaded(true);
+              return; // Exit early since we found the edited content
+            }
+          } catch (error) {
+            console.warn(`Could not retrieve review data for ${reviewId}:`, error);
+            // Continue with regular content loading on error
+          }
+        }
+        
+        // Check if content is already provided in props if we couldn't load from review
         if (clinicalDocument.content && complianceDocument.content) {
           console.log('Using document content from props (already in database)');
           setClinicalContent(clinicalDocument.content);
@@ -95,7 +131,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     };
     
     loadDocumentContent();
-  }, [clinicalDocument.id, clinicalDocument.content, complianceDocument.id, complianceDocument.content, contentLoaded]);
+  }, [clinicalDocument.id, clinicalDocument.content, complianceDocument.id, complianceDocument.content, contentLoaded, reviewId]);
   
   // Function to navigate between issues
   const navigateIssue = (direction: 'next' | 'prev') => {
@@ -237,7 +273,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   };
   
   // Finalize review and save decisions - used during ongoing review to save progress
-  const saveProgress = () => {
+  const saveProgress = async () => {
     // Show saving indicator
     setSavingProgress(true);
     
@@ -260,21 +296,62 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       const finalizedDecisions = allDecisions
         .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
         .map(({ issueId, status, appliedChange }) => ({
-          issueId,
-          status: status as 'accepted' | 'rejected',
-          appliedChange
+          issue_id: issueId, // Use snake_case to match backend expectations
+          action: status as 'accepted' | 'rejected',
+          applied_change: appliedChange
         }));
       
-      // Include the issue counts in the saved data - keep as in-progress
-      // Use setTimeout to ensure this doesn't block the UI or cause immediate state changes
-      setTimeout(() => {
-        onSaveDecisions(finalizedDecisions, {
-          totalIssues: reviewedIssues.length,
-          reviewedIssues: reviewedIssues.filter(issue => issue.status === 'accepted' || issue.status === 'rejected').length,
-          highConfidenceIssues,
-          lowConfidenceIssues
-        }, 'in-progress');
-      }, 0);
+      // Prepare issue statuses for saving (all issues, not just finalized ones)
+      const issueStatuses = reviewedIssues.map(issue => ({
+        issue_id: issue.id,
+        status: issue.status || 'pending'
+      }));
+      
+      // Generate the current state of the document with all applied changes
+      const updatedDocumentContent = generateFinalDocument();
+      
+      // Save all changes to the database
+      if (reviewId) {
+        console.log(`Saving changes to database using review ID: ${reviewId}`);
+        try {
+          // 1. Save the decisions first
+          if (finalizedDecisions.length > 0) {
+            await complianceAPI.saveDecisions(reviewId, finalizedDecisions);
+            console.log('Decisions saved successfully');
+          }
+          
+          // 2. Update all issue statuses (including pending ones)
+          // This ensures we know which issues were addressed when reopening
+          await complianceAPI.updateIssueStatuses(issueStatuses);
+          console.log('Issue statuses updated successfully');
+          
+          // 3. Update the review with the latest document content
+          await complianceAPI.updateReviewContent(reviewId, {
+            clinical_doc_content: updatedDocumentContent
+          });
+          console.log('Updated document content saved successfully');
+        } catch (err) {
+          console.error('Error saving to the database:', err);
+        }
+      } else {
+        console.error('Cannot save changes: No review ID found');
+      }
+      
+      // We'll no longer call onSaveDecisions here since it's closing the document viewer
+      // Instead, we're now directly saving to the database with the proper review ID
+      
+      // Calculate the counts for logging purposes
+      const counts = {
+        totalIssues: reviewedIssues.length,
+        reviewedIssues: reviewedIssues.filter(issue => issue.status === 'accepted' || issue.status === 'rejected').length,
+        highConfidenceIssues,
+        lowConfidenceIssues
+      };
+      
+      console.log('Decision counts:', counts);
+      
+      // Note: We're intentionally NOT calling onSaveDecisions here to prevent the document viewer from closing
+      // The onSaveDecisions callback will only be used when finalizing the review, not for saving progress
       
       // Show success message
       setProgressSaved(true);
@@ -578,6 +655,158 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     // Update the issues loaded state whenever reviewedIssues changes
     setIssuesLoaded(reviewedIssues.length > 0);
   }, [reviewedIssues]);
+
+  // Find review ID by clinical document ID on initial load
+  useEffect(() => {
+    const findReviewId = async () => {
+      if (clinicalDocument.id) {
+        try {
+          const reviews = await complianceAPI.getReviews();
+          const matchingReview = reviews.find(r => r.clinical_doc_id === clinicalDocument.id);
+          if (matchingReview && matchingReview.id) {
+            console.log(`Found review ID ${matchingReview.id} for document ${clinicalDocument.id}`);
+            setReviewId(matchingReview.id);
+          } else {
+            console.warn(`Could not find review ID for document ${clinicalDocument.id}`);
+          }
+        } catch (error) {
+          console.error('Error finding review ID:', error);
+        }
+      }
+    };
+    
+    findReviewId();
+  }, [clinicalDocument.id]);
+  
+  // Load saved issue statuses and applied changes when review ID is available
+  useEffect(() => {
+    if (!reviewId) return;
+    
+    const loadSavedIssueData = async () => {
+      try {
+        console.log(`Loading saved issue data for review ID: ${reviewId}`);
+        
+        // Get decision history to find applied changes
+        const decisions = await complianceAPI.getReviewDecisions(reviewId);
+        if (decisions && decisions.length > 0) {
+          console.log(`Found ${decisions.length} saved decisions`); 
+          
+          // Create a map to store the status of each issue
+          const issueStatusMap = new Map();
+          
+          // Create a map for applied changes
+          const savedAppliedChanges = new Map();
+          
+          // Process each decision to extract status and applied changes
+          decisions.forEach(item => {
+            // Store the status for each issue
+            if (item.issue && item.issue.id && item.decision.action) {
+              issueStatusMap.set(item.issue.id, item.decision.action);
+              
+              // If this is an accepted decision with an applied change, store it
+              if (item.decision.action === 'accepted' && 
+                  item.decision.applied_change && 
+                  item.issue.clinical_text) {
+                savedAppliedChanges.set(item.issue.clinical_text, item.decision.applied_change);
+                console.log(`Found applied change for issue ${item.issue.id}: ${item.decision.applied_change.substring(0, 30)}...`);
+              }
+            }
+          });
+          
+          // Update the reviewed issues with their status
+          if (issueStatusMap.size > 0) {
+            const updatedIssues = reviewedIssues.map(issue => {
+              if (issueStatusMap.has(issue.id)) {
+                return { ...issue, status: issueStatusMap.get(issue.id) };
+              }
+              return issue;
+            });
+            
+            console.log(`Updated ${issueStatusMap.size} issue statuses`);
+            setReviewedIssues(updatedIssues);
+          }
+          
+          // Update the appliedChanges map
+          if (savedAppliedChanges.size > 0) {
+            console.log(`Loaded ${savedAppliedChanges.size} applied changes`);
+            setAppliedChanges(savedAppliedChanges);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved issue data:', error);
+      }
+    };
+    
+    loadSavedIssueData();
+  }, [reviewId]);
+  
+  // Load decision history from API when history panel is opened
+  useEffect(() => {
+    if (showHistory && reviewId) {
+      const fetchDecisionHistory = async () => {
+        setLoadingHistory(true);
+        try {
+          console.log(`Fetching decision history for review ${reviewId}`);
+          const history = await complianceAPI.getReviewDecisions(reviewId);
+          
+          // Deduplicate history to show only latest decision per issue
+          const issueMap = new Map();
+          
+          // Process decisions in reverse timestamp order (newest first)
+          // This ensures we get the most recent decision for each issue
+          const sortedHistory = [...history].sort((a, b) => {
+            const dateA = new Date(a.decision.timestamp || 0).getTime();
+            const dateB = new Date(b.decision.timestamp || 0).getTime();
+            return dateB - dateA; // Descending order (newest first)
+          });
+          
+          // Keep only the newest decision for each issue
+          sortedHistory.forEach(item => {
+            if (item.issue && item.issue.id) {
+              // Only add if we haven't seen this issue before
+              if (!issueMap.has(item.issue.id)) {
+                issueMap.set(item.issue.id, item);
+              }
+            }
+          });
+          
+          // Convert map back to array
+          const deduplicatedHistory = Array.from(issueMap.values());
+          console.log(`Deduplicated history from ${history.length} to ${deduplicatedHistory.length} items`);
+          
+          // Set the deduplicated history
+          setDecisionHistory(deduplicatedHistory);
+          
+          // Also update the appliedChanges map with any stored changes
+          // We create a new Map instead of mutating the existing one
+          const newAppliedChanges = new Map();
+          deduplicatedHistory.forEach(item => {
+            if (item.decision.action === 'accepted' && item.decision.applied_change && item.issue.clinical_text) {
+              newAppliedChanges.set(item.issue.clinical_text, item.decision.applied_change);
+            }
+          });
+          
+          // Only update if we have changes to apply
+          if (newAppliedChanges.size > 0) {
+            setAppliedChanges(prev => {
+              // Create a new map that combines previous and new changes
+              const combined = new Map(prev);
+              newAppliedChanges.forEach((value, key) => {
+                combined.set(key, value);
+              });
+              return combined;
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching decision history:', error);
+        } finally {
+          setLoadingHistory(false);
+        }
+      };
+      
+      fetchDecisionHistory();
+    }
+  }, [showHistory, reviewId]); // Always fetch when showHistory changes
   
   return (
     <div className="flex-1 bg-white">
@@ -593,7 +822,10 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             </span>
           )}
           <button 
-            onClick={() => setShowHistory(!showHistory)}
+            onClick={() => {
+              // Toggle history view and ensure we refetch the latest data
+              setShowHistory(!showHistory);
+            }}
             className="px-3 py-1 text-sm rounded border hover:bg-gray-50"
           >
             {showHistory ? 'Hide History' : 'View History'}
@@ -825,41 +1057,66 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           {showHistory && (
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">Decision History</h3>
-              <div className="space-y-4">
-                {reviewedIssues
-                  .filter(issue => issue.status)
-                  .map((issue, index) => (
-                    <div key={issue.id} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">Issue #{index + 1}</h4>
-                        <div className="flex items-center gap-1">
-                          {issue.status === 'accepted' ? (
-                            <>
-                              <FiCheckCircle className="w-4 h-4 text-green-500" />
-                              <span className="text-sm text-green-600">Accepted</span>
-                            </>
-                          ) : (
-                            <>
-                              <FiXCircle className="w-4 h-4 text-red-500" />
-                              <span className="text-sm text-red-600">Rejected</span>
-                            </>
-                          )}
+              
+              {loadingHistory ? (
+                <div className="flex justify-center my-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {decisionHistory.length > 0 ? (
+                    decisionHistory.map((item, index) => (
+                      <div key={index} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="font-medium">Decision on Issue #{index + 1}</h4>
+                            <p className="text-xs text-gray-500">{item.decision.timestamp}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {item.decision.action === 'accepted' ? (
+                              <>
+                                <FiCheckCircle className="w-4 h-4 text-green-500" />
+                                <span className="text-sm text-green-600">Accepted</span>
+                              </>
+                            ) : (
+                              <>
+                                <FiXCircle className="w-4 h-4 text-red-500" />
+                                <span className="text-sm text-red-600">Rejected</span>
+                              </>
+                            )}
+                          </div>
                         </div>
+                        
+                        {/* Issue details */}
+                        <div className="mb-3">
+                          <p className="text-sm font-medium mb-1">Original Text:</p>
+                          <p className="text-sm bg-gray-100 p-2 rounded">{item.issue.clinical_text}</p>
+                        </div>
+                        
+                        {/* Show applied changes if the decision was accepted */}
+                        {item.decision.action === 'accepted' && item.decision.applied_change && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium mb-1">Applied Change:</p>
+                            <p className="text-sm bg-green-50 p-2 rounded border border-green-100">{item.decision.applied_change}</p>
+                          </div>
+                        )}
+                        
+                        {item.issue.regulation && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            Regulation: {item.issue.regulation}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm">{issue.clinical_text}</p>
-                      <div className="mt-2 text-xs text-gray-500">
-                        Regulation: {issue.regulation}
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <FiInfo className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No decisions have been saved yet</p>
+                      <p className="text-sm mt-2">Make changes and click "Save Progress" to record your decisions</p>
                     </div>
-                  ))}
-                
-                {reviewedIssues.filter(issue => issue.status).length === 0 && (
-                  <div className="text-center py-6 text-gray-500">
-                    <FiInfo className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No decisions have been made yet</p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

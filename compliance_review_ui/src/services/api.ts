@@ -101,5 +101,45 @@ export const complianceAPI = {
   getReviewById: async (reviewId: string) => {
     const response = await api.get(`/compliance/reviews/${reviewId}`);
     return response.data;
+  },
+  
+  // Save decisions for compliance issues (including applied changes)
+  saveDecisions: async (reviewId: string, decisions: Array<{
+    issueId: string;
+    action: 'accepted' | 'rejected';
+    applied_change?: string;
+    comments?: string;
+  }>) => {
+    const response = await api.post(`/compliance/save-decisions/?review_id=${reviewId}`, decisions);
+    return response.data;
+  },
+  
+  // Update the document content of a review to save applied changes
+  updateReviewContent: async (reviewId: string, contentData: {
+    clinical_doc_content: string;
+  }) => {
+    const response = await api.post(`/compliance/update-review-content/${reviewId}`, contentData);
+    return response.data;
+  },
+  
+  // Update the statuses of compliance issues (accepted, rejected, pending)
+  updateIssueStatuses: async (issueStatuses: Array<{
+    issue_id: string;
+    status: 'accepted' | 'rejected' | 'pending';
+  }>) => {
+    const response = await api.post('/compliance/update-issue-statuses/', issueStatuses);
+    return response.data;
+  },
+  
+  // Get all decisions for a specific review
+  getReviewDecisions: async (reviewId: string) => {
+    const response = await api.get(`/compliance/review/${reviewId}/decisions/`);
+    return response.data;
+  },
+  
+  // Get all decisions for a specific issue
+  getIssueDecisions: async (issueId: string) => {
+    const response = await api.get(`/compliance/issue/${issueId}/decisions/`);
+    return response.data;
   }
 };

@@ -198,6 +198,7 @@ class ComplianceRepository:
         decision = Decision(
             issue_id=decision_data['issue_id'],
             action=decision_data['action'],
+            applied_change=decision_data.get('applied_change'),
             comments=decision_data.get('comments')
         )
         
@@ -220,3 +221,54 @@ class ComplianceRepository:
             List of decision objects
         """
         return db.query(Decision).filter(Decision.issue_id == issue_id).order_by(Decision.timestamp.desc()).all()
+        
+    @staticmethod
+    def update_issue_status(db: Session, issue_id: str, status: str) -> Optional[ComplianceIssue]:
+        """
+        Update the status of a compliance issue
+        
+        Args:
+            db: Database session
+            issue_id: ID of the issue to update
+            status: New status (accepted, rejected, or pending)
+            
+        Returns:
+            Updated issue object or None if issue not found
+        """
+        issue = db.query(ComplianceIssue).filter(ComplianceIssue.id == issue_id).first()
+        
+        if not issue:
+            return None
+            
+        issue.status = status
+        db.commit()
+        db.refresh(issue)
+        
+        return issue
+        
+    @staticmethod
+    def update_issues_status(db: Session, issue_statuses: List[Dict[str, Any]]) -> List[ComplianceIssue]:
+        """
+        Batch update multiple issue statuses
+        
+        Args:
+            db: Database session
+            issue_statuses: List of dictionaries containing issue_id and status
+            
+        Returns:
+            List of updated issue objects
+        """
+        updated_issues = []
+        
+        for status_update in issue_statuses:
+            issue_id = status_update.get('issue_id')
+            status = status_update.get('status')
+            
+            if not issue_id or not status:
+                continue
+                
+            issue = ComplianceRepository.update_issue_status(db, issue_id, status)
+            if issue:
+                updated_issues.append(issue)
+                
+        return updated_issues
