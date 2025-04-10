@@ -16,9 +16,9 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=auditcopilot
+
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/documents:/app/documents
+      - ./backend:/app 
     depends_on:
       - postgres
     networks:
@@ -33,7 +33,12 @@ services:
     image: audit-copilot/compliance-ui:latest
     container_name: audit-copilot-compliance-ui
     ports:
-      - "3000:80"
+    - "5173:5173"  # match Vite dev port
+    working_dir: /app
+    volumes:
+    - ./compliance_review_ui:/app
+    - /app/node_modules  # prevents host node_modules from overwriting container's
+    command: ["npm", "run", "dev"]   
     depends_on:
       - backend
     networks:

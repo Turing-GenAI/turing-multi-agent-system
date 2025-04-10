@@ -14,6 +14,7 @@ export interface ComplianceReviewResponse {
   clinical_doc_id: string;
   compliance_doc_id: string;
   issues: ComplianceIssue[];
+  reviewId?: string;
 }
 
 export interface Document {
@@ -23,6 +24,7 @@ export interface Document {
   filename: string;
   path: string;
   size: number;
+  content?: string;
 }
 
 export interface ComplianceDecision {

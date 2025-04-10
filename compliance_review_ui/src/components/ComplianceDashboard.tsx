@@ -401,6 +401,50 @@ const [success, setSuccess] = useState<string | null>(null);
     }
   };
 
+  const [showAlertModal, setShowAlertModal] = useState<boolean>(false);
+  const [selectedReviewForAlert, setSelectedReviewForAlert] = useState<any>(null);
+  const [emailAddresses, setEmailAddresses] = useState<string>('');
+  const [sendingAlert, setSendingAlert] = useState<boolean>(false);
+  
+  // Handle sending alerts to document owners
+  const handleSendAlert = async () => {
+    if (!selectedReviewForAlert || !emailAddresses.trim()) return;
+    
+    try {
+      setSendingAlert(true);
+      
+      // Call the API to send the alert
+      await complianceAPI.sendReviewAlert({
+        review_id: selectedReviewForAlert.id,
+        email_addresses: emailAddresses.split(',').map(email => email.trim()),
+        clinical_doc: selectedReviewForAlert.clinicalDoc,
+        compliance_doc: selectedReviewForAlert.complianceDoc,
+        issues: selectedReviewForAlert.issues || 0,
+        high_confidence_issues: selectedReviewForAlert.highConfidenceIssues || 0,
+        low_confidence_issues: selectedReviewForAlert.lowConfidenceIssues || 0
+      });
+      
+      // Show success message
+      setSuccess('Alert sent successfully to document owners.');
+      
+      // Close the modal and reset state
+      setShowAlertModal(false);
+      setSelectedReviewForAlert(null);
+      setEmailAddresses('');
+    } catch (error) {
+      console.error('Error sending alert:', error);
+      setError('Failed to send alert. Please try again.');
+    } finally {
+      setSendingAlert(false);
+    }
+  };
+  
+  // Function to open alert modal
+  const handleOpenAlertModal = (review: any) => {
+    setSelectedReviewForAlert(review);
+    setShowAlertModal(true);
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -768,6 +812,13 @@ const [success, setSuccess] = useState<string | null>(null);
                           Continue Review
                         </button>
                         <button 
+                          className="text-sm text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded-md hover:bg-orange-50 flex items-center"
+                          onClick={() => handleOpenAlertModal(review)}
+                        >
+                          <FiAlertTriangle className="w-3 h-3 mr-1" />
+                          Alert Owners
+                        </button>
+                        <button 
                           className="text-sm text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded-md hover:bg-red-50 flex items-center"
                           onClick={() => handleDeleteReview(review)}
                           disabled={reviewsBeingDeleted.includes(review.id)}
@@ -781,6 +832,67 @@ const [success, setSuccess] = useState<string | null>(null);
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {/* Alert Modal */}
+          {showAlertModal && selectedReviewForAlert && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-[500px] max-w-full">
+                <h3 className="text-lg font-semibold mb-4">Alert Document Owners</h3>
+                
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">Review Details:</p>
+                  <div className="bg-gray-50 p-3 rounded text-sm">
+                    <p><strong>Clinical Document:</strong> {selectedReviewForAlert.clinicalDoc}</p>
+                    <p><strong>Compliance Document:</strong> {selectedReviewForAlert.complianceDoc}</p>
+                    <p><strong>Issues Found:</strong> {selectedReviewForAlert.issues || 0} total 
+                      ({selectedReviewForAlert.highConfidenceIssues || 0} high confidence, 
+                      {selectedReviewForAlert.lowConfidenceIssues || 0} low confidence)</p>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Document Owner Email Addresses
+                    <span className="text-gray-500 font-normal"> (comma-separated)</span>
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    value={emailAddresses}
+                    onChange={(e) => setEmailAddresses(e.target.value)}
+                    placeholder="e.g., owner1@example.com, owner2@example.com"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-3">
+                  <button
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md"
+                    onClick={() => {
+                      setShowAlertModal(false);
+                      setSelectedReviewForAlert(null);
+                      setEmailAddresses('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    onClick={handleSendAlert}
+                    disabled={sendingAlert || !emailAddresses.trim()}
+                  >
+                    {sendingAlert ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>Send Alert</>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>

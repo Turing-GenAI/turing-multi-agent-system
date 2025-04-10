@@ -147,5 +147,19 @@ export const complianceAPI = {
   deleteReview: async (reviewId: string) => {
     const response = await api.delete(`/compliance/review/${reviewId}/`);
     return response.data;
+  },
+  
+  // Send alert to document owners about review results
+  sendReviewAlert: async (data: {
+    review_id: string;
+    email_addresses: string[];
+    clinical_doc: string;
+    compliance_doc: string;
+    issues: number;
+    high_confidence_issues: number;
+    low_confidence_issues: number;
+  }) => {
+    const response = await api.post('/compliance/send-review-alert/', data);
+    return response.data;
   }
 };
