@@ -7,20 +7,21 @@ import logging
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Get the database directory
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATABASE_DIR = os.path.join(BASE_DIR, "data")
+# Read database connection parameters from environment variables
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+DB_NAME = os.getenv("DB_NAME", "auditcopilot")
 
-# Create the database directory if it doesn't exist
-os.makedirs(DATABASE_DIR, exist_ok=True)
+# Log database connection (without password)
+logger.info(f"Connecting to PostgreSQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")
 
-# SQLite database URL
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(DATABASE_DIR, 'compliance_reviews.db')}"
+# PostgreSQL database URL
+SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Create SQLAlchemy engine
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

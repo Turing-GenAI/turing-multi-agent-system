@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 # Import database modules
 from app.db.database import get_db
-from app.db.models.models import Base, Review, ComplianceIssue as DbComplianceIssue
+from app.db.models.models import Base, Review, ComplianceIssue as DbComplianceIssue, Decision
 from app.db.repositories.compliance_repository import ComplianceRepository
 
 from app.models.compliance import (
@@ -704,3 +704,51 @@ def get_issue_decisions(issue_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting decisions for issue {issue_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/review/{review_id}/")
+def delete_review(review_id: str, db: Session = Depends(get_db)):
+    """
+    Hard delete a review and all associated data (issues, decisions).
+    This permanently removes the record from the database.
+    
+    Args:
+        review_id: ID of the review to delete
+        db: Database session dependency
+        
+    Returns:
+        Success message
+    """
+    try:
+        logger.info(f"Deleting review {review_id}")
+        
+        # Get the review
+        review = ComplianceRepository.get_review_by_id(db, review_id)
+        
+        if not review:
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+        
+        # First, get all issues for this review and delete their decisions
+        issues = ComplianceRepository.get_issues_for_review(db, review_id)
+        for issue in issues:
+            # Delete decisions for this issue
+            db.query(Decision).filter(Decision.issue_id == issue.id).delete()
+        
+        # Delete all issues for this review
+        db.query(DbComplianceIssue).filter(DbComplianceIssue.review_id == review_id).delete()
+        
+        # Delete the review itself
+        db.delete(review)
+        
+        # Commit changes
+        db.commit()
+        
+        return {"success": True, "message": f"Review {review_id} successfully deleted", "review_id": review_id}
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404) directly
+        raise
+    except Exception as e:
+        # Log and handle other exceptions
+        logger.error(f"Error deleting review {review_id}: {str(e)}", exc_info=True)
+        db.rollback()  # Roll back any uncommitted changes
+        raise HTTPException(status_code=500, detail=f"Failed to delete review: {str(e)}")

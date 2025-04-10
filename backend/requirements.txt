@@ -16,3 +16,4 @@ rapidfuzz==3.13.0  # Replaced fuzzywuzzy with faster/better rapidfuzz
 # Added for database support
 sqlalchemy==2.0.40
 alembic==1.15.2
+psycopg2-binary==2.9.9  # PostgreSQL driver

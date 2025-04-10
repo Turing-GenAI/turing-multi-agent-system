@@ -141,5 +141,11 @@ export const complianceAPI = {
   getIssueDecisions: async (issueId: string) => {
     const response = await api.get(`/compliance/issue/${issueId}/decisions/`);
     return response.data;
+  },
+  
+  // Delete a compliance review (soft delete)
+  deleteReview: async (reviewId: string) => {
+    const response = await api.delete(`/compliance/review/${reviewId}/`);
+    return response.data;
   }
 };

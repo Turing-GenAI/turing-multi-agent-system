@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { documentAPI, complianceAPI } from '../services/api';
 import { Document } from '../types/compliance';
-import { FiUpload, FiFileText, FiCheck, FiAlertTriangle, FiPlus, FiMinus, FiRefreshCw } from 'react-icons/fi';
+import { FiUpload, FiFileText, FiCheck, FiAlertTriangle, FiPlus, FiMinus, FiTrash2, FiLoader } from 'react-icons/fi';
 import * as Checkbox from '@radix-ui/react-checkbox';
 
 interface DocumentInfo {
@@ -73,6 +73,9 @@ const [success, setSuccess] = useState<string | null>(null);
   // Track reviews with processing status to update individually
   const [processingReviews, setProcessingReviews] = useState<{[key: string]: boolean}>({});
   
+  // Track reviews that are being deleted
+  const [reviewsBeingDeleted, setReviewsBeingDeleted] = useState<string[]>([]);
+  
   // Initial fetch to load all reviews - only called when tab changes or component mounts
   const fetchAllReviews = async () => {
     try {
@@ -106,6 +109,8 @@ const [success, setSuccess] = useState<string | null>(null);
     try {
       // Fetch only the processing reviews to check their status
       const updatedReviews = await complianceAPI.getReviews();
+      // Also check for any reviews being deleted
+      const deletingIds = Object.keys(deletingReviews);
       let hasStatusChanges = false;
       
       // Update only reviews that changed status
@@ -346,87 +351,36 @@ const [success, setSuccess] = useState<string | null>(null);
     }
   };
 
-  // Handle refreshing the analysis with force refresh
-  const handleRefreshAnalysis = async (review: any) => {
+  // Handle deleting a review
+  const handleDeleteReview = async (review: any) => {
+    // Show confirmation dialog before deleting
+    if (!window.confirm(`Are you sure you want to permanently delete this review?\n\nClinical Document: ${review.clinicalDoc}\nCompliance Document: ${review.complianceDoc}\n\nThis action cannot be undone.`)) {
+      return; // User cancelled the deletion
+    }
+    
     try {
-      setIsAnalyzing(true);
+      // Set loading state for this specific review
+      const reviewId = review.id;
+      setReviewsBeingDeleted(prev => [...prev, reviewId]);
       setError(null);
       setSuccess(null);
-      console.log('Refreshing analysis for review:', review);
+      console.log('Deleting review:', reviewId);
       
-      // Create document objects from the review data
-      const clinicalDoc: DocumentInfo = {
-        id: review.clinical_doc_id || review.id.replace('review_', 'clinical_'),
-        title: review.clinicalDoc,
-        type: 'clinical',
-        filename: '',
-        path: '',
-        size: 0,
-        format: 'pdf', // Default format
-        created: review.created || new Date().toISOString(),
-        updated: review.created || new Date().toISOString()
-      };
+      // Call the delete API endpoint
+      await complianceAPI.deleteReview(reviewId);
       
-      const complianceDoc: DocumentInfo = {
-        id: review.compliance_doc_id || review.id.replace('review_', 'compliance_'),
-        title: review.complianceDoc,
-        type: 'compliance',
-        filename: '',
-        path: '',
-        size: 0,
-        format: 'pdf', // Default format
-        created: review.created || new Date().toISOString(),
-        updated: review.created || new Date().toISOString()
-      };
-      
-      // Call the backend API to analyze compliance with force_refresh set to true
-      const complianceResult = await complianceAPI.analyzeCompliance(
-        clinicalDoc.id,
-        complianceDoc.id,
-        true // Force refresh
-      );
-      
-      // Count high and low confidence issues
-      const highConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'high').length;
-      const lowConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'low').length;
-      
-      // Update the existing review with new counts
-      await complianceAPI.createReview({
-        id: review.id,
-        clinical_doc_id: clinicalDoc.id,
-        compliance_doc_id: complianceDoc.id,
-        clinicalDoc: clinicalDoc.title,
-        complianceDoc: complianceDoc.title,
-        status: 'completed',
-        issues: complianceResult.issues.length,
-        highConfidenceIssues,
-        lowConfidenceIssues,
-        created: review.created
-      });
-      
-      // Refresh the reviews list by calling the useEffect hook's function
-      const fetchReviews = async () => {
-        try {
-          setLoadingReviews(true);
-          const reviewsData = await complianceAPI.getReviews();
-          setReviews(reviewsData || []);
-        } catch (err) {
-          console.error('Error fetching reviews:', err);
-          setReviews([]);
-        } finally {
-          setLoadingReviews(false);
-        }
-      };
-      await fetchReviews();
+      // Remove the deleted review from the local state
+      setReviews(prevReviews => prevReviews.filter(r => r.id !== reviewId));
       
       // Show success message
-      setSuccess(`Analysis refreshed successfully! Found ${complianceResult.issues.length} issues.`);
+      setSuccess(`Review deleted successfully.`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('Error refreshing analysis:', error);
-      setError('Failed to refresh analysis. Please try again.');
+      console.error('Error deleting review:', error);
+      setError('Failed to delete review. Please try again.');
     } finally {
-      setIsAnalyzing(false);
+      // Remove from loading state
+      setReviewsBeingDeleted(prev => prev.filter(id => id !== review.id));
     }
   };
 
@@ -775,6 +729,16 @@ const [success, setSuccess] = useState<string | null>(null);
                             <FiCheck className="mr-1 w-3 h-3" />
                             Completed
                           </>
+                        ) : reviewsBeingDeleted.includes(review.id) ? (
+                          <>
+                            <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                            Deleting...
+                          </>
+                        ) : processingReviews[review.id] ? (
+                          <>
+                            <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                            Processing...
+                          </>
                         ) : (
                           <>
                             <FiAlertTriangle className="mr-1 w-3 h-3" />
@@ -804,16 +768,12 @@ const [success, setSuccess] = useState<string | null>(null);
                           Continue Review
                         </button>
                         <button 
-                          className="text-sm text-gray-600 hover:text-gray-800 px-2 py-1 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center"
-                          onClick={() => handleRefreshAnalysis(review)}
-                          disabled={isAnalyzing}
+                          className="text-sm text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded-md hover:bg-red-50 flex items-center"
+                          onClick={() => handleDeleteReview(review)}
+                          disabled={reviewsBeingDeleted.includes(review.id)}
                         >
-                          {isAnalyzing ? (
-                            <div className="animate-spin h-3 w-3 border-b-2 border-gray-600 rounded-full mr-1"></div>
-                          ) : (
-                            <FiRefreshCw className="w-3 h-3 mr-1" />
-                          )}
-                          Refresh
+                          <FiTrash2 className="w-3 h-3 mr-1" />
+                          Delete
                         </button>
                       </div>
                     </td>
