@@ -31,12 +31,16 @@ from app.services.document_service import document_service
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Initialize the database on startup
+# Initialize the database on startup - this creates tables based on our models
 from app.db.database import engine
 Base.metadata.create_all(bind=engine)
 
-# For caching analysis results temporarily to avoid duplicate analysis
+# Document content storage is a core part of the design
+# The Review model includes clinical_doc_content and compliance_doc_content fields
+
+# For caching analysis results and document content temporarily to avoid duplicate API calls
 analysis_results_cache: Dict[str, Any] = {}
+document_content_cache: Dict[str, str] = {}
 
 router = APIRouter()
 
@@ -157,12 +161,16 @@ async def analyze_compliance_by_ids(clinical_doc_id: str, compliance_doc_id: str
             "issues": issues
         }
 
-        # Only store if we have real issues
-        if isinstance(issues, list) and len(issues) > 0:
-            logger.info(f"Caching analysis with {len(issues)} issues")
+        # Always store results in cache, even if there are no issues
+        # This ensures consistency when retrieving reviews later
+        if isinstance(issues, list):
+            if len(issues) > 0:
+                logger.info(f"Caching analysis with {len(issues)} issues")
+            else:
+                logger.info(f"Caching analysis with 0 issues (compliant document)")
             analysis_results_cache[cache_key] = result
         else:
-            logger.warning(f"Warning: Analysis completed but generated no issues")
+            logger.warning(f"Warning: Analysis completed but issues is not a list")
 
         return result
     except Exception as e:
@@ -211,6 +219,68 @@ async def get_compliance_reviews(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/reviews/{review_id}", response_model=dict)
+async def get_review_by_id(review_id: str, db: Session = Depends(get_db)):
+    """
+    Get a review by ID, including its document content.
+    This helps avoiding repeated API calls for document content.
+    
+    Args:
+        review_id: The ID of the review to retrieve
+        
+    Returns:
+        The review with document content
+    """
+    try:
+        # Get the review from the database
+        review = ComplianceRepository.get_review_by_id(db, review_id)
+        
+        if not review:
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+            
+        # Get the issues for this review
+        issues = ComplianceRepository.get_issues_for_review(db, review_id)
+        
+        # Create the complete review response with issues
+        review_dict = review.to_dict()
+        review_dict["issues"] = [issue.to_dict() for issue in issues]
+        
+        # Add document content from cache or fetch it
+        clinical_doc_id = review.clinical_doc_id
+        compliance_doc_id = review.compliance_doc_id
+        
+        # Check if we need to fetch and cache document content
+        if clinical_doc_id not in document_content_cache:
+            try:
+                logger.info(f"Fetching clinical document content for {clinical_doc_id}")
+                content = document_service.get_document_content(clinical_doc_id)
+                document_content_cache[clinical_doc_id] = content
+            except Exception as e:
+                logger.error(f"Error fetching clinical document content: {str(e)}")
+                document_content_cache[clinical_doc_id] = ""  # Cache empty string to prevent repeated failures
+        
+        if compliance_doc_id not in document_content_cache:
+            try:
+                logger.info(f"Fetching compliance document content for {compliance_doc_id}")
+                content = document_service.get_document_content(compliance_doc_id)
+                document_content_cache[compliance_doc_id] = content
+            except Exception as e:
+                logger.error(f"Error fetching compliance document content: {str(e)}")
+                document_content_cache[compliance_doc_id] = ""  # Cache empty string to prevent repeated failures
+        
+        # Add content to the response
+        review_dict["clinical_doc_content"] = document_content_cache.get(clinical_doc_id, "")
+        review_dict["compliance_doc_content"] = document_content_cache.get(compliance_doc_id, "")
+        
+        logger.info(f"Returning review {review_id} with document content")
+        return review_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting review {review_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/reviews/{review_id}/issues", response_model=dict)
 async def get_review_issues(review_id: str, db: Session = Depends(get_db)):
     """
@@ -239,6 +309,7 @@ async def get_review_issues(review_id: str, db: Session = Depends(get_db)):
 async def create_compliance_review(review: ComplianceReview, db: Session = Depends(get_db)):
     """
     Create or update a compliance review record in the database.
+    Also fetches and stores document content to prevent repeated API calls.
 
     Args:
         review: The compliance review data
@@ -268,6 +339,56 @@ async def create_compliance_review(review: ComplianceReview, db: Session = Depen
                 logger.info(f"Found existing review {existing_review.id} to update from processing to completed")
                 # Use the existing review ID
                 review_dict['id'] = existing_review.id
+                
+        # Fetch and store document content to avoid repeated API calls
+        # Now that we have proper database columns thanks to our migration system,
+        # we can store the content properly in the database
+        
+        # First check if document is already in the cache to avoid API calls
+        clinical_doc_id = review_dict['clinical_doc_id']
+        compliance_doc_id = review_dict['compliance_doc_id']
+        
+        # Determine if we need to fetch content
+        should_fetch_clinical = clinical_doc_id not in document_content_cache
+        should_fetch_compliance = compliance_doc_id not in document_content_cache
+        
+        # If existing review has content, check if we can use it instead of fetching
+        if existing_review:
+            if existing_review.clinical_doc_content and not should_fetch_clinical:
+                logger.info(f"Using clinical document content from existing review {existing_review.id}")
+                document_content_cache[clinical_doc_id] = existing_review.clinical_doc_content
+                should_fetch_clinical = False
+            
+            if existing_review.compliance_doc_content and not should_fetch_compliance:
+                logger.info(f"Using compliance document content from existing review {existing_review.id}")
+                document_content_cache[compliance_doc_id] = existing_review.compliance_doc_content
+                should_fetch_compliance = False
+        
+        # Fetch clinical document content if needed
+        if should_fetch_clinical:
+            try:
+                logger.info(f"Fetching clinical document content for {clinical_doc_id}")
+                clinical_content = document_service.get_document_content(clinical_doc_id)
+                document_content_cache[clinical_doc_id] = clinical_content
+            except Exception as e:
+                logger.error(f"Error fetching clinical document content: {str(e)}")
+                document_content_cache[clinical_doc_id] = ""  # Cache empty string to prevent repeated failures
+        
+        # Fetch compliance document content if needed
+        if should_fetch_compliance:
+            try:
+                logger.info(f"Fetching compliance document content for {compliance_doc_id}")
+                compliance_content = document_service.get_document_content(compliance_doc_id)
+                document_content_cache[compliance_doc_id] = compliance_content
+            except Exception as e:
+                logger.error(f"Error fetching compliance document content: {str(e)}")
+                document_content_cache[compliance_doc_id] = ""  # Cache empty string to prevent repeated failures
+        
+        # Set the document content in the review data for database storage
+        review_dict['clinical_doc_content'] = document_content_cache.get(clinical_doc_id, "")
+        review_dict['compliance_doc_content'] = document_content_cache.get(compliance_doc_id, "")
+        
+        logger.info(f"Successfully prepared document content for review")
         
         # Create or update the review
         if existing_review:
@@ -287,8 +408,17 @@ async def create_compliance_review(review: ComplianceReview, db: Session = Depen
             # Get the issues from the cache
             issues_data = analysis_results_cache[cache_key]['issues']
             
-            if isinstance(issues_data, list) and len(issues_data) > 0:
-                # Add the issues to the review in the database
+            # Always store issues in the database, even if the list is empty
+            # This ensures we can retrieve reviews with zero issues consistently
+            if isinstance(issues_data, list):
+                # For empty lists (no issues found), we still want to store the record
+                # to indicate the document was analyzed and found compliant
+                if len(issues_data) > 0:
+                    logger.info(f"Adding {len(issues_data)} issues to review {new_review.id}")
+                else:
+                    logger.info(f"Storing review {new_review.id} with 0 issues (compliant document)")
+                
+                # Add the issues (or empty list) to the review in the database
                 ComplianceRepository.add_issues_to_review(db, new_review.id, issues_data)
                 # Clear from cache once stored in the database
                 del analysis_results_cache[cache_key]

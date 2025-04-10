@@ -97,9 +97,9 @@ function App() {
     }
   };
   
-  // Handle starting a compliance review
-  const handleStartReview = async (clinicalDoc: Document, complianceDoc: Document) => {
-    console.log('Starting review with:', { clinicalDoc, complianceDoc });
+  // Handle starting a compliance review or continuing an existing one
+  const handleStartReview = async (clinicalDoc: Document, complianceDoc: Document, reviewId?: string) => {
+    console.log('Starting/continuing review with:', { clinicalDoc, complianceDoc, reviewId });
     
     if (!clinicalDoc || !complianceDoc) {
       alert('Please select both a clinical document and a compliance document.');
@@ -113,16 +113,75 @@ function App() {
       setSelectedClinicalDoc(clinicalDoc);
       setSelectedComplianceDoc(complianceDoc);
       
-      // Get the analysis results from the backend
-      const result = await complianceAPI.analyzeCompliance(
-        clinicalDoc.id,
-        complianceDoc.id
-      );
-      
-      console.log('Compliance analysis result:', result);
-      
-      // Set the issues for the review page
-      setReviewIssues(result.issues || []);
+      // If we have a reviewId, this is a continuation of an existing review
+      if (reviewId) {
+        console.log('Continuing existing review:', reviewId);
+        
+        // Get the complete review with document content from the backend
+        try {
+          const completeReview = await complianceAPI.getReviewById(reviewId);
+          console.log('Loaded complete review with document content:', completeReview);
+          
+          // Set the review issues
+          setReviewIssues(completeReview.issues || []);
+          
+          // Update the document objects with content from the database
+          if (completeReview.clinical_doc_content) {
+            clinicalDoc.content = completeReview.clinical_doc_content;
+            console.log('Using clinical document content from database');
+          }
+          
+          if (completeReview.compliance_doc_content) {
+            complianceDoc.content = completeReview.compliance_doc_content;
+            console.log('Using compliance document content from database');
+          }
+        } catch (reviewError) {
+          console.error('Error loading review data:', reviewError);
+          // Fall back to just loading issues if the complete review endpoint fails
+          try {
+            const reviewIssuesData = await complianceAPI.getIssuesByReviewId(reviewId);
+            console.log('Loaded issues for existing review (fallback):', reviewIssuesData);
+            setReviewIssues(reviewIssuesData || []);
+          } catch (issuesError) {
+            console.error('Error loading issues for review:', issuesError);
+            // Continue even if we can't load issues
+            setReviewIssues([]);
+          }
+        }
+      } else {
+        // This is a new review, so analyze the documents
+        console.log('Starting new compliance analysis');
+        const result = await complianceAPI.analyzeCompliance(
+          clinicalDoc.id,
+          complianceDoc.id
+        );
+        
+        console.log('Compliance analysis result:', result);
+        
+        if (result.reviewId) {
+          // Fetch the complete review to get document content
+          try {
+            console.log('Fetching complete review with document content for new analysis');
+            const completeReview = await complianceAPI.getReviewById(result.reviewId);
+            
+            // Update the documents with content from the database
+            if (completeReview.clinical_doc_content) {
+              clinicalDoc.content = completeReview.clinical_doc_content;
+              console.log('Using clinical document content from new review');
+            }
+            
+            if (completeReview.compliance_doc_content) {
+              complianceDoc.content = completeReview.compliance_doc_content;
+              console.log('Using compliance document content from new review');
+            }
+          } catch (error) {
+            console.error('Error fetching complete review for new analysis:', error);
+            // Continue with the issues we already have
+          }
+        }
+        
+        setReviewIssues(result.issues || []);
+      }
       
       // Show the review page
       setShowComplianceReview(true);
@@ -385,7 +444,7 @@ function App() {
     ) : (
       <ComplianceDashboard 
         onDocumentSelect={handleComplianceDocSelect}
-        onStartReview={(clinicalDoc, complianceDoc) => {
+        onStartReview={(clinicalDoc, complianceDoc, reviewId) => {
           handleStartReview({
             ...clinicalDoc,
             filename: clinicalDoc.title,
@@ -396,8 +455,8 @@ function App() {
             filename: complianceDoc.title,
             path: `/documents/${complianceDoc.id}`,
             size: 0
-          });
-          navigate('/compliance/review');
+          }, reviewId);
+          // Navigation is done inside handleStartReview
         }}
       />
     );

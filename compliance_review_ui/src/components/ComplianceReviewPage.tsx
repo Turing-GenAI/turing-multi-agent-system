@@ -57,17 +57,25 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   
   const currentIssue = reviewedIssues[currentIssueIndex] || null;
   
-  // Fetch document content from the backend
+  // Use document content from props or fetch from backend if needed
   useEffect(() => {
     // Skip if we've already loaded content for these documents
     if (contentLoaded) return;
     
-    const fetchDocumentContent = async () => {
+    const loadDocumentContent = async () => {
       try {
         setLoading(true);
         
-        // Only fetch if we have valid document IDs
-        if (clinicalDocument.id && complianceDocument.id) {
+        // Check if content is already provided in props first
+        if (clinicalDocument.content && complianceDocument.content) {
+          console.log('Using document content from props (already in database)');
+          setClinicalContent(clinicalDocument.content);
+          setComplianceContent(complianceDocument.content);
+          setContentLoaded(true);
+        } 
+        // Only fetch from API if we don't already have content
+        else if (clinicalDocument.id && complianceDocument.id) {
+          console.log('Content not in props, fetching from API');
           // Fetch clinical document content
           const clinicalContentData = await documentAPI.getDocumentContent(clinicalDocument.id);
           setClinicalContent(clinicalContentData);
@@ -80,14 +88,14 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           setContentLoaded(true);
         }
       } catch (err) {
-        console.error('Error fetching document content:', err);
+        console.error('Error loading document content:', err);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchDocumentContent();
-  }, [clinicalDocument.id, complianceDocument.id, contentLoaded]);
+    loadDocumentContent();
+  }, [clinicalDocument.id, clinicalDocument.content, complianceDocument.id, complianceDocument.content, contentLoaded]);
   
   // Function to navigate between issues
   const navigateIssue = (direction: 'next' | 'prev') => {
@@ -627,7 +635,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         {/* Clinical Document Content with Highlights */}
         <div className="border-r overflow-auto p-6 flex flex-col">
           <h3 className="text-lg font-semibold mb-4">{clinicalDocument.title}</h3>
-          {loading ? (
+          {loading && clinicalContent === '' ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
@@ -687,7 +695,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             </div>
           ) : null}
           
-          {!showHistory && loading && (
+          {!showHistory && loading && reviewedIssues.length > 0 && (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
               <p className="text-gray-600">Analyzing documents and generating issues...</p>
@@ -696,7 +704,20 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           
           {!showHistory && (
             <div className="p-6">
-              {currentIssue ? (
+              {reviewedIssues.length === 0 ? (
+                <div className="bg-green-50 rounded-lg p-6 mb-6 text-center">
+                  <div className="flex justify-center mb-3">
+                    <FiCheckCircle className="w-12 h-12 text-green-500" />
+                  </div>
+                  <h3 className="text-lg font-medium text-green-800 mb-2">No Compliance Issues Found</h3>
+                  <p className="text-green-700 mb-4">
+                    Great news! The clinical document appears to comply with all regulations in the compliance document.
+                  </p>
+                  <div className="text-sm text-green-600 bg-green-100 p-3 rounded inline-block">
+                    This document pair has passed compliance review.
+                  </div>
+                </div>
+              ) : currentIssue ? (
                 <>
                   {/* Current issue details */}
                   <div className="bg-gray-50 rounded-lg p-4 mb-6">

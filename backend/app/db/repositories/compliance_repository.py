@@ -123,38 +123,46 @@ class ComplianceRepository:
         if not review:
             return None
             
-        # Add each issue to the review
-        for issue in issues:
-            # Handle metadata if it exists in the model
-            metadata_json = None
-            if hasattr(issue, 'metadata') and issue.metadata:
-                metadata_json = json.dumps(issue.metadata)
-                
-            # Create the issue object with required fields
-            issue_data = {
-                "review_id": review_id,
-                "clinical_text": issue.clinical_text,
-                "compliance_text": issue.compliance_text,
-                "explanation": issue.explanation,
-                "suggested_edit": issue.suggested_edit,
-                "confidence": issue.confidence,
-                "regulation": issue.regulation,
-                "metadata_json": metadata_json
-            }
-            
-            # Add optional position fields if they exist in the model
-            for attr in ["clinical_text_start_char", "clinical_text_end_char", 
-                          "compliance_text_start_char", "compliance_text_end_char"]:
-                if hasattr(issue, attr) and getattr(issue, attr) is not None:
-                    issue_data[attr] = getattr(issue, attr)
-                else:
-                    # Default to None for missing positions
-                    issue_data[attr] = None
+        # When we have an empty list of issues, we won't create any marker records
+        # The empty list in the database will indicate that the document is compliant
+        # We'll handle this at the API layer by checking if the issues list is empty
+        if len(issues) == 0:
+            # Just log that the document is compliant - no need to create a marker record
+            # The empty issues list is enough to indicate compliance
+            pass
+        else:
+            # Add each issue to the review
+            for issue in issues:
+                # Handle metadata if it exists in the model
+                metadata_json = None
+                if hasattr(issue, 'metadata') and issue.metadata:
+                    metadata_json = json.dumps(issue.metadata)
                     
-            # Create the database issue object
-            db_issue = ComplianceIssue(**issue_data)
+                # Create the issue object with required fields
+                issue_data = {
+                    "review_id": review_id,
+                    "clinical_text": issue.clinical_text,
+                    "compliance_text": issue.compliance_text,
+                    "explanation": issue.explanation,
+                    "suggested_edit": issue.suggested_edit,
+                    "confidence": issue.confidence,
+                    "regulation": issue.regulation,
+                    "metadata_json": metadata_json
+                }
             
-            db.add(db_issue)
+                # Add optional position fields if they exist in the model
+                for attr in ["clinical_text_start_char", "clinical_text_end_char", 
+                              "compliance_text_start_char", "compliance_text_end_char"]:
+                    if hasattr(issue, attr) and getattr(issue, attr) is not None:
+                        issue_data[attr] = getattr(issue, attr)
+                    else:
+                        # Default to None for missing positions
+                        issue_data[attr] = None
+                        
+                # Create the database issue object
+                db_issue = ComplianceIssue(**issue_data)
+                
+                db.add(db_issue)
             
         db.commit()
         db.refresh(review)

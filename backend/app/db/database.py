@@ -2,6 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Get the database directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,6 +38,10 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# No schema checking function - we're implementing this from scratch
+# Document content storage is a core part of the design, not an add-on
+
 
 def generate_review_id():
     """

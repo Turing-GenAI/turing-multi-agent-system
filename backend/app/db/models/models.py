@@ -18,6 +18,8 @@ class Review(Base):
     compliance_doc_id = Column(String, nullable=False)
     clinicalDoc = Column(String, nullable=False)  # Document title for display
     complianceDoc = Column(String, nullable=False)  # Document title for display
+    clinical_doc_content = Column(Text)  # Store actual document content
+    compliance_doc_content = Column(Text)  # Store actual document content
     status = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     
@@ -32,6 +34,8 @@ class Review(Base):
             "compliance_doc_id": self.compliance_doc_id,
             "clinicalDoc": self.clinicalDoc,
             "complianceDoc": self.complianceDoc,
+            "clinical_doc_content": self.clinical_doc_content,
+            "compliance_doc_content": self.compliance_doc_content,
             "status": self.status,
             "created": self.created_at.strftime("%b %d, %Y, %I:%M %p"),
             "issues": len(self.issues) if self.issues else 0,

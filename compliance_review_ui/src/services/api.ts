@@ -95,5 +95,11 @@ export const complianceAPI = {
   getIssuesByReviewId: async (reviewId: string) => {
     const response = await api.get(`/compliance/reviews/${reviewId}/issues`);
     return response.data.issues || [];
+  },
+  
+  // Get a complete review by ID with document content
+  getReviewById: async (reviewId: string) => {
+    const response = await api.get(`/compliance/reviews/${reviewId}`);
+    return response.data;
   }
 };

@@ -19,7 +19,7 @@ interface DocumentInfo {
 
 interface ComplianceDashboardProps {
   onDocumentSelect: (doc: DocumentInfo) => void;
-  onStartReview: (clinicalDoc: DocumentInfo, complianceDoc: DocumentInfo) => void;
+  onStartReview: (clinicalDoc: DocumentInfo, complianceDoc: DocumentInfo, reviewId?: string) => void;
 }
 
 export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({ 
@@ -283,50 +283,60 @@ const [success, setSuccess] = useState<string | null>(null);
       setIsAnalyzing(true);
       console.log('Continuing review:', review);
       
-      // Create document objects from the review data
+      // Get the complete review with document content included
+      console.log('Fetching complete review with document content from database');
+      const fullReview = await complianceAPI.getReviewById(review.id);
+      console.log('Retrieved review data with document content:', fullReview);
+      
+      // Create document objects with content from the database
       const clinicalDoc: DocumentInfo = {
-        id: review.clinical_doc_id || review.id.replace('review_', 'clinical_'),
-        title: review.clinicalDoc,
+        id: fullReview.clinical_doc_id || review.id.replace('review_', 'clinical_'),
+        title: fullReview.clinicalDoc,
         type: 'clinical',
         filename: '',
         path: '',
         size: 0,
         format: 'pdf', // Default format
-        created: review.created || new Date().toISOString(),
-        updated: review.created || new Date().toISOString()
+        created: fullReview.created || new Date().toISOString(),
+        updated: fullReview.created || new Date().toISOString(),
+        content: fullReview.clinical_doc_content // Use content directly from the database
       };
       
       const complianceDoc: DocumentInfo = {
-        id: review.compliance_doc_id || review.id.replace('review_', 'compliance_'),
-        title: review.complianceDoc,
+        id: fullReview.compliance_doc_id || review.id.replace('review_', 'compliance_'),
+        title: fullReview.complianceDoc,
         type: 'compliance',
         filename: '',
         path: '',
         size: 0,
         format: 'pdf', // Default format
-        created: review.created || new Date().toISOString(),
-        updated: review.created || new Date().toISOString()
+        created: fullReview.created || new Date().toISOString(),
+        updated: fullReview.created || new Date().toISOString(),
+        content: fullReview.compliance_doc_content // Use content directly from the database
       };
       
-      // IMPORTANT: Preload the compliance issues before navigation
-      // This ensures we don't show an empty review first
-      const issuesResponse = await complianceAPI.getIssuesByReviewId(review.id);
+      console.log('Using document content from database - no need to fetch separately');
       
-      if (!issuesResponse || !issuesResponse.length) {
-        console.log('Preloading issues for review:', review.id);
-        // If no issues are found for some reason, fetch them using document IDs
-        await complianceAPI.analyzeCompliance(
-          clinicalDoc.id,
-          complianceDoc.id,
-          review.id // Pass review ID for association
-        );
+      // The issues are already included in the fullReview response,
+      // but we'll keep this for backward compatibility
+      try {
+        if (fullReview.issues) {
+          console.log(`Found ${fullReview.issues.length || 0} issues in the review data`);
+        } else {
+          // Fallback to separate API call if needed
+          const issuesResponse = await complianceAPI.getIssuesByReviewId(review.id);
+          console.log(`Found ${issuesResponse?.length || 0} issues for review ${review.id}`);
+        }
+      } catch (issuesError) {
+        console.log('Error with issues data, but continuing to the review page:', issuesError);
+        // We'll still navigate to the review page even if we can't fetch issues
       }
       
       // Set the selected documents
       setSelectedClinicalDoc(clinicalDoc);
       setSelectedComplianceDoc(complianceDoc);
       
-      // Now that we've preloaded the issues data, navigate to the document viewer
+      // Now that we have all the data including document content, navigate to the document viewer
       onStartReview(clinicalDoc, complianceDoc, review.id);
     } catch (error) {
       console.error('Error continuing review:', error);
