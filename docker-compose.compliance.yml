@@ -32,11 +32,11 @@ services:
   compliance_ui:
     build:
       context: ./compliance_review_ui
-      dockerfile: Dockerfile
-    image: audit-copilot/compliance-ui:latest
-    container_name: audit-copilot-compliance-ui
+      dockerfile: Dockerfile.dev  # Use a new dev Dockerfile
+    image: audit-copilot/compliance-ui-dev:latest
+    container_name: audit-copilot-compliance-ui-dev
     ports:
-      - "3000:80"
+      - "5173:5173"  # Vite dev server
     depends_on:
       - backend
     networks:
@@ -44,6 +44,9 @@ services:
     restart: unless-stopped
     environment:
       - VITE_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./compliance_review_ui:/app
 
   # PostgreSQL database service
   postgres:

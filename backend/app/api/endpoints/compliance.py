@@ -7,6 +7,7 @@ import datetime
 import os
 import json
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 # Import database modules
 from app.db.database import get_db
@@ -27,6 +28,7 @@ from app.services.compliance_service import compliance_service as enhanced_compl
 # Keep original service for reference but don't use it
 # from app.services.compliance_service import compliance_service as original_compliance_service
 from app.services.document_service import document_service
+from app.services.email_service import EmailService
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -753,3 +755,44 @@ def delete_review(review_id: str, db: Session = Depends(get_db)):
         logger.error(f"Error deleting review {review_id}: {str(e)}", exc_info=True)
         db.rollback()  # Roll back any uncommitted changes
         raise HTTPException(status_code=500, detail=f"Failed to delete review: {str(e)}")
+
+
+class EmailRequest(BaseModel):
+    to_emails: List[str]
+    subject: str
+    content: str = None
+    review_data: dict = None
+
+@router.post("/generate-review-alert-content/")
+async def generate_review_alert_content(request: EmailRequest):
+    """
+    Generate email content for compliance review findings without sending.
+    """
+    email_service = EmailService()
+    try:
+        content = await email_service.generate_email_content(request.review_data)
+        return {"content": content}
+    except Exception as e:
+        logger.error(f"Error generating email content: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/send-review-alert/")
+async def send_review_alert(request: EmailRequest):
+    """
+    Send an email alert about compliance review findings.
+    The email content must be provided.
+    """
+    if not request.content:
+        raise HTTPException(status_code=400, detail="Email content is required")
+        
+    email_service = EmailService()
+    try:
+        await email_service.send_email(
+            to_emails=request.to_emails,
+            subject=request.subject,
+            content=request.content
+        )
+        return {"status": "success", "message": "Email sent successfully"}
+    except Exception as e:
+        logger.error(f"Error sending email alert: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
