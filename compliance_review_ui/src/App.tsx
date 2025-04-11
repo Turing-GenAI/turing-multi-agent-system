@@ -7,6 +7,7 @@ import { Navigation } from './components/Navigation'
 import { ComplianceReviewPage } from './components/ComplianceReviewPage'
 import { HistoryDialog } from './components/HistoryDialog'
 import { ComplianceDashboard } from './components/ComplianceDashboard'
+import AnalyticsDashboard from './components/AnalyticsDashboard'
 import { Document } from './types/compliance'
 import { complianceAPI } from './services/api'
 import { format } from 'date-fns'
@@ -564,11 +565,10 @@ function App() {
     );
   };
 
-  // Analytics tab content (placeholder)
+  // Analytics tab content
   const AnalyticsContent = () => (
-    <div className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Analytics Dashboard</h2>
-      <p className="text-gray-600">Analytics features coming soon.</p>
+    <div className="flex-1 overflow-auto">
+      <AnalyticsDashboard />
     </div>
   );
 
