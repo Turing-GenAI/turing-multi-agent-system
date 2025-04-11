@@ -449,7 +449,8 @@ async def apply_suggestion(request: ApplySuggestionRequest):
         revised_text = await enhanced_compliance_service.apply_suggestion(
             clinical_text=request.clinical_text,
             suggested_edit=request.suggested_edit,
-            surrounding_context=request.surrounding_context
+            surrounding_context=request.surrounding_context,
+            edit_type=request.edit_type
         )
         
         logger.info(f"Successfully applied suggestion, revised text length: {len(revised_text)}")

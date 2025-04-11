@@ -1,0 +1,21 @@
+Consent Guidelines (CG-101):
+All clinical trial subjects must provide written informed consent prior to any study-specific procedures or screening activities taking place.
+
+Patient Privacy and Data Protection (PPS-202):
+Clinical trial participant data must be fully anonymized. Personal identifiable information must never be stored together with clinical data. Data must be encrypted and securely stored with restricted access.
+
+Age and Inclusion Standards (AG-303):
+Clinical trials classified as adult trials must only enroll participants who are 18 years or older unless special regulatory approvals have been explicitly obtained for younger populations.
+
+Medication Administration Standards (MAO-404):
+Clinical trials involving home administration of investigational products require follow-up appointments at intervals of no longer than two weeks to ensure patient compliance, proper drug use, and to address any emerging safety issues.
+
+Exclusion Criteria Requirements (ECS-505):
+Participants on systemic corticosteroids must complete a minimum 4-week washout period prior to screening visits in respiratory disease studies.
+
+Adverse Event Reporting Standards (AES-606):
+Serious adverse events must be reported to the regulatory authorities within 7 days of identification to comply with safety monitoring regulations.
+
+Study Visit Frequency Guidelines (SVG-707):
+Clinical trials lasting six months or longer must conduct patient safety and compliance checks at intervals not exceeding four weeks to ensure adequate oversight.
+

@@ -1,0 +1,182 @@
+Protocol AP-123: A Phase 3, Randomized, Double-Blind, Placebo-Controlled Study to Evaluate the Efficacy and Safety of DrugX in Adults with Mild-to-Moderate Essential Hypertension
+
+Version: 3.0
+Date: 15 October 2023
+
+Sponsor: ACME Pharma Inc.
+Investigational Product: DrugX (ACME-HTN-01) 50mg Tablets
+
+1.0 INTRODUCTION
+
+Essential hypertension is a major public health issue, significantly increasing the risk of cardiovascular events such as stroke, myocardial infarction, heart failure, and chronic kidney disease. Despite the availability of numerous antihypertensive agents, blood pressure control remains suboptimal in a large portion of the hypertensive population. DrugX (ACME-HTN-01) is a novel, orally administered selective inhibitor of the Renin-Angiotensin-Aldosterone System (RAAS) pathway, acting via a unique mechanism distinct from existing ACE inhibitors or ARBs. Preclinical studies and Phase 1/2 clinical trials have demonstrated promising antihypertensive effects and a favorable safety profile. This Phase 3 study aims to definitively establish the efficacy and safety of DrugX 50mg once daily compared to placebo in adults with mild-to-moderate essential hypertension.
+
+2.0 STUDY OBJECTIVES
+
+2.1 Primary Objective:
+To evaluate the efficacy of DrugX 50mg once daily compared to placebo in reducing mean sitting Systolic Blood Pressure (SBP) from baseline after 12 weeks of treatment in adults with mild-to-moderate essential hypertension.
+
+2.2 Secondary Objectives:
+
+    To evaluate the efficacy of DrugX 50mg once daily compared to placebo in reducing mean sitting Diastolic Blood Pressure (DBP) from baseline after 12 weeks of treatment.
+
+    To assess the proportion of participants achieving target blood pressure (<140/90 mmHg) at Week 12.
+
+    To evaluate the safety and tolerability profile of DrugX 50mg once daily over 12 weeks.
+
+    To explore the effect of DrugX on heart rate variability (HRV) as an exploratory endpoint.
+
+3.0 STUDY DESIGN
+
+This is a Phase 3, multicenter, randomized, double-blind, placebo-controlled, parallel-group study. Approximately 500 eligible participants will be randomized in a 1:1 ratio to receive either DrugX 50mg or matching placebo, administered orally once daily for 12 weeks.
+
+The study includes a Screening Period (up to 4 weeks), a 12-week Double-Blind Treatment Period, and a Follow-up phone call 2 weeks after the last dose of study medication. Randomization will be stratified by baseline SBP (<150 mmHg vs. ≥150 mmHg) and geographic region.
+
+4.0 PARTICIPANT SELECTION
+
+4.1 Inclusion Criteria:
+Participants must meet all of the following criteria at Screening/Baseline to be eligible for enrollment:
+
+    Provide written informed consent prior to any study-specific procedures.
+
+    Male or female, age 17-75 years, inclusive.
+
+    Diagnosis of essential hypertension according to JNC 8 guidelines or equivalent local standard.
+
+    Mean sitting SBP ≥ 140 mmHg and < 160 mmHg, and mean sitting DBP < 100 mmHg at the Screening Visit (Visit 1) and Baseline Visit (Visit 2), based on the average of three measurements taken 2 minutes apart after 5 minutes of rest.
+
+    If currently on antihypertensive medication, willing and clinically suitable to undergo a washout period (duration specified in Section 5.4) prior to randomization.
+
+    Willing and able to comply with study procedures, visit schedule, and medication administration.
+
+    Women of childbearing potential (WOCBP) must have a negative pregnancy test at Screening and Baseline and agree to use a highly effective method of contraception throughout the study and for 30 days after the last dose.
+
+    Stable use of low-dose aspirin (≤100 mg/day) for cardiovascular prevention is permitted if initiated at least 30 days prior to screening.
+
+4.2 Exclusion Criteria:
+Participants meeting any of the following criteria will be excluded:
+
+    Secondary hypertension (e.g., renal artery stenosis, pheochromocytoma, primary aldosteronism).
+
+    Severe hypertension (SBP ≥ 160 mmHg or DBP ≥ 100 mmHg) at Screening or Baseline.
+
+    History of myocardial infarction, stroke, transient ischemic attack (TIA), coronary revascularization, or unstable angina within the past 6 months.
+
+    Clinically significant heart failure (NYHA Class III or IV).
+
+    Severe renal impairment (estimated Glomerular Filtration Rate [eGFR] < 30 mL/min/1.73m² calculated using the CKD-EPI formula).
+
+    Known hypersensitivity or allergy to DrugX or its excipients.
+
+    Use of other investigational drugs within 30 days or 5 half-lives (whichever is longer) prior to randomization.
+
+    Use of disallowed concomitant medications (see Appendix B), including other RAAS inhibitors (ACEi, ARB, direct renin inhibitors) within the protocol-specified washout period.
+
+    History of drug or alcohol abuse within the past 12 months.
+
+    Any condition which, in the opinion of the Investigator, would compromise the participant's safety or interfere with study participation or evaluation.
+
+5.0 STUDY PROCEDURES
+
+5.1 Screening Visit (Visit 1, Day -28 to -2):
+
+    Obtain written informed consent.
+
+    Review inclusion/exclusion criteria.
+
+    Medical history and demographic information collection.
+
+    Physical examination, height, weight, vital signs (BP, HR).
+
+    12-lead ECG.
+
+    Blood sampling for safety laboratory tests (hematology, chemistry, lipids) and eGFR calculation.
+
+    Urine sample for urinalysis and pregnancy test (WOCBP).
+
+    Dispense participant diary.
+
+    Schedule washout period if applicable.
+
+5.2 Informed Consent Process:
+Potential participants will be identified through site databases and appropriate recruitment methods. The Investigator or a qualified designee will explain the study's purpose, procedures, potential risks and benefits, confidentiality, voluntary nature of participation, and alternatives. Participants aged 17 years or older will be provided ample opportunity (at least 24 hours recommended) to review the informed consent form (ICF) and ask questions. The informed consent form, provided in English, will be reviewed with the potential participant. Interpreters may be used if necessary and available at the site, following local guidelines. Written informed consent must be documented via signature and date by the participant (or LAR, if applicable and approved by IRB/IEC) and the person conducting the consent discussion before any study-specific procedures are performed. A signed copy will be given to the participant, and the original stored securely in the site's study files.
+
+5.3 Baseline/Randomization Visit (Visit 2, Day 1):
+
+    Confirm eligibility criteria.
+
+    Review concomitant medications and adverse events since screening.
+
+    Vital signs (BP, HR).
+
+    Blood sampling for baseline confirmation (if needed) and potential exploratory biomarkers.
+
+    Urine pregnancy test (WOCBP).
+
+    Randomize eligible participants via Interactive Web Response System (IWRS).
+
+    Dispense study medication (DrugX or Placebo) and instruct on administration.
+
+    Review participant diary completion.
+
+5.4 Treatment Period (Weeks 1-12):
+Participants will take the assigned study medication (DrugX 50mg or placebo) once daily in the morning. Visits will occur at Week 2, Week 4, Week 8, and Week 12 (End of Treatment). Procedures at these visits include:
+
+    Assessment of compliance (pill count).
+
+    Vital signs (BP, HR).
+
+    Adverse event and concomitant medication review.
+
+    Blood sampling for safety labs (Weeks 4 and 12).
+
+    12-lead ECG (Week 12).
+
+    Dispense study medication (Weeks 2, 4, 8).
+
+Washout: For participants on existing antihypertensive medication, a washout period is required before Visit 2 (Baseline/Randomization). Specific durations depend on the prior medication (e.g., 2 weeks for most diuretics, ACEi, ARBs; 4 weeks for long-acting agents like amlodipine). The Investigator must deem the washout clinically appropriate. BP will be monitored during washout.
+
+5.5 End of Treatment Visit (Visit 5, Week 12 or Early Termination):
+Perform all scheduled Week 12 assessments. Collect remaining study medication.
+
+5.6 Follow-up Contact (Week 14):
+A brief phone call to assess for any ongoing or new adverse events since the last dose of study medication.
+
+6.0 SAFETY MONITORING
+
+6.1 Adverse Event (AE) Monitoring:
+An AE is any untoward medical occurrence in a participant administered an investigational product, which does not necessarily have a causal relationship with this treatment. AEs will be collected from the time of informed consent until the Follow-up Contact. All AEs reported by the participant or observed by site staff will be recorded in the source documents and eCRF, including severity, start/end dates, action taken, and investigator assessment of causality.
+
+6.2 Serious Adverse Event (SAE) Reporting:
+An SAE is any AE that results in death, is life-threatening, requires inpatient hospitalization or prolongation of existing hospitalization, results in persistent or significant disability/incapacity, or is a congenital anomaly/birth defect. All SAEs must be reported by the Investigator to the Sponsor's Safety Department (or designated CRO Safety Unit) using the official SAE Report Form within 48 hours of the site becoming aware of the event. Follow-up information must be provided promptly as it becomes available. The Investigator is responsible for assessing causality and ensuring appropriate medical follow-up.
+
+7.0 DATA MANAGEMENT
+
+7.1 Data Collection:
+Study data will be recorded on certified source documents maintained at the site. Data will then be transcribed into the electronic Case Report Form (eCRF) system (Medidata Rave®). Site staff are responsible for ensuring data entered into the eCRF is accurate, complete, and consistent with source documentation. Access to the eCRF will be restricted via unique usernames and passwords.
+
+7.2 Data Entry and Quality:
+Source data should be entered into the eCRF within 7 business days of the participant visit or data generation (e.g., central lab result receipt). Data queries generated by the system or monitoring team must be resolved by authorized site staff in a timely manner, typically within 5 business days of query issuance. Regular monitoring (remote and on-site) will verify data quality and adherence to protocol and GCP.
+
+8.0 STUDY STAFF RESPONSIBILITIES AND TRAINING
+
+8.1 Investigator Responsibilities:
+The Principal Investigator (PI) is responsible for the overall conduct of the study at their site, ensuring compliance with the protocol, GCP, and all applicable regulations. The PI must ensure participant safety and welfare, proper informed consent, accurate data collection, and timely reporting. The PI may delegate tasks but retains overall responsibility.
+
+8.2 Study Staff Training:
+All study staff members involved in conducting the trial must be qualified by education, training, and experience to perform their respective tasks. All study staff will receive general GCP and protocol training before the site initiation visit. Training logs documenting attendance may be maintained at the site. Site staff must be familiar with ICH-GCP guidelines.
+
+9.0 STATISTICAL CONSIDERATIONS
+
+9.1 Sample Size:
+A sample size of approximately 500 participants (250 per group) is planned. This provides over 90% power to detect a statistically significant difference of 5 mmHg in mean change from baseline SBP between DrugX and placebo at Week 12, assuming a standard deviation of 12 mmHg and a two-sided alpha level of 0.05, allowing for a 10% dropout rate.
+
+9.2 Analysis Populations:
+
+    Intent-to-Treat (ITT) Population: All randomized participants. Primary efficacy analyses will be conducted on the ITT population.
+
+    Per-Protocol (PP) Population: Subset of ITT participants who adhere sufficiently to the protocol.
+
+    Safety Population: All participants who receive at least one dose of study medication. Safety analyses will be conducted on the Safety Population.
+
+9.3 Efficacy Analyses:
+The primary efficacy endpoint (change from baseline in SBP at Week 12) will be analyzed using an Analysis of Covariance (ANCOVA) model with treatment group and randomization stratification factors as fixed effects and baseline SBP as a covariate. Missing data will be handled using appropriate methods (e.g., mixed-effects model for repeated measures [MMRM]). Secondary efficacy endpoints will be analyzed similarly or using logistic regression for binary outcomes.

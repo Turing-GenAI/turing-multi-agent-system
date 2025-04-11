@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # Standard OpenAI Settings
     OPENAI_API_KEY: str = Field(default=os.getenv("OPENAI_API_KEY"))
-    OPENAI_MODEL_NAME: str = Field(default="gpt-4o")
+    OPENAI_MODEL_NAME: str = Field(default=os.getenv("OPENAI_MODEL_NAME"))
     
     # Azure OpenAI Settings
     AZURE_OPENAI_API_KEY: str = Field(default=os.getenv("AZURE_OPENAI_API_KEY"))
@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     # Text Splitting Settings
     CHUNK_SIZE: int = 3500
     CHUNK_OVERLAP: int = 250
+    
+    # Chunking Strategy Settings
+    # Options: "agentic" (default), "recursive", "token", "sentence"
+    CHUNKING_STRATEGY: str = Field(default=os.getenv("CHUNKING_STRATEGY", "agentic"))
+    # Optional custom parameters for specific chunkers
+    CHUNKING_PARAMS: dict = Field(default={})
     
     class Config:
         env_file = ".env"

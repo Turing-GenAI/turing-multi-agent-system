@@ -97,6 +97,9 @@ function App() {
     }
   };
   
+  // State to track if navigation to review is in progress
+  const [isNavigatingToReview, setIsNavigatingToReview] = useState<boolean>(false);
+
   // Handle starting a compliance review or continuing an existing one
   const handleStartReview = async (clinicalDoc: Document, complianceDoc: Document, reviewId?: string) => {
     console.log('Starting/continuing review with:', { clinicalDoc, complianceDoc, reviewId });
@@ -105,6 +108,9 @@ function App() {
       alert('Please select both a clinical document and a compliance document.');
       return;
     }
+    
+    // Set navigating state immediately to trigger loading UI
+    setIsNavigatingToReview(true);
     
     try {
       setLoading(true);
@@ -186,13 +192,18 @@ function App() {
       // Show the review page
       setShowComplianceReview(true);
       
-      // Navigate to the review route
-      navigate('/compliance/review');
+      // Navigate to the review route with reviewId in the URL for persistence
+      const urlReviewId = reviewId || result?.reviewId || `temp_${Date.now()}`;
+      navigate(`/compliance/review/${urlReviewId}`);
     } catch (error) {
       console.error('Error starting compliance review:', error);
       alert('Failed to analyze compliance. Please try again.');
     } finally {
       setLoading(false);
+      // Reset navigation state after a short delay to ensure transitions complete
+      setTimeout(() => {
+        setIsNavigatingToReview(false);
+      }, 800);
     }
   };
 
@@ -230,6 +241,15 @@ function App() {
     if (path.startsWith('/document/')) {
       const id = parseInt(path.split('/').pop() || '0', 10);
       return id || null;
+    }
+    return null;
+  };
+  
+  // Get review ID from the URL for the compliance review route
+  const getReviewIdFromPath = () => {
+    const path = location.pathname;
+    if (path.startsWith('/compliance/review/')) {
+      return path.split('/').pop() || null;
     }
     return null;
   };
@@ -365,22 +385,93 @@ function App() {
     );
   };
 
-  // Effect to sync routes with compliance review state
+  // Effect to sync routes with compliance review state and handle URL parameters
   useEffect(() => {
-    // If we're on the review route but review isn't showing, set it
-    if (location.pathname === '/compliance/review' && !showComplianceReview) {
-      setShowComplianceReview(true);
+    // Check if we're on a review route
+    const reviewId = getReviewIdFromPath();
+    const isReviewRoute = location.pathname.startsWith('/compliance/review/');
+    
+    // If we're on the review route but review isn't showing, load review data
+    if (isReviewRoute && !showComplianceReview) {
+      if (reviewId) {
+        console.log(`Loading review data for ID: ${reviewId} from URL`);
+        
+        // Load the review data
+        const loadReviewData = async () => {
+          try {
+            setLoading(true);
+            const fullReview = await complianceAPI.getReviewById(reviewId);
+            
+            if (fullReview) {
+              console.log('Loaded review data from URL:', fullReview);
+              
+              // Create document objects with content from the database
+              const clinicalDoc: Document = {
+                id: fullReview.clinical_doc_id || reviewId.replace('review_', 'clinical_'),
+                title: fullReview.clinicalDoc || 'Clinical Document',
+                type: 'clinical',
+                filename: fullReview.clinicalDoc || '',
+                path: '',
+                size: 0,
+                format: 'pdf',
+                created: fullReview.created || new Date().toISOString(),
+                updated: fullReview.created || new Date().toISOString(),
+                content: fullReview.clinical_doc_content
+              };
+              
+              const complianceDoc: Document = {
+                id: fullReview.compliance_doc_id || reviewId.replace('review_', 'compliance_'),
+                title: fullReview.complianceDoc || 'Compliance Document',
+                type: 'compliance',
+                filename: fullReview.complianceDoc || '',
+                path: '',
+                size: 0,
+                format: 'pdf',
+                created: fullReview.created || new Date().toISOString(),
+                updated: fullReview.created || new Date().toISOString(),
+                content: fullReview.compliance_doc_content
+              };
+              
+              // Set the selected documents
+              setSelectedClinicalDoc(clinicalDoc);
+              setSelectedComplianceDoc(complianceDoc);
+              
+              // Set the review issues
+              setReviewIssues(fullReview.issues || []);
+              
+              // Show the review
+              setShowComplianceReview(true);
+            } else {
+              console.error('No review data found for ID:', reviewId);
+              navigate('/compliance');
+            }
+          } catch (error) {
+            console.error('Error loading review data from URL:', error);
+            navigate('/compliance');
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        loadReviewData();
+      } else {
+        // If we're on a review route without an ID, just show the review UI
+        setShowComplianceReview(true);
+      }
     }
     // If we're on the main compliance route but review is showing, hide it
     else if (location.pathname === '/compliance' && showComplianceReview) {
       setShowComplianceReview(false);
+      setSelectedClinicalDoc(null);
+      setSelectedComplianceDoc(null);
+      setReviewIssues([]);
     }
   }, [location.pathname, showComplianceReview]);
 
   // Compliance tab content
   const ComplianceContent = () => {
-    // Get URL path to determine which view to show
-    const isReviewRoute = location.pathname === '/compliance/review';
+    // Get URL path to determine which view to show (check if it starts with /compliance/review)
+    const isReviewRoute = location.pathname.startsWith('/compliance/review/');
     
     // Debug information for troubleshooting
     console.log('Compliance Content State:', {
@@ -388,10 +479,21 @@ function App() {
       isReviewRoute,
       selectedClinicalDoc,
       selectedComplianceDoc,
-      reviewIssues
+      reviewIssues,
+      loading,
+      isNavigatingToReview
     });
     
-    return isReviewRoute || showComplianceReview ? (
+    // If navigating to review or still loading review data, show loading spinner
+    if (isNavigatingToReview || (isReviewRoute && loading)) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin h-8 w-8 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+      </div>
+    );
+  }
+  
+  return isReviewRoute || showComplianceReview ? (
       <ComplianceReviewPage
         clinicalDocument={{
           id: selectedClinicalDoc?.id || '',
@@ -488,7 +590,7 @@ function App() {
             <Route path="/" element={<HomeContent />} />
             <Route path="/document/:id" element={<HomeContent />} />
             <Route path="/compliance" element={<ComplianceContent />} />
-            <Route path="/compliance/review" element={<ComplianceContent />} />
+            <Route path="/compliance/review/:reviewId" element={<ComplianceContent />} />
             <Route path="/analytics" element={<AnalyticsContent />} />
             <Route path="/settings" element={<SettingsContent />} />
           </Routes>

@@ -17,6 +17,9 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=auditcopilot
     volumes:
+      # Mount the entire app directory for live code reloading
+      - ./backend:/app
+      # Keep specific data directories persisted separately
       - ./backend/data:/app/data
       - ./backend/documents:/app/documents
     depends_on:

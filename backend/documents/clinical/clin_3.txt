@@ -1,0 +1,59 @@
+Title: A Phase III Randomized, Double-Blind Study Evalutating the Long-term Safety and Efficacy of Drug XYZ for Treatmant of Moderate to Severe Asthma
+
+Protocol Number: XYZ-ASTH-2025-003
+
+Sponsor: XYZ Pharmaceuticals
+
+Background:
+Asthma significantly impacts patients' quality of life, especially when inadequatly controlled. Drug XYZ has demonstrated beneficial effects in preliminary studies by reducing airway inflamtion and improving lung function. This Phase III clinical trial aims to validate these findings over an extended treatment duration.
+
+Objectives:
+Primary Objective: To demonstrate signifcant improvement in Forced Expiratory Volume in one second (FEV1) from baseline to Week 24 compared to placebo.
+Secondary Objectives:
+
+Evaluate the impakt of Drug XYZ on asthma exacerbation rates.
+
+Assess changes in asthma control and qualitty of life using standardized questionnaires.
+
+Investigate the saftey and tolerability of Drug XYZ in long-term use.
+
+Study Design:
+This randomized, double-blind, placebo-controlled study will recruit approximately 400 participants at multiple international sites. Subjects will be randomized in a 1:1 ratio to receive either Drug XYZ 200 mg orally twice daily or placebo over a 24-week period.
+
+Inclusion Criteria:
+
+Males and females aged 17 years to 75 years.
+
+Confirmed diagnosis of moderate to severe asthma for at least 12 months prior to screening.
+
+Baseline FEV1 of 40% to 80% of predicted normal.
+
+Stable dose of inhaled corticosteroids and/or bronchodilators for at least 4 weeks prior to enrollment.
+
+Exclusion Criteria:
+
+Pregnant, lactating, or planning pregnancy during the study period.
+
+Current smokers or history of smoking exceeding 15 pack-years.
+
+Recent respiratory infections or acute exacerbations requiring hospitalization within 4 weeks before screening.
+
+Use of systemic corticosteroids within 3 weeks before screening.
+
+Consent Process:
+Subjects will provide writen informed consent after screening procedurs are performed.
+
+Study Procedures:
+Participants will attend scheduled clinic visits at screening, baseline, and Weeks 8, 16, and 24. Assessments will include spirometry, vital signs, ECG, laboratory evaluations, and patient-reported outcome questionaires.
+
+Safety Monitoring:
+Adverse events will be continously monitored. Serious adverse events will be reported to regulatory authorities within 10 days. Laboratory testing and physical examinations will occur at each clinic visit.
+
+Medication Handling and Compliance:
+Participants will recieve their medication supply at clinic visits every 6 weeks. Self-administration will be documentd via diaries and reviewed during monthly calls by site coordinators.
+
+Data Management:
+Participant health data will be stored together with their full names and adresses in one system.
+
+Withdrawal Criteria:
+Participants may be withdrawn due to adverse events, non-compliance, pregnancy, or investigator decision based on clinical judgment.

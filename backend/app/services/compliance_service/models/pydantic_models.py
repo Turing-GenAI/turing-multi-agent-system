@@ -15,6 +15,7 @@ class LLMComplianceIssue(BaseModel):
     suggested_edit: str = Field(description="Specific changes to make the text compliant")
     confidence: str = Field(description="Assessment of confidence in this finding: 'high' or 'low'")
     regulation: Optional[str] = Field(default="", description="Specific regulation being violated, if identifiable (e.g., 21 CFR § 801.109)")
+    edit_type: str = Field(default="modification", description="Type of edit required: 'modification' (change existing text) or 'insertion' (add new content)")
 
     @validator('confidence')
     def confidence_must_be_high_or_low(cls, v):
@@ -23,6 +24,15 @@ class LLMComplianceIssue(BaseModel):
         if lowered not in ['high', 'low']:
             # Default to 'low' confidence if invalid value provided
             return 'low'
+        return lowered
+        
+    @validator('edit_type')
+    def edit_type_must_be_valid(cls, v):
+        """Ensure edit_type is either 'modification' or 'insertion'."""
+        lowered = v.lower().strip()
+        if lowered not in ['modification', 'insertion']:
+            # Default to 'modification' if invalid value provided
+            return 'modification'
         return lowered
 
 class ComplianceIssueList(BaseModel):

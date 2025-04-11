@@ -4,6 +4,7 @@ import { documentAPI, complianceAPI } from '../services/api';
 import { Document } from '../types/compliance';
 import { FiUpload, FiFileText, FiCheck, FiAlertTriangle, FiPlus, FiMinus, FiTrash2, FiLoader } from 'react-icons/fi';
 import * as Checkbox from '@radix-ui/react-checkbox';
+import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 
 interface DocumentInfo {
   id: string;
@@ -75,6 +76,10 @@ const [success, setSuccess] = useState<string | null>(null);
   
   // Track reviews that are being deleted
   const [reviewsBeingDeleted, setReviewsBeingDeleted] = useState<string[]>([]);
+  
+  // State for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [reviewToDelete, setReviewToDelete] = useState<any | null>(null);
   
   // Initial fetch to load all reviews - only called when tab changes or component mounts
   const fetchAllReviews = async () => {
@@ -351,16 +356,19 @@ const [success, setSuccess] = useState<string | null>(null);
     }
   };
 
-  // Handle deleting a review
-  const handleDeleteReview = async (review: any) => {
-    // Show confirmation dialog before deleting
-    if (!window.confirm(`Are you sure you want to permanently delete this review?\n\nClinical Document: ${review.clinicalDoc}\nCompliance Document: ${review.complianceDoc}\n\nThis action cannot be undone.`)) {
-      return; // User cancelled the deletion
-    }
+  // Handle deleting a review - opens the confirmation dialog
+  const handleDeleteReview = (review: any) => {
+    setReviewToDelete(review);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle actual deletion after confirmation
+  const confirmDeleteReview = async () => {
+    if (!reviewToDelete) return;
     
     try {
       // Set loading state for this specific review
-      const reviewId = review.id;
+      const reviewId = reviewToDelete.id;
       setReviewsBeingDeleted(prev => [...prev, reviewId]);
       setError(null);
       setSuccess(null);
@@ -375,12 +383,16 @@ const [success, setSuccess] = useState<string | null>(null);
       // Show success message
       setSuccess(`Review deleted successfully.`);
       setTimeout(() => setSuccess(null), 3000);
+      
+      // Close the dialog
+      setDeleteDialogOpen(false);
+      setReviewToDelete(null);
     } catch (error) {
       console.error('Error deleting review:', error);
       setError('Failed to delete review. Please try again.');
     } finally {
       // Remove from loading state
-      setReviewsBeingDeleted(prev => prev.filter(id => id !== review.id));
+      setReviewsBeingDeleted(prev => prev.filter(id => id !== reviewToDelete.id));
     }
   };
 
@@ -804,6 +816,29 @@ const [success, setSuccess] = useState<string | null>(null);
           </div>
         </div>
       </div>
+      )}
+      {/* Delete Confirmation Dialog */}
+      {reviewToDelete && (
+        <DeleteConfirmationDialog 
+          isOpen={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setReviewToDelete(null);
+          }}
+          onConfirm={confirmDeleteReview}
+          title="Delete Review"
+          description={
+            <div className="space-y-2">
+              <p>Are you sure you want to permanently delete this review?</p>
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                <p><span className="font-medium">Clinical Document:</span> {reviewToDelete.clinicalDoc}</p>
+                <p><span className="font-medium">Compliance Document:</span> {reviewToDelete.complianceDoc}</p>
+              </div>
+              <p className="text-red-600 text-sm font-medium">This action cannot be undone.</p>
+            </div>
+          }
+          isDeleting={reviewsBeingDeleted.includes(reviewToDelete.id)}
+        />
       )}
     </div>
   );
