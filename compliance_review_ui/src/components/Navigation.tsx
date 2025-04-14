@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiHome, FiClipboard, FiActivity, FiSettings } from 'react-icons/fi';
+import { FiHome, FiClipboard, FiActivity, FiSettings, FiInfo } from 'react-icons/fi';
 
 interface NavigationProps {
   className?: string;
@@ -42,6 +42,14 @@ export const Navigation: React.FC<NavigationProps> = ({
           title="Analytics"
         >
           <FiActivity className="w-5 h-5" />
+        </button>
+        
+        <button 
+          className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${activeTab === 'information' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-200'}`}
+          onClick={() => onTabChange('information')}
+          title="Information Collection"
+        >
+          <FiInfo className="w-5 h-5" />
         </button>
         
         <button 
