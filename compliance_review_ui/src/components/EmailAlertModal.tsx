@@ -24,12 +24,15 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
   const [emailSubject, setEmailSubject] = useState<string>('');
   const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
   const [isLoadingFromCache, setIsLoadingFromCache] = useState<boolean>(false);
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [selectedText, setSelectedText] = useState<{start: number, end: number} | null>(null);
 
   // Reset the form state when the modal opens with a new review
   useEffect(() => {
     if (isOpen && review) {
       setEmailSubject(`Compliance Review Alert - ${review.clinicalDoc}`);
       setEmailAddresses('');
+      setIsEditMode(false);
       loadEmailContent();
     }
   }, [isOpen, review]);
@@ -160,7 +163,98 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
     setEmailContent('');
     setEmailSubject('');
     setEmailAddresses('');
+    setIsEditMode(false);
     onClose();
+  };
+
+  // Handle text selection in the textarea for formatting
+  const handleTextSelect = () => {
+    const textarea = document.getElementById('email-content-textarea') as HTMLTextAreaElement;
+    if (textarea) {
+      if (textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined) {
+        setSelectedText({
+          start: textarea.selectionStart,
+          end: textarea.selectionEnd
+        });
+      }
+    }
+  };
+
+  // Apply formatting to the selected text
+  const applyFormatting = (format: string) => {
+    if (!selectedText || selectedText.start === selectedText.end) return;
+
+    let newContent = emailContent;
+    const selectedTextContent = emailContent.substring(selectedText.start, selectedText.end);
+    let formattedText = '';
+
+    switch (format) {
+      case 'bold':
+        formattedText = `**${selectedTextContent}**`;
+        break;
+      case 'italic':
+        formattedText = `*${selectedTextContent}*`;
+        break;
+      case 'underline':
+        formattedText = `<u>${selectedTextContent}</u>`;
+        break;
+      case 'code':
+        formattedText = `\`${selectedTextContent}\``;
+        break;
+      default:
+        return;
+    }
+
+    newContent = 
+      emailContent.substring(0, selectedText.start) + 
+      formattedText + 
+      emailContent.substring(selectedText.end);
+    
+    setEmailContent(newContent);
+  };
+
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    setIsEditMode(!isEditMode);
+    setSelectedText(null);
+  };
+
+  // Format content for display (convert ** to <strong>, etc.)
+  const formatContentForDisplay = (content: string) => {
+    if (!content) return '';
+    
+    // Replace markdown-style formatting with HTML
+    const formatted = content
+      // Convert ** to <strong> (bold)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Convert * to <em> (italic)
+      .replace(/\*([^*]*)\*/g, '<em>$1</em>')
+      // Convert ` to <code>
+      .replace(/`([^`]*)`/g, '<code>$1</code>')
+      // Enhance decision history section with better formatting
+      .replace(
+        /DECISION HISTORY:/g, 
+        '<h3 class="text-lg font-semibold mt-4 mb-2 text-slate-800">DECISION HISTORY:</h3>'
+      )
+      // Style the Original Text section with light red background
+      .replace(
+        /- \*\*Original Text:\*\* (.*?)(?=- \*\*|$)/gs,
+        '- <strong>Original Text:</strong> <div class="bg-red-50 p-2 my-1 rounded text-red-800 border border-red-100">$1</div>'
+      )
+      // Style the Change Applied section with light green background
+      .replace(
+        /- \*\*Change Applied:\*\* (.*?)(?=- \*\*|$)/gs,
+        '- <strong>Change Applied:</strong> <div class="bg-green-50 p-2 my-1 rounded text-green-800 border border-green-100">$1</div>'
+      )
+      // Style decisions with a border and background
+      .replace(
+        /- \*\*Issue ID:\*\*(.*?)(?=- \*\*Issue ID:\*\*|$)/gs,
+        '<div class="border border-slate-200 rounded-md p-3 mb-3 bg-slate-50">- <strong>Issue ID:</strong>$1</div>'
+      )
+      // Convert newlines to <br>
+      .replace(/\n/g, '<br>');
+    
+    return formatted;
   };
 
   if (!isOpen || !review) return null;
@@ -266,9 +360,25 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="block text-sm font-medium text-slate-700 mb-1 flex-shrink-0">
-                  Email Content
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-slate-700 flex-shrink-0">
+                    Email Content
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {!isLoadingEmailContent && !isLoadingFromCache && (
+                      <button
+                        onClick={toggleEditMode}
+                        className={`px-2 py-1 text-xs ${isEditMode 
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'} 
+                          rounded-md shadow-sm font-medium hover:bg-opacity-80 transition-colors`}
+                      >
+                        {isEditMode ? 'Exit Edit Mode' : 'Edit Content'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
                 {isLoadingFromCache ? (
                   <div className="flex items-center justify-center p-10 border border-slate-300 rounded-md bg-slate-50 h-full">
                     <div className="flex flex-col items-center">
@@ -283,7 +393,7 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
                       <div className="text-slate-500 text-sm">Generating email content...</div>
                     </div>
                   </div>
-                ) : (
+                ) : isEditMode ? (
                   <div className="border border-slate-300 rounded-md overflow-hidden flex-1 flex flex-col min-h-0">
                     <div className="bg-slate-50 p-2 border-b flex items-center gap-2 flex-shrink-0">
                       <button 
@@ -298,11 +408,43 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
                       </button>
                       <button 
                         className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
-                        title="Edit"
+                        title="Bold"
+                        onClick={() => applyFormatting('bold')}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+                          <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+                        </svg>
+                      </button>
+                      <button 
+                        className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
+                        title="Italic"
+                        onClick={() => applyFormatting('italic')}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="19" y1="4" x2="10" y2="4"></line>
+                          <line x1="14" y1="20" x2="5" y2="20"></line>
+                          <line x1="15" y1="4" x2="9" y2="20"></line>
+                        </svg>
+                      </button>
+                      <button 
+                        className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
+                        title="Underline"
+                        onClick={() => applyFormatting('underline')}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
+                          <line x1="4" y1="21" x2="20" y2="21"></line>
+                        </svg>
+                      </button>
+                      <button 
+                        className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
+                        title="Code"
+                        onClick={() => applyFormatting('code')}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="16 18 22 12 16 6"></polyline>
+                          <polyline points="8 6 2 12 8 18"></polyline>
                         </svg>
                       </button>
                       <div className="h-5 border-r border-slate-300 mx-1"></div>
@@ -318,24 +460,37 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
                           <path d="M8 16H3v5"></path>
                         </svg>
                       </button>
-                      <div className="h-5 border-r border-slate-300 mx-1"></div>
+                    </div>
+                    <textarea
+                      id="email-content-textarea"
+                      value={emailContent}
+                      onChange={(e) => setEmailContent(e.target.value)}
+                      onSelect={handleTextSelect}
+                      className="w-full p-3 flex-1 resize-none focus:outline-none focus:ring-0 text-sm overflow-y-auto"
+                      placeholder="Enter email content..."
+                    />
+                  </div>
+                ) : (
+                  // Rendered view mode
+                  <div className="border border-slate-300 rounded-md overflow-hidden flex-1 flex flex-col min-h-0">
+                    <div className="bg-slate-50 p-2 border-b flex items-center justify-between flex-shrink-0">
+                      <div className="text-xs font-medium text-slate-600">Preview Mode</div>
                       <button 
                         className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
-                        title="Format"
+                        onClick={generateEmailContent}
+                        title="Regenerate content"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M6 15h12"></path>
-                          <path d="M10 7h4"></path>
-                          <path d="M11 11h2"></path>
-                          <path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"></path>
+                          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                          <path d="M21 3v5h-5"></path>
+                          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                          <path d="M8 16H3v5"></path>
                         </svg>
                       </button>
                     </div>
-                    <textarea
-                      value={emailContent}
-                      onChange={(e) => setEmailContent(e.target.value)}
-                      className="w-full p-3 flex-1 resize-none focus:outline-none focus:ring-0 text-sm overflow-y-auto"
-                      placeholder="Enter email content..."
+                    <div 
+                      className="w-full p-3 flex-1 overflow-y-auto text-sm font-sans bg-white"
+                      dangerouslySetInnerHTML={{ __html: formatContentForDisplay(emailContent) }}
                     />
                   </div>
                 )}

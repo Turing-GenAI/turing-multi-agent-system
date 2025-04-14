@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from fastapi import HTTPException
 from app.core.config import settings
 from app.services.compliance_service import compliance_service
+from app.services.compliance_service.prompts import EMAIL_SYSTEM_PROMPT, get_email_human_prompt
 from langchain.schema import HumanMessage, SystemMessage
 
 
@@ -18,36 +19,10 @@ class EmailService:
 
     async def generate_email_content(self, review_data: dict) -> str:
         """Generate email content using LLM"""
-        system_prompt = """You are generating automated compliance review notification emails.
-        Create a concise, system-generated email that clearly presents compliance findings.
-        Use minimal text, avoid greetings/signatures, and highlight key statistics in bold."""
-
-        human_prompt = f"""
-        Create a system-generated compliance review notification email.
-        
-        Document Details:
-        - Clinical Document: {review_data.get('clinical_doc')}
-        - Compliance Document: {review_data.get('compliance_doc')}
-        - Total Issues Found: {review_data.get('issues', 0)}
-        - High Confidence Issues: {review_data.get('high_confidence_issues', 0)}
-        - Low Confidence Issues: {review_data.get('low_confidence_issues', 0)}
-        - Decision History: {review_data.get('decision_history', 'Not available')}
-        
-        Requirements:
-        1. Use format "Subject: Compliance Review: [Clinical Doc]"
-        2. Skip traditional greetings and signatures
-        3. Start directly with "COMPLIANCE REVIEW NOTIFICATION"
-        4. Present all statistics using bold formatting (use ** for bold)
-        5. If decision history is available, include a section with key decisions
-        6. Keep all sections short and direct
-        7. Use bullet points for clarity
-        8. No need for polite language, signatures, or contact details
-        """
-
         try:
             messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt)
+                SystemMessage(content=EMAIL_SYSTEM_PROMPT),
+                HumanMessage(content=get_email_human_prompt(review_data))
             ]
             response = await compliance_service.llm_client.ainvoke(messages)
             return response.content.strip()
