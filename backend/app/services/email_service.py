@@ -48,7 +48,7 @@ class EmailService:
             )
 
         try:
-            msg = MIMEMultipart()
+            msg = MIMEMultipart('alternative')
             msg['From'] = self.sender_email
             msg['To'] = ", ".join(to_emails)
             msg['Subject'] = subject
@@ -57,63 +57,25 @@ class EmailService:
             if not content and review_data:
                 content = await self.generate_email_content(review_data)
 
-            # Convert markdown-style bold (**text**) to HTML bold (<strong>text</strong>)
-            content = content.replace('**', '<strong>', 1)
-            while '**' in content:
-                content = content.replace('**', '</strong>', 1)
-                if '**' in content:
-                    content = content.replace('**', '<strong>', 1)
-
-            # Create only the HTML version
-            html_content = f"""
-            <html>
-            <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-                <style type="text/css">
-                    /* Base styles that most email clients will honor */
-                    body {{ font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #333333; margin: 0; padding: 15px; }}
-                    strong {{ font-weight: bold; }}
-                    h2 {{ font-size: 20px; font-weight: bold; margin-top: 20px; margin-bottom: 15px; color: #2c3e50; background-color: #f8f9fa; padding: 10px; border-left: 4px solid #4a6da7; }}
-                    h4 {{ font-size: 16px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; color: #2c3e50; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; }}
-                    .issue {{ margin-bottom: 20px; padding: 10px; border: 1px solid #dee2e6; background-color: #f8f9fa; border-radius: 4px; }}
-                    .original-text {{ background-color: #ffeeee; padding: 8px; border: 1px solid #ffcccc; border-radius: 4px; margin: 5px 0; }}
-                    .applied-change {{ background-color: #eeffee; padding: 8px; border: 1px solid #ccffcc; border-radius: 4px; margin: 5px 0; }}
-                    .issue-prop {{ margin-bottom: 8px; }}
-                    .stats {{ font-weight: bold; color: #2c3e50; }}
-                    .divider {{ border-top: 1px solid #e9ecef; margin: 15px 0; height: 0; }}
-                </style>
-            </head>
-            <body>
-                <!-- Main Notification Header -->
-                <div style="font-size: 20px; font-weight: bold; margin-top: 20px; margin-bottom: 15px; color: #2c3e50; background-color: #f8f9fa; padding: 10px; border-left: 4px solid #4a6da7;">
-                    COMPLIANCE REVIEW NOTIFICATION
-                </div>
-"""
+            # Create formatted content with asterisks to indicate importance
+            formatted_text = ""
 
             # Add review details if review_data is provided
             if review_data is not None:
-                html_content += f"""
-                <!-- Document and Issue Stats -->
-                <div style="margin-bottom: 20px;">
-                    <div style="margin-bottom: 8px;"><strong>Clinical Document:</strong> {review_data.get('clinical_doc', 'N/A')}</div>
-                    <div style="margin-bottom: 8px;"><strong>Compliance Document:</strong> {review_data.get('compliance_doc', 'N/A')}</div>
-                    <div style="margin-bottom: 8px;"><strong>Total Issues Found:</strong> <span style="font-weight: bold; color: #2c3e50;">{review_data.get('issues', 0)}</span></div>
-                    <div style="margin-bottom: 8px;"><strong>High Confidence Issues:</strong> <span style="font-weight: bold; color: #2c3e50;">{review_data.get('high_confidence_issues', 0)}</span></div>
-                    <div style="margin-bottom: 8px;"><strong>Low Confidence Issues:</strong> <span style="font-weight: bold; color: #2c3e50;">{review_data.get('low_confidence_issues', 0)}</span></div>
-                </div>
-                
-                <div style="border-top: 1px solid #e9ecef; margin: 15px 0; height: 0;"></div>
-"""
+                clinical_doc = review_data.get('clinical_doc', 'N/A')
+                total_issues = review_data.get('issues', 0)
+                high_confidence = review_data.get('high_confidence_issues', 0)
+                low_confidence = review_data.get('low_confidence_issues', 0)
+
+                formatted_text += "COMPLIANCE REVIEW NOTIFICATION\n\n"
+                formatted_text += f"- **Total Issues Found:** {total_issues}\n"
+                formatted_text += f"- **High Confidence Issues:** {high_confidence}\n"
+                formatted_text += f"- **Low Confidence Issues:** {low_confidence}\n\n"
 
                 # Add decision history if available
                 decision_history = review_data.get('decision_history', [])
                 if decision_history:
-                    html_content += f"""
-                    <!-- Decision History Section -->
-                    <div style="font-size: 16px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; color: #2c3e50; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">
-                        DECISION HISTORY:
-                    </div>
-"""
+                    formatted_text += "DECISION HISTORY:\n"
 
                     # Add each decision
                     for decision in decision_history:
@@ -131,39 +93,45 @@ class EmailService:
                         regulation = issue.get('regulation', 'N/A')
                         timestamp = decision_data.get('timestamp', 'N/A')
 
-                        html_content += f"""
-                        <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #dee2e6; background-color: #f8f9fa; border-radius: 4px;">
-                            <div style="margin-bottom: 8px;"><strong>Issue ID:</strong> {issue_id}</div>
-                            <div style="margin-bottom: 8px;"><strong>Original Text:</strong> 
-                                <div style="background-color: #ffeeee; padding: 8px; border: 1px solid #ffcccc; border-radius: 4px; margin: 5px 0;">
-                                    {clinical_text}
-                                </div>
-                            </div>
-                            <div style="margin-bottom: 8px;"><strong>Action:</strong> {action}</div>
-                            <div style="margin-bottom: 8px;"><strong>Change Applied:</strong> 
-                                <div style="background-color: #eeffee; padding: 8px; border: 1px solid #ccffcc; border-radius: 4px; margin: 5px 0;">
-                                    {applied_change}
-                                </div>
-                            </div>
-                            <div style="margin-bottom: 8px;"><strong>Regulation:</strong> {regulation}</div>
-                            <div style="margin-bottom: 8px;"><strong>Timestamp:</strong> {timestamp}</div>
-                        </div>
-"""
-            else:
-                # If review_data is None, just include the content as-is
-                html_content += f"""
-                <div style="margin-bottom: 20px;">
-                    {content}
-                </div>
-                """
+                        formatted_text += f"- **Issue ID:** {issue_id}\n"
+                        formatted_text += f"  - **Original Text:** {clinical_text}\n"
+                        formatted_text += f"  - **Action:** {action}\n"
+                        formatted_text += f"  - **Change Applied:** {applied_change}\n"
+                        formatted_text += f"  - **Regulation:** {regulation}\n"
+                        formatted_text += f"  - **Timestamp:** {timestamp}\n\n"
+            elif content:
+                # If review_data is None but content is provided, just include it
+                formatted_text = content
 
-            # Close the HTML
-            html_content += """
+            # Process text for the HTML version - convert markdown-style bold to HTML
+            html_text = formatted_text
+            # Replace markdown-style bold with HTML bold
+            while '**' in html_text:
+                html_text = html_text.replace('**', '<strong>', 1)
+                if '**' in html_text:
+                    html_text = html_text.replace('**', '</strong>', 1)
+
+            # Create HTML version with proper formatting and monospace font
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+                <style>
+                    pre {{ font-family: monospace; white-space: pre-wrap; word-wrap: break-word; margin: 0; }}
+                    strong {{ font-weight: bold; }}
+                </style>
+            </head>
+            <body>
+                <pre>{html_text}</pre>
             </body>
             </html>
             """
 
-            # Set content type to HTML only
+            # First attach the plain text version (basic fallback)
+            msg.attach(MIMEText(formatted_text, 'plain'))
+
+            # Then attach the HTML version with proper formatting
             msg.attach(MIMEText(html_content, 'html'))
 
             try:

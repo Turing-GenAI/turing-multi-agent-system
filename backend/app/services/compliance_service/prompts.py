@@ -26,7 +26,7 @@ def get_email_human_prompt(review_data: dict) -> str:
     - Decision History: {review_data.get('decision_history', 'Not available')}
     
     Requirements:
-    1. Use format "Subject: Compliance Review: [Clinical Doc]"
+    1. Do NOT include a subject line in the content
     2. Skip traditional greetings and signatures
     3. Start directly with "COMPLIANCE REVIEW NOTIFICATION"
     4. Present all statistics using bold formatting (use ** for bold)
