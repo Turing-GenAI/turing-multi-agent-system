@@ -4,8 +4,8 @@ import { documentAPI, complianceAPI } from '../services/api';
 import { FiFileText, FiCheck, FiAlertTriangle, FiTrash2, FiEye, FiPlay, FiSearch } from 'react-icons/fi';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 import { ToastContainer, ToastType } from './Toast';
-import { ReviewInfo } from '../types';
-import { ReviewAlertRequest } from '../services/api';
+import { ReviewInfo, ReviewAlertRequest } from '../types';
+import { EmailAlertModal } from './EmailAlertModal';
 
 interface DocumentInfo {
   id: string;
@@ -433,79 +433,26 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   //   }
   // };
 
+  // Alert modal state
   const [showAlertModal, setShowAlertModal] = useState<boolean>(false);
   const [selectedReviewForAlert, setSelectedReviewForAlert] = useState<ReviewInfo | null>(null);
-  const [emailAddresses, setEmailAddresses] = useState<string>('');
-  const [sendingAlert, setSendingAlert] = useState<boolean>(false);
-  const [emailContent, setEmailContent] = useState<string>('');
-  const [emailSubject, setEmailSubject] = useState<string>('');
-  const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
-  
-  // Function to generate email content using LLM
-  const generateEmailContent = async (review: ReviewInfo) => {
-    setIsLoadingEmailContent(true);
-    try {
-      const response = await complianceAPI.generateReviewAlertContent({
-        to_emails: emailAddresses.split(',').map(email => email.trim()),
-        subject: emailSubject,
-        review_data: {
-          clinical_doc: review.clinicalDoc,
-          compliance_doc: review.complianceDoc,
-          issues: review.issues || 0,
-          high_confidence_issues: review.highConfidenceIssues || 0,
-          low_confidence_issues: review.lowConfidenceIssues || 0
-        }
-      } as ReviewAlertRequest);
-      
-      if (response.content) {
-        setEmailContent(response.content);
-      }
-    } catch (error) {
-      console.error('Error generating email content:', error);
-      addToast('Failed to generate email content. Please try again.', 'error');
-    } finally {
-      setIsLoadingEmailContent(false);
-    }
-  };
-
-  // Handle sending alerts to document owners
-  const handleSendAlert = async () => {
-    if (!selectedReviewForAlert || !emailAddresses.trim()) return;
-
-    setSendingAlert(true);
-    try {
-      await complianceAPI.sendReviewAlert({
-        to_emails: emailAddresses.split(',').map(email => email.trim()),
-        subject: emailSubject || `Compliance Review Alert - ${selectedReviewForAlert.clinicalDoc}`,
-        content: emailContent,
-        review_data: {
-          clinical_doc: selectedReviewForAlert.clinicalDoc,
-          compliance_doc: selectedReviewForAlert.complianceDoc,
-          issues: selectedReviewForAlert.issues || 0,
-          high_confidence_issues: selectedReviewForAlert.highConfidenceIssues || 0,
-          low_confidence_issues: selectedReviewForAlert.lowConfidenceIssues || 0
-        }
-      } as ReviewAlertRequest);
-
-      addToast('Alert sent successfully to document owners.', 'success');
-      setShowAlertModal(false);
-      setSelectedReviewForAlert(null);
-      setEmailContent('');
-      setEmailSubject('');
-    } catch (error) {
-      console.error('Error sending alert:', error);
-      addToast('Failed to send alert. Please try again.', 'error');
-    } finally {
-      setSendingAlert(false);
-    }
-  };
 
   // Function to open alert modal
   const handleOpenAlertModal = (review: ReviewInfo) => {
     setSelectedReviewForAlert(review);
-    setEmailSubject(`Compliance Review Alert - ${review.clinicalDoc}`);
     setShowAlertModal(true);
-    generateEmailContent(review);
+  };
+
+  // Handle alert success
+  const handleAlertSuccess = (message: string) => {
+    addToast(message, 'success');
+    setShowAlertModal(false);
+    setSelectedReviewForAlert(null);
+  };
+
+  // Handle alert error
+  const handleAlertError = (message: string) => {
+    addToast(message, 'error');
   };
 
   // Search functionality
@@ -933,93 +880,14 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
             </div>
           )}
           
-          {/* Alert Modal */}
-          {showAlertModal && selectedReviewForAlert && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <h3 className="text-lg font-semibold mb-4">Alert Document Owners</h3>
-                
-                <div className="mb-4">
-                  <p><strong>Clinical Document:</strong> {selectedReviewForAlert.clinicalDoc}</p>
-                  <p><strong>Compliance Document:</strong> {selectedReviewForAlert.complianceDoc}</p>
-                  <p><strong>Issues Found:</strong> {selectedReviewForAlert.issues || 0} total
-                    ({selectedReviewForAlert.highConfidenceIssues || 0} high confidence,
-                    {selectedReviewForAlert.lowConfidenceIssues || 0} low confidence)</p>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Addresses (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={emailAddresses}
-                    onChange={(e) => setEmailAddresses(e.target.value)}
-                    className="w-full p-2 border rounded"
-                    placeholder="email1@example.com, email2@example.com"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Content
-                  </label>
-                  {isLoadingEmailContent ? (
-                    <div className="flex items-center justify-center p-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                    </div>
-                  ) : (
-                    <textarea
-                      value={emailContent}
-                      onChange={(e) => setEmailContent(e.target.value)}
-                      className="w-full p-2 border rounded h-48"
-                      placeholder="Enter email content..."
-                    />
-                  )}
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <button
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                    onClick={() => {
-                      setShowAlertModal(false);
-                      setSelectedReviewForAlert(null);
-                      setEmailContent('');
-                      setEmailSubject('');
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                    onClick={handleSendAlert}
-                    disabled={sendingAlert || !emailAddresses.trim() || !emailContent.trim()}
-                  >
-                    {sendingAlert ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Sending...
-                      </div>
-                    ) : (
-                      <>Send Alert</>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Email Alert Modal */}
+          <EmailAlertModal 
+            isOpen={showAlertModal}
+            onClose={() => setShowAlertModal(false)}
+            review={selectedReviewForAlert}
+            onSendSuccess={handleAlertSuccess}
+            onError={handleAlertError}
+          />
         </>
       )}
 
