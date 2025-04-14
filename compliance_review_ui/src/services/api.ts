@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ComplianceIssue } from '../types/compliance';
+import { ReviewAlertRequest } from '../types';
 
 // API base URL - reads from environment variables in production
 // Using Vite's import.meta.env instead of process.env
