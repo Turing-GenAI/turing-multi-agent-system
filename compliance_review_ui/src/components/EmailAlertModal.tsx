@@ -184,10 +184,16 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
   const applyFormatting = (format: string) => {
     if (!selectedText || selectedText.start === selectedText.end) return;
 
-    let newContent = emailContent;
-    const selectedTextContent = emailContent.substring(selectedText.start, selectedText.end);
+    const textarea = document.getElementById('email-content-textarea') as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    // Store current selection
+    const start = selectedText.start;
+    const end = selectedText.end;
+    const selectedTextContent = emailContent.substring(start, end);
     let formattedText = '';
 
+    // Prepare the formatted text
     switch (format) {
       case 'bold':
         formattedText = `**${selectedTextContent}**`;
@@ -205,12 +211,21 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
         return;
     }
 
-    newContent = 
-      emailContent.substring(0, selectedText.start) + 
-      formattedText + 
-      emailContent.substring(selectedText.end);
+    // Apply the formatting using the selection API
+    // This approach will work with browser's undo history
     
-    setEmailContent(newContent);
+    // First focus the textarea
+    textarea.focus();
+    
+    // Ensure the selection is set correctly
+    textarea.setSelectionRange(start, end);
+    
+    // Use document.execCommand to replace the selection
+    // This approach maintains the undo history
+    document.execCommand('insertText', false, formattedText);
+    
+    // Update our state with the new content
+    setEmailContent(textarea.value);
   };
 
   // Toggle edit mode
@@ -225,16 +240,21 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
     
     // Replace markdown-style formatting with HTML
     const formatted = content
+      // Make COMPLIANCE REVIEW NOTIFICATION the main heading
+      .replace(
+        /COMPLIANCE REVIEW NOTIFICATION/g, 
+        '<h3 class="text-l font-bold mt-2 mb-4 text-slate-800">COMPLIANCE REVIEW NOTIFICATION</h3>'
+      )
       // Convert ** to <strong> (bold)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       // Convert * to <em> (italic)
       .replace(/\*([^*]*)\*/g, '<em>$1</em>')
       // Convert ` to <code>
       .replace(/`([^`]*)`/g, '<code>$1</code>')
-      // Enhance decision history section with better formatting
+      // Make Decision History a smaller subheading
       .replace(
         /DECISION HISTORY:/g, 
-        '<h3 class="text-lg font-semibold mt-4 mb-2 text-slate-800">DECISION HISTORY:</h3>'
+        '<h4 class="text-base font-semibold mt-4 mb-2 text-slate-700">DECISION HISTORY:</h4>'
       )
       // Style the Original Text section with light red background
       .replace(
@@ -398,16 +418,6 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
                     <div className="bg-slate-50 p-2 border-b flex items-center gap-2 flex-shrink-0">
                       <button 
                         className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
-                        title="Template"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M8 3H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1"></path>
-                          <path d="M12 17v.01"></path>
-                          <rect x="8" y="7" width="8" height="4" rx="1" ry="1"></rect>
-                        </svg>
-                      </button>
-                      <button 
-                        className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded"
                         title="Bold"
                         onClick={() => applyFormatting('bold')}
                       >
@@ -495,7 +505,7 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
                   </div>
                 )}
                 <div className="flex justify-between items-center text-xs text-slate-500 mt-2 italic flex-shrink-0">
-                  <div>The email will be sent in both plain text and HTML format.</div>
+                  <div>The email will be sent in formatted HTML with enhanced styling.</div>
                   {emailContent && !isLoadingEmailContent && !isLoadingFromCache && (
                     <div className="text-green-600 font-medium non-italic flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -522,7 +532,7 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
           <button
             className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
             onClick={handleSendAlert}
-            disabled={sendingAlert || !emailAddresses.trim() || !emailContent.trim()}
+            disabled={sendingAlert || !emailAddresses.trim() || !emailContent.trim() || isEditMode}
           >
             {sendingAlert ? (
               <div className="flex items-center">
