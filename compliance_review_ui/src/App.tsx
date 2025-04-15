@@ -28,6 +28,7 @@ function App() {
     const path = location.pathname
     if (path.startsWith('/compliance')) return 'compliance'
     if (path.startsWith('/analytics')) return 'analytics'
+    if (path.startsWith('/information')) return 'information'
     if (path.startsWith('/settings')) return 'settings'
     return 'home'
   }
@@ -587,7 +588,7 @@ function App() {
   return (
     <div className="flex h-screen bg-white">
       <Navigation activeTab={getCurrentTab()} onTabChange={handleTabChange} />
-      <Sidebar selectedTrial={selectedTrial} />
+      {getCurrentTab() === 'home' && <Sidebar selectedTrial={selectedTrial} />}
       <main className="flex-1 overflow-hidden">
         <div className="h-full flex flex-col">
           <Routes>

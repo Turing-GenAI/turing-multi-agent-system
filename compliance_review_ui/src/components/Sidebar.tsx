@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { FiSearch } from 'react-icons/fi';
 import * as Switch from '@radix-ui/react-switch';
 
 interface Trial {
@@ -17,6 +16,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onTrialSelect, selectedTrial }) => {
+  // selectedTrial is used for identifying which trial is currently selected
   const [searchQuery, setSearchQuery] = useState('');
   const [showReviewed, setShowReviewed] = useState(false);
 
@@ -136,7 +136,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onTrialSelect, selectedTrial }
           {filteredTrials.map((trial, index) => (
             <div
               key={trial.id}
-              className={`cursor-pointer py-4 ${index !== filteredTrials.length - 1 ? 'border-b border-gray-100' : ''}`}
+              className={`cursor-pointer py-4 ${
+                trial.id === selectedTrial ? 'bg-gray-50 border-l-4 border-l-black pl-2' : 'pl-3'
+              } ${index !== filteredTrials.length - 1 ? 'border-b border-gray-100' : ''}`}
               onClick={() => onTrialSelect?.(trial.id)}
             >
               <div className="mb-2">

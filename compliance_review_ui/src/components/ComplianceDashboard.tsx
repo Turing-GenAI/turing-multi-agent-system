@@ -4,6 +4,7 @@ import { documentAPI, complianceAPI } from '../services/api';
 import { FiFileText, FiCheck, FiAlertTriangle, FiTrash2, FiEye, FiPlay, FiSearch } from 'react-icons/fi';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 import { ToastContainer, ToastType } from './Toast';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ReviewInfo, ReviewAlertRequest } from '../types';
 import { EmailAlertModal } from './EmailAlertModal';
 
@@ -37,8 +38,11 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     location.state?.activeTab === 'reviews' ? 'reviews' : 'documents'
   );
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState<boolean>(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [success, setSuccess] = useState<string | null>(null);
   // Reviews will use backend-generated UUIDs
 
@@ -122,8 +126,11 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   
   // State for email functionality
   const [emailSubject, setEmailSubject] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [emailContent, setEmailContent] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [emailAddresses, setEmailAddresses] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
 
   // Function to generate email content using LLM
@@ -209,6 +216,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     }
   }, [activeTab, processingReviews]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleDocumentSelect = (doc: DocumentInfo) => {
     console.log('Selected document:', doc);
     // Always convert to lowercase string for consistent comparison
@@ -441,6 +449,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCheckboxChange = (docId: string, checked: boolean) => {
     setSelectedDocs(
       checked
@@ -514,7 +523,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
         
         <div className="flex items-center gap-3">
           <button 
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px] shadow-sm transition-all duration-200"
+            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px] shadow-sm transition-all duration-200"
             disabled={!selectedClinicalDoc || !selectedComplianceDoc || isAnalyzing}
             onClick={handleStartReview}
           >
@@ -566,18 +575,18 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
           <div className="flex flex-1 overflow-hidden">
             {/* Clinical Documents */}
             <div className="flex-1 mr-4 flex flex-col overflow-hidden">
-              <h3 className="text-lg font-semibold mb-4 text-blue-700">Clinical Documents</h3>
+              <h3 className="text-lg font-semibold mb-4 text-gray-700">Clinical Documents</h3>
               
               {/* Search bar for clinical documents */}
               <div className="mb-4 w-full">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiSearch className="h-5 w-5 text-blue-500" />
+                    <FiSearch className="h-5 w-5 text-gray-500" />
                   </div>
                   <input
                     type="text"
                     placeholder="Search clinical documents..."
-                    className="pl-10 pr-4 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-0 focus:border-blue-300 block w-full bg-white text-slate-900"
+                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
                     value={clinicalDocSearchQuery}
                     onChange={(e) => setclinicalDocSearchQuery(e.target.value)}
                   />
@@ -597,12 +606,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                     {filteredClinicalDocs.map((doc) => (
                       <tr key={doc.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
                         selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
-                          ? 'bg-blue-50 border-l-4 border-l-blue-600' 
+                          ? 'bg-gray-50 border-l-4 border-l-black' 
                           : ''
                       }`}>
                         <td className="py-3 px-4">
                           <div className="flex items-center">
-                            <FiFileText className="text-blue-500 mr-2 flex-shrink-0" />
+                            <FiFileText className="text-gray-500 mr-2 flex-shrink-0" />
                             <span className="truncate text-sm font-medium text-slate-900" title={doc.title}>{doc.title}</span>
                           </div>
                         </td>
@@ -622,7 +631,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                             }}
                             className={`flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-md shadow-sm w-full transition-colors ${
                               selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
-                                ? 'bg-blue-600 text-white' 
+                                ? 'bg-black text-white' 
                                 : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
                             }`}
                           >
@@ -652,18 +661,18 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
 
             {/* Compliance Documents */}
             <div className="flex-1 ml-4 flex flex-col overflow-hidden">
-              <h3 className="text-lg font-semibold mb-4 text-green-700">Compliance Documents</h3>
+              <h3 className="text-lg font-semibold mb-4 text-gray-700">Compliance Documents</h3>
               
               {/* Search bar for compliance documents */}
               <div className="mb-4 w-full">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiSearch className="h-5 w-5 text-green-500" />
+                    <FiSearch className="h-5 w-5 text-gray-500" />
                   </div>
                   <input
                     type="text"
                     placeholder="Search compliance documents..."
-                    className="pl-10 pr-4 py-2 border border-green-200 rounded-md focus:outline-none focus:ring-0 focus:border-green-300 block w-full bg-white text-slate-900"
+                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
                     value={complianceDocSearchQuery}
                     onChange={(e) => setComplianceDocSearchQuery(e.target.value)}
                   />
@@ -683,12 +692,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                     {filteredComplianceDocs.map((doc) => (
                       <tr key={doc.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
                         selectedComplianceDoc && selectedComplianceDoc.id === doc.id 
-                          ? 'bg-green-50 border-l-4 border-l-green-600' 
+                          ? 'bg-gray-50 border-l-4 border-l-black' 
                           : ''
                       }`}>
                         <td className="py-3 px-4">
                           <div className="flex items-center">
-                            <FiFileText className="text-green-500 mr-2 flex-shrink-0" />
+                            <FiFileText className="text-gray-500 mr-2 flex-shrink-0" />
                             <span className="truncate text-sm font-medium text-slate-900" title={doc.title}>{doc.title}</span>
                           </div>
                         </td>
@@ -708,7 +717,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                             }}
                             className={`flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-md shadow-sm w-full transition-colors ${
                               selectedComplianceDoc && selectedComplianceDoc.id === doc.id 
-                                ? 'bg-green-600 text-white' 
+                                ? 'bg-black text-white' 
                                 : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
                             }`}
                           >
@@ -742,14 +751,14 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
             <div>
               Clinical Documents: {filteredClinicalDocs.length}
               {clinicalDocSearchQuery && (
-                <span className="ml-1 text-blue-600">
+                <span className="ml-1 text-gray-800">
                   (filtered from {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length})
                 </span>
               )}
               {' | '}
               Compliance Documents: {filteredComplianceDocs.length}
               {complianceDocSearchQuery && (
-                <span className="ml-1 text-blue-600">
+                <span className="ml-1 text-gray-800">
                   (filtered from {documents.filter(doc => doc.type.toLowerCase() === 'compliance').length})
                 </span>
               )}
@@ -768,12 +777,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
           <div className="mb-4 w-full">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiSearch className="h-5 w-5 text-indigo-500" />
+                <FiSearch className="h-5 w-5 text-gray-500" />
               </div>
               <input
                 type="text"
                 placeholder="Search by ID, clinical or compliance document..."
-                className="pl-10 pr-4 py-2 border border-indigo-200 rounded-md focus:outline-none focus:ring-0 focus:border-indigo-300 block w-full bg-white text-slate-900"
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
                 value={reviewsSearchQuery}
                 onChange={(e) => setReviewsSearchQuery(e.target.value)}
               />
@@ -860,7 +869,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                       <td className="py-3 px-4">
                         <div className="flex space-x-2">
                           <button 
-                            className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center"
+                            className="text-xs text-black hover:text-gray-800 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 transition-colors flex items-center"
                             onClick={() => handleContinueReview(review)}
                             disabled={isAnalyzing}
                             title="View compliance review details"
@@ -869,7 +878,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                             View
                           </button>
                           <button 
-                            className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded hover:bg-orange-50 flex items-center transition-colors"
+                            className="text-xs text-black hover:text-gray-800 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 flex items-center transition-colors"
                             onClick={() => handleOpenAlertModal(review)}
                             title="Send alert to document owners"
                           >
@@ -925,7 +934,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Rows per page</span>
-              <select className="border border-slate-200 rounded px-2 py-1 text-xs bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select className="border border-slate-200 rounded px-2 py-1 text-xs bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-black">
                 <option>10</option>
                 <option>20</option>
                 <option>50</option>
