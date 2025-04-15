@@ -873,13 +873,13 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           <button 
             onClick={saveProgress}
             disabled={savingProgress}
-            className={`px-3 py-1 text-sm rounded border border-blue-300 text-blue-600 hover:bg-blue-50 ${
+            className={`px-3 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 ${
               savingProgress ? 'opacity-75 cursor-not-allowed' : ''
             }`}
           >
             {savingProgress ? (
               <span className="flex items-center">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-700 mr-2"></div>
                 Saving...
               </span>
             ) : (
@@ -888,7 +888,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           </button>
           <button 
             onClick={finalizeReview}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
           >
             Finalize Review
           </button>
@@ -1007,7 +1007,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                       <div className="flex gap-2">
                         <button 
                           className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
-                            currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300' : ''
+                            currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300 text-green-700' : ''
                           }`}
                           onClick={() => handleDecision('accepted')}
                           disabled={processingEdit}
@@ -1019,19 +1019,19 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                             </>
                           ) : (
                             <>
-                          <FiCheck className="w-4 h-4" />
+                          <FiCheck className="w-4 h-4 text-green-600" />
                           Accept
                             </>
                           )}
                         </button>
                         <button 
                           className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
-                            currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300' : ''
+                            currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300 text-red-700' : ''
                           }`}
                           onClick={() => handleDecision('rejected')}
                           disabled={processingEdit}
                         >
-                          <FiX className="w-4 h-4" />
+                          <FiX className="w-4 h-4 text-red-600" />
                           Reject
                         </button>
                       </div>
@@ -1168,14 +1168,14 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
               <h3 className="text-lg font-semibold">Finalized Document</h3>
               <div className="flex items-center gap-3">
                 <button 
-                  className="px-3 py-1 flex items-center gap-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-3 py-1 flex items-center gap-1 text-sm bg-black text-white rounded hover:bg-gray-800"
                   onClick={completeReview}
                 >
                   <FiCheck className="w-4 h-4" />
                   Complete Review
                 </button>
                 <button 
-                  className="px-3 py-1 flex items-center gap-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-3 py-1 flex items-center gap-1 text-sm bg-black text-white rounded hover:bg-gray-800"
                   onClick={() => {
                     // Create a blob and download link
                     const blob = new Blob([finalDocument], { type: 'text/plain' });

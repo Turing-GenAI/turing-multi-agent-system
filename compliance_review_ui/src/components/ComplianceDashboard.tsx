@@ -803,12 +803,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">ID</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">Clinical Document</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">Compliance Document</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">Status</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">Issues</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">Created</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">Actions</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Clinical Document</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Compliance Document</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Status</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Issues</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Created</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -820,13 +820,13 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                       <td className="py-3 px-4 text-sm font-medium text-slate-900">
                         <div className="max-w-[120px] truncate" title={review.id}>{review.id}</div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-slate-700">
-                        <div className="max-w-[180px] truncate" title={review.clinicalDoc}>{review.clinicalDoc}</div>
+                      <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                        <div className="max-w-[180px] truncate mx-auto" title={review.clinicalDoc}>{review.clinicalDoc}</div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-slate-700">
-                        <div className="max-w-[180px] truncate" title={review.complianceDoc}>{review.complianceDoc}</div>
+                      <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                        <div className="max-w-[180px] truncate mx-auto" title={review.complianceDoc}>{review.complianceDoc}</div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           review.status === 'completed' 
                             ? 'bg-green-100 text-green-800 border border-green-200' 
@@ -855,8 +855,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                           )}
                         </span>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center gap-2 justify-center">
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-800 border border-red-200 text-xs font-medium" title="High confidence issues">
                             {review.highConfidenceIssues}
                           </span>
@@ -865,11 +865,11 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-slate-700">{review.created}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex space-x-2">
+                      <td className="py-3 px-4 text-sm text-slate-700 text-center">{review.created}</td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex space-x-2 justify-center">
                           <button 
-                            className="text-xs text-black hover:text-gray-800 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 transition-colors flex items-center"
+                            className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center"
                             onClick={() => handleContinueReview(review)}
                             disabled={isAnalyzing}
                             title="View compliance review details"
@@ -878,7 +878,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                             View
                           </button>
                           <button 
-                            className="text-xs text-black hover:text-gray-800 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 flex items-center transition-colors"
+                            className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded hover:bg-orange-50 flex items-center transition-colors"
                             onClick={() => handleOpenAlertModal(review)}
                             title="Send alert to document owners"
                           >
