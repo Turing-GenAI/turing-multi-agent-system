@@ -54,6 +54,7 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
     """
     Analyze clinical trial documents for compliance issues using document content provided directly.
     Uses enhanced LLM analysis with verification and position tracking for more accurate results.
+    Always creates a new analysis rather than reusing previous ones.
     """
     try:
         logger.info(
@@ -70,8 +71,9 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
             "issues": issues
         }
 
-        # Store result in our temporary cache until saved to database with a review
-        cache_key = f"{review_input.clinical_doc_id}:{review_input.compliance_doc_id}"
+        # Store result in our temporary cache with a unique timestamp key
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        cache_key = f"{review_input.clinical_doc_id}:{review_input.compliance_doc_id}:{timestamp}"
         analysis_results_cache[cache_key] = result
 
         return result
@@ -84,13 +86,14 @@ async def analyze_compliance(review_input: ComplianceReviewInput):
 async def analyze_compliance_by_ids(
     clinical_doc_id: str,
     compliance_doc_id: Optional[str] = None,
-    force_refresh: bool = False,
+    force_refresh: bool = True,
     db: Session = Depends(get_db)
 ):
     """
     Analyze clinical trial documents for compliance issues using document IDs.
     Loads document content from the document service and performs compliance analysis.
     If compliance_doc_id is not provided, automatically selects the most relevant one.
+    Always creates a new analysis rather than reusing previous ones.
 
     Args:
         clinical_doc_id: ID of the clinical trial document
@@ -118,56 +121,10 @@ async def analyze_compliance_by_ids(
             logger.info(
                 f"Auto-selected compliance document: {compliance_doc_id}")
 
-        cache_key = f"{clinical_doc_id}:{compliance_doc_id}"
+        # Generate a unique cache key that includes a timestamp to prevent reuse
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        cache_key = f"{clinical_doc_id}:{compliance_doc_id}:{timestamp}"
 
-        # Only check cache if not forcing a refresh
-        if not force_refresh:
-            # Check if we already have valid results for this document pair
-            if cache_key in analysis_results_cache and analysis_results_cache[cache_key].get('issues'):
-                issues = analysis_results_cache[cache_key].get('issues')
-                # Validate that the cached results contain actual issues
-                if isinstance(issues, list) and len(issues) > 0:
-                    logger.info(
-                        f"Returning cached analysis for documents {clinical_doc_id} and {compliance_doc_id} with {len(issues)} issues")
-                    return analysis_results_cache[cache_key]
-                else:
-                    logger.info(
-                        f"Cached analysis has no issues, forcing refresh")
-
-            # Check existing reviews in the database for valid issues
-            # Query database for reviews matching these document IDs
-            db_reviews = db.query(Review).filter(
-                Review.clinical_doc_id == clinical_doc_id,
-                Review.compliance_doc_id == compliance_doc_id
-            ).all()
-
-            # If any matching reviews exist
-            if db_reviews:
-                # Get the latest review
-                # Assuming sorted by created_at desc
-                latest_review = db_reviews[0]
-
-                # Get the issues for this review
-                db_issues = ComplianceRepository.get_issues_for_review(
-                    db, latest_review.id)
-
-                if db_issues and len(db_issues) > 0:
-                    logger.info(
-                        f"Returning analysis from existing review {latest_review.id} with {len(db_issues)} issues")
-
-                    # Convert issues to the expected format
-                    issues_list = [issue.to_dict() for issue in db_issues]
-
-                    return {
-                        "clinical_doc_id": clinical_doc_id,
-                        "compliance_doc_id": compliance_doc_id,
-                        "issues": issues_list
-                    }
-        else:
-            logger.info(
-                f"Force refreshing analysis for documents {clinical_doc_id} and {compliance_doc_id}")
-
-        # Either no valid cached results, or force_refresh is true - create a new analysis
         logger.info(
             f"Creating new analysis for documents {clinical_doc_id} and {compliance_doc_id}")
 
@@ -356,7 +313,8 @@ async def get_review_issues(review_id: str, db: Session = Depends(get_db)):
 @router.post("/reviews/", response_model=ComplianceReview)
 async def create_compliance_review(review: ComplianceReview, db: Session = Depends(get_db)):
     """
-    Create or update a compliance review record in the database.
+    Create a compliance review record in the database.
+    Always creates a new review, even if one exists for the same documents.
     Also fetches and stores document content to prevent repeated API calls.
 
     Args:
@@ -364,56 +322,19 @@ async def create_compliance_review(review: ComplianceReview, db: Session = Depen
         db: Database session dependency
 
     Returns:
-        The created or updated compliance review record
+        The created compliance review record
     """
     try:
         # Convert to dict for easier manipulation
         review_dict = review.dict()
 
-        # Check if there's an existing review for these documents to avoid duplicates
-        existing_review = None
-
-        # If it's a processing -> completed transition, try to find the existing review
-        if review_dict.get('status') == 'completed' and review_dict.get('clinical_doc_id') and review_dict.get('compliance_doc_id'):
-            # Look for any review with the same document IDs that might be in 'processing' status
-            existing_reviews = db.query(Review).filter(
-                Review.clinical_doc_id == review_dict['clinical_doc_id'],
-                Review.compliance_doc_id == review_dict['compliance_doc_id']
-            ).all()
-
-            if existing_reviews:
-                # Use the most recent one (likely the 'processing' review we want to update)
-                existing_review = existing_reviews[0]
-                logger.info(
-                    f"Found existing review {existing_review.id} to update from processing to completed")
-                # Use the existing review ID
-                review_dict['id'] = existing_review.id
-
         # Fetch and store document content to avoid repeated API calls
-        # Now that we have proper database columns thanks to our migration system,
-        # we can store the content properly in the database
-
-        # First check if document is already in the cache to avoid API calls
         clinical_doc_id = review_dict['clinical_doc_id']
         compliance_doc_id = review_dict['compliance_doc_id']
 
         # Determine if we need to fetch content
         should_fetch_clinical = clinical_doc_id not in document_content_cache
         should_fetch_compliance = compliance_doc_id not in document_content_cache
-
-        # If existing review has content, check if we can use it instead of fetching
-        if existing_review:
-            if existing_review.clinical_doc_content and not should_fetch_clinical:
-                logger.info(
-                    f"Using clinical document content from existing review {existing_review.id}")
-                document_content_cache[clinical_doc_id] = existing_review.clinical_doc_content
-                should_fetch_clinical = False
-
-            if existing_review.compliance_doc_content and not should_fetch_compliance:
-                logger.info(
-                    f"Using compliance document content from existing review {existing_review.id}")
-                document_content_cache[compliance_doc_id] = existing_review.compliance_doc_content
-                should_fetch_compliance = False
 
         # Fetch clinical document content if needed
         if should_fetch_clinical:
@@ -451,42 +372,43 @@ async def create_compliance_review(review: ComplianceReview, db: Session = Depen
 
         logger.info(f"Successfully prepared document content for review")
 
-        # Create or update the review
-        if existing_review:
-            # Update the existing review
-            updated_review = ComplianceRepository.update_review(
-                db, existing_review.id, review_dict)
-            logger.info(f"Updated existing review {updated_review.id}")
-            new_review = updated_review
-        else:
-            # Create a new review
-            new_review = ComplianceRepository.create_review(db, review_dict)
-            logger.info(f"Creating new review {new_review.id}")
+        # Always create a new review
+        new_review = ComplianceRepository.create_review(db, review_dict)
+        logger.info(f"Creating new review {new_review.id}")
 
-        # Check if we have cached analysis results for this document pair
-        cache_key = f"{review_dict['clinical_doc_id']}:{review_dict['compliance_doc_id']}"
+        # Check for cached analysis results for this document pair with any timestamp
+        # Look for any cache key that matches the document pair pattern
+        document_pair_prefix = f"{review_dict['clinical_doc_id']}:{review_dict['compliance_doc_id']}"
+        matching_cache_keys = [key for key in analysis_results_cache.keys()
+                               if key.startswith(document_pair_prefix)]
 
-        if review_dict.get('status') == 'completed' and cache_key in analysis_results_cache and 'issues' in analysis_results_cache[cache_key]:
-            # Get the issues from the cache
-            issues_data = analysis_results_cache[cache_key]['issues']
+        # Use the most recent cached result if available
+        if matching_cache_keys and review_dict.get('status') == 'completed':
+            # Sort by timestamp (newest first) if timestamps are included
+            matching_cache_keys.sort(reverse=True)
+            latest_cache_key = matching_cache_keys[0]
 
-            # Always store issues in the database, even if the list is empty
-            # This ensures we can retrieve reviews with zero issues consistently
-            if isinstance(issues_data, list):
-                # For empty lists (no issues found), we still want to store the record
-                # to indicate the document was analyzed and found compliant
-                if len(issues_data) > 0:
-                    logger.info(
-                        f"Adding {len(issues_data)} issues to review {new_review.id}")
-                else:
-                    logger.info(
-                        f"Storing review {new_review.id} with 0 issues (compliant document)")
+            if 'issues' in analysis_results_cache[latest_cache_key]:
+                # Get the issues from the cache
+                issues_data = analysis_results_cache[latest_cache_key]['issues']
 
-                # Add the issues (or empty list) to the review in the database
-                ComplianceRepository.add_issues_to_review(
-                    db, new_review.id, issues_data)
-                # Clear from cache once stored in the database
-                del analysis_results_cache[cache_key]
+                # Always store issues in the database, even if the list is empty
+                if isinstance(issues_data, list):
+                    if len(issues_data) > 0:
+                        logger.info(
+                            f"Adding {len(issues_data)} issues to review {new_review.id}")
+                    else:
+                        logger.info(
+                            f"Storing review {new_review.id} with 0 issues (compliant document)")
+
+                    # Add the issues to the review in the database
+                    ComplianceRepository.add_issues_to_review(
+                        db, new_review.id, issues_data)
+
+                    # Clear from cache once stored in the database
+                    for key in matching_cache_keys:
+                        if key in analysis_results_cache:
+                            del analysis_results_cache[key]
 
         # Return the review as a dictionary
         return new_review.to_dict()
