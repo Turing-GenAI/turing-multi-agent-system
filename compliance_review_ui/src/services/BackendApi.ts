@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ComplianceIssue } from '../components/ComplianceReviewPage';
+import { ComplianceIssue } from '../types/compliance';
 
 // API base URL - change this to match your backend
 const API_BASE_URL = 'http://localhost:8000/api/v1';

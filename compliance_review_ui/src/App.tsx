@@ -8,6 +8,7 @@ import { ComplianceReviewPage } from './components/ComplianceReviewPage'
 import { HistoryDialog } from './components/HistoryDialog'
 import { ComplianceDashboard } from './components/ComplianceDashboard'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
+import { InformationCollection } from './components/InformationCollection'
 import { Document } from './types/compliance'
 import { complianceAPI } from './services/api'
 import { format } from 'date-fns'
@@ -220,6 +221,9 @@ function App() {
         break
       case 'analytics':
         navigate('/analytics')
+        break
+      case 'information':
+        navigate('/information')
         break
       case 'settings':
         navigate('/settings')
@@ -592,6 +596,7 @@ function App() {
             <Route path="/compliance" element={<ComplianceContent />} />
             <Route path="/compliance/review/:reviewId" element={<ComplianceContent />} />
             <Route path="/analytics" element={<AnalyticsContent />} />
+            <Route path="/information" element={<InformationCollection onInformationSubmit={(info) => console.log('Information submitted:', info)} />} />
             <Route path="/settings" element={<SettingsContent />} />
           </Routes>
         </div>

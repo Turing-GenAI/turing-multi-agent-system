@@ -105,8 +105,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       setReviews(reviewsData || []);
       
       // Track which reviews are in processing state
-      const processing = {};
-      reviewsData.forEach(review => {
+      const processing: { [key: string]: boolean } = {};
+      reviewsData.forEach((review: ReviewInfo) => {
         if (review.status === 'processing') {
           processing[review.id] = true;
         }
@@ -120,42 +120,67 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     }
   };
   
+  // State for email functionality
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  const [emailContent, setEmailContent] = useState<string>('');
+  const [emailAddresses, setEmailAddresses] = useState<string>('');
+  const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
+
+  // Function to generate email content using LLM
+  const generateEmailContent = async (review: ReviewInfo) => {
+    setIsLoadingEmailContent(true);
+    try {
+      const response = await complianceAPI.generateReviewAlertContent({
+        to_emails: emailAddresses.split(',').map(email => email.trim()),
+        subject: emailSubject,
+        review_data: {
+          clinical_doc: review.clinicalDoc,
+          compliance_doc: review.complianceDoc,
+          issues: review.issues || 0,
+          high_confidence_issues: review.highConfidenceIssues || 0,
+          low_confidence_issues: review.lowConfidenceIssues || 0
+        }
+      });
+      
+      if (response.content) {
+        setEmailContent(response.content);
+      }
+    } catch (error) {
+      console.error('Error generating email content:', error);
+      addToast('Failed to generate email content. Please try again.', 'error');
+    } finally {
+      setIsLoadingEmailContent(false);
+    }
+  };
+
   // Function to check status of individual processing reviews
   const checkProcessingReviews = async () => {
-    // Get IDs of all processing reviews
     const processingIds = Object.keys(processingReviews);
     
     if (processingIds.length === 0) return;
     
     try {
-      // Fetch only the processing reviews to check their status
       const updatedReviews = await complianceAPI.getReviews();
-      // Also check for any reviews being deleted
-      const deletingIds = reviewsBeingDeleted;
       let hasStatusChanges = false;
       
-      // Update only reviews that changed status
       setReviews(prevReviews => {
         return prevReviews.map(review => {
-          const updatedReview = updatedReviews.find(r => r.id === review.id);
+          const updatedReview = updatedReviews.find((r: ReviewInfo) => r.id === review.id);
           
-          // If this review was processing and now it's complete
           if (updatedReview && processingReviews[review.id] && updatedReview.status === 'completed') {
             hasStatusChanges = true;
-            return updatedReview; // Return the updated review
+            return updatedReview;
           }
-          
-          return review; // Keep the existing review unchanged
+          return review;
         });
       });
       
-      // Update processing reviews tracking if any changed to completed
       if (hasStatusChanges) {
         setProcessingReviews(prev => {
           const updated = {...prev};
-          updatedReviews.forEach(review => {
+          updatedReviews.forEach((review: ReviewInfo) => {
             if (updated[review.id] && review.status === 'completed') {
-              delete updated[review.id]; // Remove from processing
+              delete updated[review.id];
             }
           });
           return updated;
@@ -440,7 +465,9 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   // Function to open alert modal
   const handleOpenAlertModal = (review: ReviewInfo) => {
     setSelectedReviewForAlert(review);
+    setEmailSubject(`Compliance Review Alert - ${review.clinicalDoc}`);
     setShowAlertModal(true);
+    generateEmailContent(review);
   };
 
   // Handle alert success
