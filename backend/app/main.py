@@ -11,21 +11,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create FastAPI application
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
+app = FastAPI(title=settings.PROJECT_NAME)
 
-# Add CORS middleware
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API router
+# Include API router with the correct prefix
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
@@ -34,11 +31,7 @@ async def root():
     """
     Root endpoint to verify the API is running.
     """
-    return {
-        "message": "Compliance Review API is running",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+    return {"message": "Welcome to the Compliance Review API"}
 
 
 @app.get("/health")

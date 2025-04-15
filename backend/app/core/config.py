@@ -2,6 +2,7 @@ import os
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+from typing import List
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,8 +13,13 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Compliance Review API"
     API_PORT: int = Field(default=8000)
     
-    # CORS Settings
-    BACKEND_CORS_ORIGINS: list[str] = ["*"]
+    # CORS Configuration
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",  # Local development
+        "http://127.0.0.1:5173",
+        "http://audit-copilot-compliance-ui:5173",  # Docker container
+        "http://audit-copilot-compliance-ui-dev:5173"  # Docker development container
+    ]
     
     # OpenAI Settings Toggle
     USE_AZURE_OPENAI: bool = Field(default=os.getenv("USE_AZURE_OPENAI", "False").lower() == "true")

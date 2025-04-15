@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import compliance, documents
+from app.api.endpoints import compliance, documents, trial_info
 
 api_router = APIRouter()
 
@@ -15,4 +15,11 @@ api_router.include_router(
     documents.router, 
     prefix="/documents", 
     tags=["documents"]
+)
+
+# Include trial info endpoints under /api/v1
+api_router.include_router(
+    trial_info.router, 
+    prefix="", 
+    tags=["trial-info"]
 )
