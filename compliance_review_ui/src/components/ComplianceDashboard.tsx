@@ -33,6 +33,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   const location = useLocation();
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [selectedClinicalDoc, setSelectedClinicalDoc] = useState<DocumentInfo | null>(null);
+  // We'll keep this state but won't expose it in the UI
   const [selectedComplianceDoc, setSelectedComplianceDoc] = useState<DocumentInfo | null>(null);
   const [activeTab, setActiveTab] = useState<'documents' | 'reviews'>(
     location.state?.activeTab === 'reviews' ? 'reviews' : 'documents'
@@ -255,61 +256,55 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   };
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Change from boolean to string to track which review is being loaded
+  const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
   
   const handleStartReview = async () => {
-    if (selectedClinicalDoc && selectedComplianceDoc) {
+    if (selectedClinicalDoc) {
       try {
         setIsAnalyzing(true);
         
         // Switch to the Reviews tab first to show analysis progress
         setActiveTab('reviews');
         
-        // Create review with 'processing' status before analysis
-        const placeholderUuid = 'frontend-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        // No need to create a placeholder review - we'll create the final review once we have the analysis results
         const now = new Date();
         const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
         
-        // Create initial review with processing status
-        await complianceAPI.createReview({
-          id: placeholderUuid,
-          clinical_doc_id: selectedClinicalDoc.id,
-          compliance_doc_id: selectedComplianceDoc.id,
-          clinicalDoc: selectedClinicalDoc.title,
-          complianceDoc: selectedComplianceDoc.title,
-          status: 'processing', // Show as processing initially
-          issues: 0,
-          highConfidenceIssues: 0,
-          lowConfidenceIssues: 0,
-          created: formattedDate
-        });
-        
-        // With polling enabled, we don't need to manually fetch reviews here
-        
-        // Now call the backend API to analyze compliance (this might take time)
+        // Call the backend API to analyze compliance and auto-select compliance document
+        // We only need to pass the clinical doc ID
         const complianceResult = await complianceAPI.analyzeCompliance(
-          selectedClinicalDoc.id,
-          selectedComplianceDoc.id
+          selectedClinicalDoc.id
         );
+        
+        // Get the selected compliance document ID from the result
+        const selectedComplianceDocId = complianceResult.compliance_doc_id;
         
         // Count high and low confidence issues
         const highConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'high').length;
         const lowConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'low').length;
         
-        // Update the review with the analysis results
+        // Get the compliance document details for the UI
+        // Find the doc by ID in the list of documents
+        const selectedComplianceDoc = documents.find(doc => 
+          doc.id === selectedComplianceDocId && doc.type.toLowerCase() === 'compliance'
+        );
+        
+        // Now create a review with completed status
         await complianceAPI.createReview({
-          id: placeholderUuid, // Same ID to update the existing review
+          id: 'will-be-replaced-by-backend', // Backend will generate a sequential ID
           clinical_doc_id: selectedClinicalDoc.id,
-          compliance_doc_id: selectedComplianceDoc.id,
+          compliance_doc_id: selectedComplianceDocId,
           clinicalDoc: selectedClinicalDoc.title,
-          complianceDoc: selectedComplianceDoc.title,
-          status: 'completed', // Now marked as completed
+          complianceDoc: selectedComplianceDoc ? selectedComplianceDoc.title : "Compliance Document",
+          status: 'completed', // Mark as completed
           issues: complianceResult.issues.length,
           highConfidenceIssues,
           lowConfidenceIssues,
           created: formattedDate
         });
         
-        // Refresh the reviews list again to show the completed review
+        // Refresh the reviews list to show the completed review
         await fetchAllReviews();
         
         // Use appropriate toast type based on whether issues were found
@@ -345,7 +340,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
         return;
       }
       
-      setIsAnalyzing(true);
+      // Set the specific review ID that's loading
+      setLoadingReviewId(review.id);
       console.log('Continuing review:', review);
       
       // Get the complete review with document content included
@@ -407,7 +403,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       console.error('Error continuing review:', error);
       addToast('Failed to continue review. Please try again.', 'error');
     } finally {
-      setIsAnalyzing(false);
+      // Clear the loading state
+      setLoadingReviewId(null);
     }
   };
 
@@ -458,15 +455,6 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     );
   };
 
-  // const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'clinical' | 'compliance') => {
-  //   // In a real implementation, this would handle file uploads
-  //   // For now, just log that a file was selected
-  //   if (event.target.files && event.target.files.length > 0) {
-  //     console.log('File selected:', event.target.files[0].name);
-  //     // You would typically upload this file to your backend here
-  //   }
-  // };
-
   // Alert modal state
   const [showAlertModal, setShowAlertModal] = useState<boolean>(false);
   const [selectedReviewForAlert, setSelectedReviewForAlert] = useState<ReviewInfo | null>(null);
@@ -494,19 +482,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   // Search functionality
   const [reviewsSearchQuery, setReviewsSearchQuery] = useState<string>('');
   const [clinicalDocSearchQuery, setclinicalDocSearchQuery] = useState<string>('');
-  const [complianceDocSearchQuery, setComplianceDocSearchQuery] = useState<string>('');
   
   // Filter documents based on search queries
   const filteredClinicalDocs = documents
     .filter(doc => doc.type.toLowerCase() === 'clinical')
     .filter(doc => 
       doc.title.toLowerCase().includes(clinicalDocSearchQuery.toLowerCase())
-    );
-    
-  const filteredComplianceDocs = documents
-    .filter(doc => doc.type.toLowerCase() === 'compliance')
-    .filter(doc => 
-      doc.title.toLowerCase().includes(complianceDocSearchQuery.toLowerCase())
     );
     
   // Filter reviews based on search query
@@ -524,7 +505,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
         <div className="flex items-center gap-3">
           <button 
             className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px] shadow-sm transition-all duration-200"
-            disabled={!selectedClinicalDoc || !selectedComplianceDoc || isAnalyzing}
+            disabled={!selectedClinicalDoc || isAnalyzing}
             onClick={handleStartReview}
           >
             {isAnalyzing ? (
@@ -571,178 +552,89 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       {/* Documents Table */}
       {activeTab === 'documents' && (
         <div className="h-[calc(100vh-200px)] flex flex-col overflow-hidden">
-          {/* Documents Lists */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Clinical Documents */}
-            <div className="flex-1 mr-4 flex flex-col overflow-hidden">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">Clinical Documents</h3>
-              
-              {/* Search bar for clinical documents */}
-              <div className="mb-4 w-full">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiSearch className="h-5 w-5 text-gray-500" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search clinical documents..."
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
-                    value={clinicalDocSearchQuery}
-                    onChange={(e) => setclinicalDocSearchQuery(e.target.value)}
-                  />
+          {/* Documents List - now just clinical documents */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">Clinical Documents</h3>
+            
+            {/* Search bar for clinical documents */}
+            <div className="mb-4 w-full">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiSearch className="h-5 w-5 text-gray-500" />
                 </div>
-              </div>
-              
-              <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-350px)] shadow-sm border-slate-200">
-                <table className="w-full border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                    <tr className="text-left">
-                      <th className="py-3 px-4 text-xs font-semibold text-slate-700">Title</th>
-                      {/* Format and Created columns commented out until backend provides data */}
-                      <th className="py-3 px-4 text-xs font-semibold text-slate-700 w-24">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredClinicalDocs.map((doc) => (
-                      <tr key={doc.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                        selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
-                          ? 'bg-gray-50 border-l-4 border-l-black' 
-                          : ''
-                      }`}>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <FiFileText className="text-gray-500 mr-2 flex-shrink-0" />
-                            <span className="truncate text-sm font-medium text-slate-900" title={doc.title}>{doc.title}</span>
-                          </div>
-                        </td>
-                        {/* Format and Created columns commented out until backend provides data 
-                        <td className="py-3 px-4 text-sm text-slate-700">{doc.format}</td>
-                        <td className="py-3 px-4 text-sm text-slate-700">{doc.created}</td>
-                        */}
-                        <td className="py-3 px-4">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) {
-                                setSelectedClinicalDoc(null);
-                              } else {
-                                setSelectedClinicalDoc({...doc, type: 'clinical'});
-                              }
-                            }}
-                            className={`flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-md shadow-sm w-full transition-colors ${
-                              selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
-                                ? 'bg-black text-white' 
-                                : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
-                            }`}
-                          >
-                            {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
-                              <>
-                                <FiCheck className="w-3 h-3" />
-                                <span>Selected</span>
-                              </>
-                            ) : (
-                              <span>Select Clinical</span>
-                            )}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredClinicalDocs.length === 0 && (
-                      <tr>
-                        <td colSpan={2} className="py-8 text-center text-slate-500">
-                          {clinicalDocSearchQuery ? 'No matching clinical documents found' : 'No clinical documents uploaded yet'}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                <input
+                  type="text"
+                  placeholder="Search clinical documents..."
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
+                  value={clinicalDocSearchQuery}
+                  onChange={(e) => setclinicalDocSearchQuery(e.target.value)}
+                />
               </div>
             </div>
-
-            {/* Compliance Documents */}
-            <div className="flex-1 ml-4 flex flex-col overflow-hidden">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">Compliance Documents</h3>
-              
-              {/* Search bar for compliance documents */}
-              <div className="mb-4 w-full">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiSearch className="h-5 w-5 text-gray-500" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search compliance documents..."
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
-                    value={complianceDocSearchQuery}
-                    onChange={(e) => setComplianceDocSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-350px)] shadow-sm border-slate-200">
-                <table className="w-full border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                    <tr className="text-left">
-                      <th className="py-3 px-4 text-xs font-semibold text-slate-700">Title</th>
-                      {/* Format and Created columns commented out until backend provides data */}
-                      <th className="py-3 px-4 text-xs font-semibold text-slate-700 w-24">Action</th>
+            
+            <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-350px)] shadow-sm border-slate-200">
+              <table className="w-full border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                  <tr className="text-left">
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-700">Title</th>
+                    {/* Format and Created columns commented out until backend provides data */}
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-700 w-24">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClinicalDocs.map((doc) => (
+                    <tr key={doc.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+                      selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
+                        ? 'bg-gray-50 border-l-4 border-l-black' 
+                        : ''
+                    }`}>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center">
+                          <FiFileText className="text-gray-500 mr-2 flex-shrink-0" />
+                          <span className="truncate text-sm font-medium text-slate-900" title={doc.title}>{doc.title}</span>
+                        </div>
+                      </td>
+                      {/* Format and Created columns commented out until backend provides data 
+                      <td className="py-3 px-4 text-sm text-slate-700">{doc.format}</td>
+                      <td className="py-3 px-4 text-sm text-slate-700">{doc.created}</td>
+                      */}
+                      <td className="py-3 px-4">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) {
+                              setSelectedClinicalDoc(null);
+                            } else {
+                              setSelectedClinicalDoc({...doc, type: 'clinical'});
+                            }
+                          }}
+                          className={`flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-md shadow-sm w-full transition-colors ${
+                            selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
+                              ? 'bg-black text-white' 
+                              : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
+                          }`}
+                        >
+                          {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
+                            <>
+                              <FiCheck className="w-3 h-3" />
+                              <span>Selected</span>
+                            </>
+                          ) : (
+                            <span>Select</span>
+                          )}
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredComplianceDocs.map((doc) => (
-                      <tr key={doc.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                        selectedComplianceDoc && selectedComplianceDoc.id === doc.id 
-                          ? 'bg-gray-50 border-l-4 border-l-black' 
-                          : ''
-                      }`}>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <FiFileText className="text-gray-500 mr-2 flex-shrink-0" />
-                            <span className="truncate text-sm font-medium text-slate-900" title={doc.title}>{doc.title}</span>
-                          </div>
-                        </td>
-                        {/* Format and Created columns commented out until backend provides data 
-                        <td className="py-3 px-4 text-sm text-slate-700">{doc.format}</td>
-                        <td className="py-3 px-4 text-sm text-slate-700">{doc.created}</td>
-                        */}
-                        <td className="py-3 px-4">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (selectedComplianceDoc && selectedComplianceDoc.id === doc.id) {
-                                setSelectedComplianceDoc(null);
-                              } else {
-                                setSelectedComplianceDoc({...doc, type: 'compliance'});
-                              }
-                            }}
-                            className={`flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-md shadow-sm w-full transition-colors ${
-                              selectedComplianceDoc && selectedComplianceDoc.id === doc.id 
-                                ? 'bg-black text-white' 
-                                : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
-                            }`}
-                          >
-                            {selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? (
-                              <>
-                                <FiCheck className="w-3 h-3" />
-                                <span>Selected</span>
-                              </>
-                            ) : (
-                              <span>Select Compliance</span>
-                            )}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredComplianceDocs.length === 0 && (
-                      <tr>
-                        <td colSpan={2} className="py-8 text-center text-slate-500">
-                          {complianceDocSearchQuery ? 'No matching compliance documents found' : 'No compliance documents uploaded yet'}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                  {filteredClinicalDocs.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="py-8 text-center text-slate-500">
+                        {clinicalDocSearchQuery ? 'No matching clinical documents found' : 'No clinical documents uploaded yet'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -753,13 +645,6 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
               {clinicalDocSearchQuery && (
                 <span className="ml-1 text-gray-800">
                   (filtered from {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length})
-                </span>
-              )}
-              {' | '}
-              Compliance Documents: {filteredComplianceDocs.length}
-              {complianceDocSearchQuery && (
-                <span className="ml-1 text-gray-800">
-                  (filtered from {documents.filter(doc => doc.type.toLowerCase() === 'compliance').length})
                 </span>
               )}
             </div>
@@ -789,123 +674,174 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
             </div>
           </div>
 
-          {loadingReviews ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          ) : reviews.length === 0 ? (
+          {reviews.length === 0 && !loadingReviews ? (
             <div className="text-center py-8 text-gray-500">
               No reviews found. Start a compliance review to see results here.
             </div>
           ) : (
             <div className="h-[calc(100vh-300px)] overflow-auto rounded-md border border-slate-200">
-              <table className="w-full border-collapse">
-                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                  <tr>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">ID</th>
-                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Clinical Document</th>
-                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Compliance Document</th>
-                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Status</th>
-                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Issues</th>
-                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Created</th>
-                    <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredReviews.map((review) => (
-                    <tr 
-                      key={review.id} 
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="py-3 px-4 text-sm font-medium text-slate-900">
-                        <div className="max-w-[120px] truncate" title={review.id}>{review.id}</div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-700 text-center">
-                        <div className="max-w-[180px] truncate mx-auto" title={review.clinicalDoc}>{review.clinicalDoc}</div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-700 text-center">
-                        <div className="max-w-[180px] truncate mx-auto" title={review.complianceDoc}>{review.complianceDoc}</div>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          review.status === 'completed' 
-                            ? 'bg-green-100 text-green-800 border border-green-200' 
-                            : 'bg-amber-100 text-amber-800 border border-amber-200'
-                        }`}>
-                          {review.status === 'completed' ? (
-                            <>
-                              <FiCheck className="mr-1 w-3 h-3" />
-                              Completed
-                            </>
-                          ) : reviewsBeingDeleted.includes(review.id) ? (
-                            <>
-                              <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
-                              Deleting...
-                            </>
-                          ) : processingReviews[review.id] ? (
-                            <>
-                              <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <FiAlertTriangle className="mr-1 w-3 h-3" />
-                              In Progress
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-800 border border-red-200 text-xs font-medium" title="High confidence issues">
-                            {review.highConfidenceIssues}
-                          </span>
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs font-medium" title="Low confidence issues">
-                            {review.lowConfidenceIssues}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-700 text-center">{review.created}</td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex space-x-2 justify-center">
-                          <button 
-                            className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center"
-                            onClick={() => handleContinueReview(review)}
-                            disabled={isAnalyzing}
-                            title="View compliance review details"
-                          >
-                            <FiEye className="w-3 h-3 mr-1" />
-                            View
-                          </button>
-                          <button 
-                            className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded hover:bg-orange-50 flex items-center transition-colors"
-                            onClick={() => handleOpenAlertModal(review)}
-                            title="Send alert to document owners"
-                          >
-                            <FiAlertTriangle className="w-3 h-3 mr-1" />
-                            Alert
-                          </button>
-                          <button 
-                            className="text-xs text-red-600 hover:text-red-800 p-1 border border-red-200 rounded hover:bg-red-50 flex items-center justify-center transition-colors w-6 h-6"
-                            onClick={() => handleDeleteReview(review)}
-                            disabled={reviewsBeingDeleted.includes(review.id)}
-                            title="Delete"
-                          >
-                            <FiTrash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredReviews.length === 0 && (
+              {loadingReviews && reviews.length === 0 ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-500">
-                        {reviewsSearchQuery ? 'No matching reviews found' : 'No reviews available'}
-                      </td>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">ID</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Clinical Document</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Compliance Document</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Status</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Issues</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Created</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {isAnalyzing && (
+                      <tr className="border-b border-slate-100 bg-amber-50 animate-pulse">
+                        <td className="py-3 px-4 text-sm font-medium text-slate-900">
+                          Pending
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto" title={selectedClinicalDoc?.title}>
+                            {selectedClinicalDoc?.title}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto">Auto-selecting...</div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                            <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                            Analyzing...
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center gap-2 justify-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 text-gray-800 border border-gray-200 text-xs font-medium">
+                              -
+                            </span>
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 text-gray-800 border border-gray-200 text-xs font-medium">
+                              -
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">Just now</td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex space-x-2 justify-center opacity-50">
+                            <button disabled className="text-xs text-blue-600 px-2 py-1 border border-blue-200 rounded flex items-center">
+                              <FiEye className="w-3 h-3 mr-1" />
+                              View
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {filteredReviews.map((review) => (
+                      <tr 
+                        key={review.id} 
+                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-3 px-4 text-sm font-medium text-slate-900">
+                          <div className="max-w-[120px] truncate" title={review.id}>{review.id}</div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto" title={review.clinicalDoc}>{review.clinicalDoc}</div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto" title={review.complianceDoc}>{review.complianceDoc}</div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            review.status === 'completed' 
+                              ? 'bg-green-100 text-green-800 border border-green-200' 
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}>
+                            {review.status === 'completed' ? (
+                              <>
+                                <FiCheck className="mr-1 w-3 h-3" />
+                                Completed
+                              </>
+                            ) : reviewsBeingDeleted.includes(review.id) ? (
+                              <>
+                                <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                                Deleting...
+                              </>
+                            ) : processingReviews[review.id] ? (
+                              <>
+                                <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <FiAlertTriangle className="mr-1 w-3 h-3" />
+                                In Progress
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center gap-2 justify-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-800 border border-red-200 text-xs font-medium" title="High confidence issues">
+                              {review.highConfidenceIssues}
+                            </span>
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs font-medium" title="Low confidence issues">
+                              {review.lowConfidenceIssues}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">{review.created}</td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex space-x-2 justify-center">
+                            <button 
+                              className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center"
+                              onClick={() => handleContinueReview(review)}
+                              disabled={isAnalyzing || loadingReviewId !== null}
+                              title="View compliance review details"
+                            >
+                              {loadingReviewId === review.id ? (
+                                <>
+                                  <div className="animate-spin h-3 w-3 border-b-2 border-blue-800 rounded-full mr-1"></div>
+                                  Loading...
+                                </>
+                              ) : (
+                                <>
+                                  <FiEye className="w-3 h-3 mr-1" />
+                                  View
+                                </>
+                              )}
+                            </button>
+                            <button 
+                              className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded hover:bg-orange-50 flex items-center transition-colors"
+                              onClick={() => handleOpenAlertModal(review)}
+                              title="Send alert to document owners"
+                            >
+                              <FiAlertTriangle className="w-3 h-3 mr-1" />
+                              Alert
+                            </button>
+                            <button 
+                              className="text-xs text-red-600 hover:text-red-800 p-1 border border-red-200 rounded hover:bg-red-50 flex items-center justify-center transition-colors w-6 h-6"
+                              onClick={() => handleDeleteReview(review)}
+                              disabled={reviewsBeingDeleted.includes(review.id)}
+                              title="Delete"
+                            >
+                              <FiTrash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredReviews.length === 0 && !isAnalyzing && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-500">
+                          {reviewsSearchQuery ? 'No matching reviews found' : 'No reviews available'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
           

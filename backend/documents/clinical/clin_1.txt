@@ -1,10 +1,10 @@
-Appendix A. INVESTIGATOR’S BROCHURE
+Appendix A. INVESTIGATOR'S BROCHURE
 
 A.1 Introduction
 
-The Investigator’s Brochure (IB) provides clinical and nonclinical data relevant to the investigational product(s) under study in human participants. Its purpose is to assist investigators and trial staff in understanding key protocol elements, including dosage, administration methods, and safety monitoring.
+The Investigator's Brochure (IB) provides clinical and nonclinical data relevant to the investigational product(s) under study in human participants. Its purpose is to assist investigators and trial staff in understanding key protocol elements, including dosage, administration methods, and safety monitoring. All investigators should refer to compliance document comp_1.txt for comprehensive regulatory requirements applicable to this study.
 
-A.1.1 Development of the Investigator’s Brochure
+A.1.1 Development of the Investigator's Brochure
 
 The sponsor ensures an IB is prepared and updated. In investigator-initiated trials, the sponsor-investigator must ascertain the availability of an IB from the product license holder. Current scientific information, including comprehensive product characteristics, should be incorporated. The IB should undergo regular reviews and updates in accordance with the sponsor's procedures, particularly when significant new information arises.
 
@@ -30,7 +30,7 @@ A.2.2 Confidentiality Statement
 
 This document is confidential and intended solely for investigator/institution use, as well as regulatory authorities and IRBs/IECs.
 
-A.3 Contents of the Investigator’s Brochure
+A.3 Contents of the Investigator's Brochure
 
 A.3.2 Summary
 
@@ -42,7 +42,7 @@ ABC-101 (compound XYZ-123) belongs to a class of anti-inflammatory agents intend
 
 A.3.4 Physical, Chemical and Pharmaceutical Properties and Formulation
 
-Detailed description of the investigational product’s chemical structure, properties, and pharmaceutical formulation, including excipients, storage, and handling guidelines.
+Detailed description of the investigational product's chemical structure, properties, and pharmaceutical formulation, including excipients, storage, and handling guidelines.
 
 A.3.5 Nonclinical Studies
 

@@ -41,8 +41,15 @@ export const documentAPI = {
 
 export const complianceAPI = {
   // Analyze compliance using document IDs
-  analyzeCompliance: async (clinicalDocId: string, complianceDocId: string, forceRefresh: boolean = false) => {
-    const response = await api.post(`/compliance/analyze-by-ids/?clinical_doc_id=${clinicalDocId}&compliance_doc_id=${complianceDocId}&force_refresh=${forceRefresh}`);
+  analyzeCompliance: async (clinicalDocId: string, complianceDocId?: string, forceRefresh: boolean = false) => {
+    let url = `/compliance/analyze-by-ids/?clinical_doc_id=${clinicalDocId}&force_refresh=${forceRefresh}`;
+    
+    // Only add compliance_doc_id if provided
+    if (complianceDocId) {
+      url += `&compliance_doc_id=${complianceDocId}`;
+    }
+    
+    const response = await api.post(url);
     return response.data as {
       clinical_doc_id: string;
       compliance_doc_id: string;

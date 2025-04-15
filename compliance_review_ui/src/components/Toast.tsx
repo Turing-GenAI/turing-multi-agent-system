@@ -71,7 +71,7 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <div 
-      className={`fixed top-4 right-4 z-50 min-w-[300px] max-w-md flex items-start p-4 mb-4 border-l-4 rounded shadow-lg ${
+      className={`fixed bottom-4 right-4 z-50 min-w-[300px] max-w-md flex items-start p-4 mb-4 border-l-4 rounded shadow-lg ${
         isExiting ? 'animate-slide-out' : 'animate-slide-in'
       } ${getTypeStyles()}`}
       role="alert"
@@ -104,11 +104,11 @@ export interface ToastContainerProps {
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-4">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col-reverse gap-4">
       {toasts.map((toast, index) => (
         <div 
           key={toast.id} 
-          style={{ top: `${(index * 4) + 1}rem` }}
+          style={{ bottom: `${(index * 4) + 1}rem` }}
           className="relative"
         >
           <Toast
