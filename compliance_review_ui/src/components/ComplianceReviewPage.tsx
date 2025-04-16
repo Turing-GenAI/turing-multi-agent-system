@@ -482,129 +482,191 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   // Highlight non-compliant text in clinical document - memoized to prevent re-highlighting on every render
   const highlightedClinicalContent = React.useMemo(() => {
     const highlightClinicalText = (content: string) => {
-    if (!content || content.trim() === '') return content;
-    let highlightedContent = content;
-    
-    reviewedIssues.forEach((issue, index) => {
-      if (!issue.clinical_text || issue.clinical_text.trim() === '') return;
+      if (!content || content.trim() === '') return content;
+      let highlightedContent = content;
       
-      const textToHighlight = issue.clinical_text;
-      
-      // If this text has an accepted change, use the suggested edit instead
-      if (issue.status === 'accepted' && appliedChanges.has(textToHighlight)) {
-        const suggestedEdit = appliedChanges.get(textToHighlight);
+      reviewedIssues.forEach((issue, index) => {
+        if (!issue.clinical_text || issue.clinical_text.trim() === '') return;
         
-        // Use vibrant green to indicate accepted change
-        const acceptedClass = 'bg-green-200 hover:bg-green-300 text-green-900';
-        const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-500' : '';
+        const textToHighlight = issue.clinical_text;
         
-        try {
-          // Normalize whitespace and escape regex characters
-          const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
-          const normalizedContent = normalizeText(content);
-          const normalizedTextToHighlight = normalizeText(textToHighlight);
+        // If this text has an accepted change, use the suggested edit instead
+        if (issue.status === 'accepted' && appliedChanges.has(textToHighlight)) {
+          const suggestedEdit = appliedChanges.get(textToHighlight);
           
-          const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const escapedText = escapeRegExp(normalizedTextToHighlight);
+          // Use vibrant green to indicate accepted change
+          const acceptedClass = 'bg-green-200';
+          const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-400' : '';
           
-          // Try to find the text
-          if (normalizedContent.includes(normalizedTextToHighlight)) {
-            const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+          try {
+            // Normalize whitespace and escape regex characters
+            const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+            const normalizedContent = normalizeText(content);
+            const normalizedTextToHighlight = normalizeText(textToHighlight);
             
-            highlightedContent = highlightedContent.replace(
-              flexRegex,
-              `<span 
-                id="issue-${issue.id}" 
-                class="${acceptedClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
-                onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
-              >
-                ${suggestedEdit} <span class="text-xs italic text-green-700">(edited)</span>
-              </span>`
-            );
-          }
-        } catch (error) {
-          console.error('Error applying accepted edit:', error);
-        }
-      } else {
-        // Regular highlighting for other issues
-        // Use more vibrant colors with stronger contrast
-        const confidenceClass = issue.confidence === 'high' 
-          ? 'bg-red-300 hover:bg-red-400 text-red-900' 
-          : 'bg-yellow-300 hover:bg-yellow-400 text-yellow-900';
-        const statusClass = issue.status === 'accepted' 
-          ? 'border-green-600 border-b-2' 
-          : issue.status === 'rejected' 
-            ? 'border-red-600 border-b-2' 
-            : 'border-gray-400 border-b-2';
-        const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-500' : '';
-        
-        try {
-          // Normalize whitespace in both the content and the text to highlight
-          const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
-          const normalizedContent = normalizeText(content);
-          const normalizedTextToHighlight = normalizeText(textToHighlight);
-          
-          // Escape special regex characters
-          const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const escapedText = escapeRegExp(normalizedTextToHighlight);
-          
-          // Try different matching approaches in order of precision
-          let matched = false;
-          
-          // 1. Try exact matching first (with normalized whitespace)
-          if (normalizedContent.includes(normalizedTextToHighlight)) {
-            // Use a regex that can handle flexible whitespace
-            const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+            const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedText = escapeRegExp(normalizedTextToHighlight);
             
-            highlightedContent = highlightedContent.replace(
-              flexRegex,
-              `<span 
-                id="issue-${issue.id}" 
-                class="${confidenceClass} ${statusClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
-                onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
-              >
-                $&
-              </span>`
-            );
-            matched = true;
-          }
-          
-          // 2. If exact matching fails, try fuzzy matching with word boundaries
-          if (!matched && normalizedTextToHighlight.length > 10) {
-            // For longer strings, try matching initial words (minimum 10 chars)
-            const words = normalizedTextToHighlight.split(' ');
-            const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
-            
-            if (firstFewWords.length >= 10) {
-              const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+            // Try to find the text
+            if (normalizedContent.includes(normalizedTextToHighlight)) {
+              const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
               
-      highlightedContent = highlightedContent.replace(
-                partialRegex,
-                (match) => {
-                  return `<span 
-                    id="issue-${issue.id}" 
-                    class="${confidenceClass} ${statusClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
-                    onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
-                  >
-                    ${match}
-                  </span>`;
-                }
+              highlightedContent = highlightedContent.replace(
+                flexRegex,
+                `<span 
+                  id="issue-${issue.id}" 
+                  class="${acceptedClass} ${isCurrentClass} px-1 cursor-pointer" 
+                  onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+                >
+                  ${suggestedEdit} <span class="text-xs italic text-green-700">(edited)</span>
+                </span>`
+              );
+            }
+          } catch (error) {
+            console.error('Error applying accepted edit:', error);
+          }
+        } else {
+          // Regular highlighting for other issues
+          // Use more vibrant colors with stronger contrast
+          const confidenceClass = issue.confidence === 'high' 
+            ? 'bg-red-200' 
+            : 'bg-yellow-200';
+          const statusClass = issue.status === 'accepted' 
+            ? 'border-green-600 border-b-2' 
+            : issue.status === 'rejected' 
+              ? 'border-red-600 border-b-2' 
+              : 'border-gray-400 border-b-2';
+          const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-400' : '';
+          
+          try {
+            // Normalize whitespace in both the content and the text to highlight
+            const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+            const normalizedContent = normalizeText(content);
+            const normalizedTextToHighlight = normalizeText(textToHighlight);
+            
+            // Escape special regex characters
+            const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedText = escapeRegExp(normalizedTextToHighlight);
+            
+            // Try different matching approaches in order of precision
+            let matched = false;
+            
+            // 1. Try exact matching first (with normalized whitespace)
+            if (normalizedContent.includes(normalizedTextToHighlight)) {
+              // Use a regex that can handle flexible whitespace
+              const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+              
+              highlightedContent = highlightedContent.replace(
+                flexRegex,
+                `<span 
+                  id="issue-${issue.id}" 
+                  class="${confidenceClass} ${statusClass} ${isCurrentClass} px-1 cursor-pointer" 
+                  onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+                >
+                  $&
+                </span>`
               );
               matched = true;
             }
+            
+            // 2. If exact matching fails, try using word boundary matching
+            if (!matched && normalizedTextToHighlight.length > 10) {
+              try {
+                // Create an array of individual words
+                const words = normalizedTextToHighlight.split(' ');
+                if (words.length >= 3) {
+                  // Create a pattern that matches these words with flexible spacing
+                  const wordsPattern = words.map(word => escapeRegExp(word)).join('\\s+');
+                  const boundaryRegex = new RegExp(`\\b${wordsPattern}\\b`, 'g');
+                  
+                  const replaced = highlightedContent.replace(
+                    boundaryRegex,
+                    (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+                  );
+                  
+                  if (replaced !== highlightedContent) {
+                    highlightedContent = replaced;
+                    matched = true;
+                  }
+                }
+              } catch (error) {
+                console.error('Error with word boundary matching:', error);
+              }
+            }
+            
+            // 3. If still not matched, try matching first few words
+            if (!matched && normalizedTextToHighlight.length > 10) {
+              // For longer strings, try matching initial words (minimum 10 chars)
+              const words = normalizedTextToHighlight.split(' ');
+              const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+              
+              if (firstFewWords.length >= 10) {
+                const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+                
+                const replaced = highlightedContent.replace(
+                  partialRegex,
+                  (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+                );
+                
+                if (replaced !== highlightedContent) {
+                  highlightedContent = replaced;
+                  matched = true;
+                }
+              }
+            }
+            
+            // 4. As a last resort, try an even looser matching approach for long texts
+            if (!matched && normalizedTextToHighlight.length > 30) {
+              // Find a significant initial portion and search for it
+              const initialPortion = normalizedTextToHighlight.substring(0, 30);
+              
+              const textIndex = normalizedContent.indexOf(initialPortion);
+              if (textIndex >= 0) {
+                // Find a natural stopping point - near the expected end or at the next punctuation
+                const expectedLength = normalizedTextToHighlight.length;
+                const maxEnd = Math.min(textIndex + expectedLength + 20, normalizedContent.length);
+                
+                let endIndex = maxEnd;
+                for (let i = textIndex + expectedLength - 10; i < maxEnd; i++) {
+                  if (i >= normalizedContent.length) break;
+                  if ('.!?;:'.includes(normalizedContent[i])) {
+                    endIndex = i + 1;
+                    break;
+                  }
+                }
+                
+                // Extract the matched section and highlight it
+                const originalStart = content.indexOf(content.substring(textIndex, textIndex + 20));
+                if (originalStart >= 0) {
+                  const textToMatch = content.substring(originalStart, originalStart + (endIndex - textIndex));
+                  
+                  // Create a safe regex for this specific text
+                  const safeRegex = new RegExp(escapeRegExp(textToMatch), 'g');
+                  
+                  const replaced = highlightedContent.replace(
+                    safeRegex,
+                    (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+                  );
+                  
+                  if (replaced !== highlightedContent) {
+                    highlightedContent = replaced;
+                    matched = true;
+                  }
+                }
+              }
+            }
+            
+            // 5. Log if no match was found for debugging
+            if (!matched) {
+              console.warn(`Could not find text match for issue: "${normalizedTextToHighlight.substring(0, 50)}..."`);
+            }
+          } catch (error) {
+            console.error('Error highlighting clinical text:', error);
           }
-          
-          // 3. Log if no match was found for debugging
-          if (!matched) {
-            console.warn(`Could not find text match for issue: "${normalizedTextToHighlight.substring(0, 50)}..."`);
-          }
-        } catch (error) {
-          console.error('Error highlighting clinical text:', error);
         }
-      }
-    });
-    
-    return highlightedContent;
+      });
+      
+      return highlightedContent;
     }
     
     return highlightClinicalText(displayClinicalContent);
@@ -614,68 +676,138 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   const highlightedComplianceContent = React.useMemo(() => {
     // Helper function to highlight compliance text
     function highlightComplianceText(content: string, issueIndex: number) {
-    if (!reviewedIssues[issueIndex] || !content || content.trim() === '') return content;
-    
-    let highlightedContent = content;
-    const textToHighlight = reviewedIssues[issueIndex].compliance_text;
-    
-    if (!textToHighlight || textToHighlight.trim() === '') return content;
-    
-    try {
-      // Normalize whitespace in both the content and the text to highlight
-      const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
-      const normalizedContent = normalizeText(content);
-      const normalizedTextToHighlight = normalizeText(textToHighlight);
+      if (!reviewedIssues[issueIndex] || !content || content.trim() === '') return content;
       
-      // Escape special regex characters
-      const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const escapedText = escapeRegExp(normalizedTextToHighlight);
+      let highlightedContent = content;
+      const textToHighlight = reviewedIssues[issueIndex].compliance_text;
       
-      // Try different matching approaches in order of precision
-      let matched = false;
+      if (!textToHighlight || textToHighlight.trim() === '') return content;
       
-      // 1. Try exact matching first (with normalized whitespace)
-      if (normalizedContent.includes(normalizedTextToHighlight)) {
-        // Use a regex that can handle flexible whitespace
-        const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+      try {
+        // Normalize whitespace in both the content and the text to highlight
+        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+        const normalizedContent = normalizeText(content);
+        const normalizedTextToHighlight = normalizeText(textToHighlight);
         
-        highlightedContent = highlightedContent.replace(
-          flexRegex,
-          `<span class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-2 py-1 rounded-md shadow-sm font-medium">$&</span>`
-        );
-        matched = true;
-      }
-      
-      // 2. If exact matching fails, try fuzzy matching with word boundaries
-      if (!matched && normalizedTextToHighlight.length > 10) {
-        // For longer strings, try matching initial words (minimum 10 chars)
-        const words = normalizedTextToHighlight.split(' ');
-        const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+        // Escape special regex characters
+        const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedText = escapeRegExp(normalizedTextToHighlight);
         
-        if (firstFewWords.length >= 10) {
-          const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+        // Try different matching approaches in order of precision
+        let matched = false;
+        
+        // 1. Try exact matching first (with normalized whitespace)
+        if (normalizedContent.includes(normalizedTextToHighlight)) {
+          // Use a regex that can handle flexible whitespace
+          const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
           
-    highlightedContent = highlightedContent.replace(
-            partialRegex,
-            (match) => `<span class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-2 py-1 rounded-md shadow-sm font-medium">${match}</span>`
+          highlightedContent = highlightedContent.replace(
+            flexRegex,
+            `<span class="bg-blue-200 px-1">$&</span>`
           );
           matched = true;
         }
+        
+        // 2. If exact matching fails, try using word boundary matching
+        if (!matched && normalizedTextToHighlight.length > 10) {
+          try {
+            // Create an array of individual words
+            const words = normalizedTextToHighlight.split(' ');
+            if (words.length >= 3) {
+              // Create a pattern that matches these words with flexible spacing
+              const wordsPattern = words.map(word => escapeRegExp(word)).join('\\s+');
+              const boundaryRegex = new RegExp(`\\b${wordsPattern}\\b`, 'g');
+              
+              const replaced = highlightedContent.replace(
+                boundaryRegex,
+                (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+              );
+              
+              if (replaced !== highlightedContent) {
+                highlightedContent = replaced;
+                matched = true;
+              }
+            }
+          } catch (error) {
+            console.error('Error with word boundary matching:', error);
+          }
+        }
+        
+        // 3. If still not matched, try matching first few words
+        if (!matched && normalizedTextToHighlight.length > 10) {
+          // For longer strings, try matching initial words (minimum 10 chars)
+          const words = normalizedTextToHighlight.split(' ');
+          const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+          
+          if (firstFewWords.length >= 10) {
+            const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+            
+            const replaced = highlightedContent.replace(
+              partialRegex,
+              (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+            );
+            
+            if (replaced !== highlightedContent) {
+              highlightedContent = replaced;
+              matched = true;
+            }
+          }
+        }
+        
+        // 4. As a last resort, try an even looser matching approach for long texts
+        if (!matched && normalizedTextToHighlight.length > 30) {
+          // Find a significant initial portion and search for it
+          const initialPortion = normalizedTextToHighlight.substring(0, 30);
+          
+          const textIndex = normalizedContent.indexOf(initialPortion);
+          if (textIndex >= 0) {
+            // Find a natural stopping point - near the expected end or at the next punctuation
+            const expectedLength = normalizedTextToHighlight.length;
+            const maxEnd = Math.min(textIndex + expectedLength + 20, normalizedContent.length);
+            
+            let endIndex = maxEnd;
+            for (let i = textIndex + expectedLength - 10; i < maxEnd; i++) {
+              if (i >= normalizedContent.length) break;
+              if ('.!?;:'.includes(normalizedContent[i])) {
+                endIndex = i + 1;
+                break;
+              }
+            }
+            
+            // Extract the matched section and highlight it
+            const originalStart = content.indexOf(content.substring(textIndex, textIndex + 20));
+            if (originalStart >= 0) {
+              const textToMatch = content.substring(originalStart, originalStart + (endIndex - textIndex));
+              
+              // Create a safe regex for this specific text
+              const safeRegex = new RegExp(escapeRegExp(textToMatch), 'g');
+              
+              const replaced = highlightedContent.replace(
+                safeRegex,
+                (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+              );
+              
+              if (replaced !== highlightedContent) {
+                highlightedContent = replaced;
+                matched = true;
+              }
+            }
+          }
+        }
+        
+        // 5. Log if no match was found for debugging
+        if (!matched) {
+          console.warn(`Could not find compliance text match: "${normalizedTextToHighlight.substring(0, 50)}..."`);
+        }
+      } catch (error) {
+        console.error('Error highlighting compliance text:', error);
       }
       
-      // 3. Log if no match was found for debugging
-      if (!matched) {
-        console.warn(`Could not find compliance text match: "${normalizedTextToHighlight.substring(0, 50)}..."`);
-      }
-    } catch (error) {
-      console.error('Error highlighting compliance text:', error);
+      return highlightedContent;
     }
     
-    return highlightedContent;
-  };
-  
-  return currentIssue ? highlightComplianceText(displayComplianceContent, currentIssueIndex) : displayComplianceContent;
-}, [displayComplianceContent, currentIssue, currentIssueIndex, reviewedIssues]);
+    return highlightComplianceText(displayComplianceContent, currentIssueIndex);
+  }, [displayComplianceContent, currentIssue, currentIssueIndex, reviewedIssues]);
   
   // Event listener for issue clicks in the document
   useEffect(() => {
@@ -923,19 +1055,19 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
               {reviewedIssues.length > 0 && (
                 <div className="mt-6 p-3 border-t bg-gray-50 flex flex-wrap items-center gap-4 text-xs">
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 bg-red-300 rounded-sm"></span>
+                    <span className="inline-block w-3 h-3 bg-red-200 rounded-sm"></span>
                     <span>High Confidence Issue</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 bg-yellow-300 rounded-sm"></span>
+                    <span className="inline-block w-3 h-3 bg-yellow-200 rounded-sm"></span>
                     <span>Low Confidence Issue</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 border-b-2 border-green-600"></span>
-                    <span>Accepted Issue</span>
+                    <span className="inline-block w-3 h-3 bg-green-200 rounded-sm"></span>
+                    <span>Accepted Change</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 border-b-2 border-red-600"></span>
+                    <span className="inline-block w-3 h-3 border-b-2 border-red-600"></span>
                     <span>Rejected Issue</span>
                   </div>
                 </div>
