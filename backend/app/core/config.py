@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     CHUNKING_STRATEGY: str = Field(default=os.getenv("CHUNKING_STRATEGY", "agentic"))
     # Optional custom parameters for specific chunkers
     CHUNKING_PARAMS: dict = Field(default={})
+
+    # Email Settings
+    SMTP_SERVER: str = Field(default=os.getenv("SMTP_SERVER", "smtp.gmail.com"))
+    SMTP_PORT: int = Field(default=int(os.getenv("SMTP_PORT", "587")))
+    SMTP_USERNAME: str = Field(default=os.getenv("SMTP_USERNAME"))
+    SMTP_PASSWORD: str = Field(default=os.getenv("SMTP_PASSWORD"))
+    SENDER_EMAIL: str = Field(default=os.getenv("SENDER_EMAIL"))
     
     class Config:
         env_file = ".env"

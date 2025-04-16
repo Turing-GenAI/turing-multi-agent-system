@@ -6,6 +6,43 @@ to manage, update, and reference. These prompts are designed to handle both
 full document sections and smaller text chunks, providing input text plainly.
 """
 
+# Email generation prompts
+EMAIL_SYSTEM_PROMPT = """You are generating automated compliance review notification emails.
+Create a concise, system-generated email that clearly presents compliance findings.
+Use minimal text, avoid greetings/signatures, and highlight key statistics in bold."""
+
+
+def get_email_human_prompt(review_data: dict) -> str:
+    """Generate human prompt for email content generation."""
+    return f"""
+    Create a system-generated compliance review notification email.
+    
+    Document Details:
+    - Clinical Document: {review_data.get('clinical_doc')}
+    - Compliance Document: {review_data.get('compliance_doc')}
+    - Total Issues Found: {review_data.get('issues', 0)}
+    - High Confidence Issues: {review_data.get('high_confidence_issues', 0)}
+    - Low Confidence Issues: {review_data.get('low_confidence_issues', 0)}
+    - Decision History: {review_data.get('decision_history', 'Not available')}
+    
+    Requirements:
+    1. Do NOT include a subject line in the content
+    2. Skip traditional greetings and signatures
+    3. Start directly with "COMPLIANCE REVIEW NOTIFICATION"
+    4. Present all statistics using bold formatting (use ** for bold)
+    5. If decision history is available, include a section called "DECISION HISTORY:" with each decision formatted as follows:
+       - **Issue ID:** [id]
+       - **Original Text:** [clinical_text from the issue]
+       - **Action:** [action from decision - accepted/rejected]
+       - **Change Applied:** [applied_change from decision]
+       - **Regulation:** [regulation from the issue, or "N/A" if none]
+       - **Timestamp:** [timestamp from decision]
+    6. Keep all sections short and direct
+    7. Use bullet points for clarity
+    8. No need for polite language, signatures, or contact details
+    """
+
+
 # Analysis prompts for compliance detection
 COMPLIANCE_ANALYSIS_SYSTEM_PROMPT = """You are an expert regulatory compliance analyst specializing in clinical trial documentation. Your task is to meticulously compare the provided content from a CLINICAL TRIAL DOCUMENT against the provided content from a governing COMPLIANCE DOCUMENT (e.g., SOP, Guideline, Regulation snippet) to identify discrepancies and potential non-compliance.
 
@@ -146,6 +183,7 @@ If you find no issues, return an empty issues array like this:
 **YOUR RESPONSE MUST USE THE KEY NAME "issues" EXACTLY AS SHOWN ABOVE**
 """
 
+
 def get_compliance_analysis_human_prompt(clinical_document_content: str, compliance_document_content: str) -> str:
     """
     Generate the human prompt for compliance analysis.
@@ -170,6 +208,7 @@ COMPLIANCE DOCUMENT CONTENT (Defines the rules for this comparison):
 8.  Do not include any additional commentary, greetings, or explanations outside the final JSON structure.
 """
 
+
 # Suggestion application prompts
 APPLY_SUGGESTION_SYSTEM_PROMPT = """You are an expert editor specializing in clinical trial documentation and regulatory compliance language.
 Your task is to apply a specific suggested edit to a given piece of non-compliant text to make it compliant, ensuring the change is integrated smoothly and professionally.
@@ -184,6 +223,7 @@ Your goal is to implement the suggested correction using the **minimum necessary
 5.  **Output Style:** Respond with ONLY the revised text snippet.
 6.  **CRITICAL:** Your final output MUST be plain text. Do NOT include any markdown formatting (e.g., ```text, **bold**, *italics*), labels, comments, or explanations in your response. Just provide the modified text itself.
 """
+
 
 def get_apply_suggestion_human_prompt(clinical_text: str, suggested_edit: str, surrounding_context: str) -> str:
     """
@@ -205,6 +245,8 @@ IMPORTANT: Your response must be ONLY the edited text itself. Do not include any
 """
 
 # Confidence assessment prompt
+
+
 def get_confidence_assessment_prompt(clinical_text_snippet: str, compliance_text_snippet: str) -> str:
     """
     Generate a prompt for assessing confidence in a potential violation
@@ -228,6 +270,7 @@ Compliance Requirement Snippet:
 Output ONLY a single floating-point number between 0.0 and 1.0 representing your confidence score. Do not include any other text or explanation.
 """
 
+
 # Whole document compliance analysis prompt
 WHOLE_DOCUMENT_ANALYSIS_PROMPT = """
 You are an expert regulatory compliance analyst specializing in clinical trial documentation. Your task is to conduct a comprehensive analysis of the provided clinical trial document against the compliance requirements.
@@ -243,11 +286,12 @@ When analyzing the document, pay particular attention to:
 Format your findings using the same structured JSON output format specified in the main compliance analysis prompt.
 """
 
+
 def get_whole_document_analysis_prompt(clinical_doc_content: str, compliance_doc_content: str) -> str:
     """
     Generate a comprehensive prompt for whole-document analysis that identifies compliance issues
     across the entire document without being restricted to specific sections or issues.
-    
+
     This approach can identify systemic or cross-sectional issues that might be missed in chunk-based analysis.
     """
     return f"""Perform a comprehensive compliance analysis of the following clinical trial document against the provided compliance requirements:  

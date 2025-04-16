@@ -5,7 +5,7 @@ Protocol Number: XYZ-ASTH-2025-003
 Sponsor: XYZ Pharmaceuticals
 
 Background:
-Asthma significantly impacts patients' quality of life, especially when inadequatly controlled. Drug XYZ has demonstrated beneficial effects in preliminary studies by reducing airway inflamtion and improving lung function. This Phase III clinical trial aims to validate these findings over an extended treatment duration.
+Asthma significantly impacts patients' quality of life, especially when inadequatly controlled. Drug XYZ has demonstrated beneficial effects in preliminary studies by reducing airway inflamtion and improving lung function. This Phase III clinical trial aims to validate these findings over an extended treatment duration. The study will be conducted in accordance with the regulatory requirements outlined in compliance document comp_3.txt to ensure proper protection of study participants.
 
 Objectives:
 Primary Objective: To demonstrate signifcant improvement in Forced Expiratory Volume in one second (FEV1) from baseline to Week 24 compared to placebo.

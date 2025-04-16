@@ -33,7 +33,8 @@ class ComplianceIssue(BaseModel):
     confidence: str = Field(..., description="Confidence level (high or low)")
     regulation: str = Field(...,
                             description="Specific regulation being violated")
-    edit_type: str = Field("modification", description="Type of edit required: 'modification' (change existing text) or 'insertion' (add new content)")
+    edit_type: str = Field(
+        "modification", description="Type of edit required: 'modification' (change existing text) or 'insertion' (add new content)")
 
 
 class ComplianceReviewResponse(BaseModel):
@@ -86,7 +87,8 @@ class ApplySuggestionRequest(BaseModel):
     suggested_edit: str = Field(..., description="The suggested edit to apply")
     surrounding_context: str = Field(
         ..., description="Surrounding context to help with applying the edit")
-    edit_type: str = Field("modification", description="Type of edit required: 'modification' (change existing text) or 'insertion' (add new content)")
+    edit_type: str = Field(
+        "modification", description="Type of edit required: 'modification' (change existing text) or 'insertion' (add new content)")
 
 
 class ApplySuggestionResponse(BaseModel):

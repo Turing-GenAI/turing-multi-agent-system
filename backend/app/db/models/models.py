@@ -6,25 +6,28 @@ import uuid
 
 Base = declarative_base()
 
+
 class Review(Base):
     """
     Model for compliance reviews
     Stores the main review information and links to the documents being compared
     """
     __tablename__ = "reviews"
-    
+
     id = Column(String, primary_key=True)  # R-00001 format
     clinical_doc_id = Column(String, nullable=False)
     compliance_doc_id = Column(String, nullable=False)
     clinicalDoc = Column(String, nullable=False)  # Document title for display
-    complianceDoc = Column(String, nullable=False)  # Document title for display
+    # Document title for display
+    complianceDoc = Column(String, nullable=False)
     clinical_doc_content = Column(Text)  # Store actual document content
     compliance_doc_content = Column(Text)  # Store actual document content
     status = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    
+
     # Relationships
-    issues = relationship("ComplianceIssue", back_populates="review", cascade="all, delete-orphan")
+    issues = relationship(
+        "ComplianceIssue", back_populates="review", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert model to dictionary for API response"""
@@ -43,16 +46,17 @@ class Review(Base):
             "lowConfidenceIssues": sum(1 for issue in self.issues if issue.confidence == "low")
         }
 
+
 class ComplianceIssue(Base):
     """
     Model for individual compliance issues detected during a review
     Contains details about the violation and its position in the documents
     """
     __tablename__ = "compliance_issues"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     review_id = Column(String, ForeignKey("reviews.id"), nullable=False)
-    
+
     # Issue content
     clinical_text = Column(Text, nullable=False)
     compliance_text = Column(Text, nullable=False)
@@ -60,22 +64,24 @@ class ComplianceIssue(Base):
     suggested_edit = Column(Text)
     confidence = Column(String, nullable=False)
     regulation = Column(String)
-    
+
     # Position information
     clinical_text_start_char = Column(Integer)
     clinical_text_end_char = Column(Integer)
     compliance_text_start_char = Column(Integer)
     compliance_text_end_char = Column(Integer)
-    
+
     # Additional metadata
     metadata_json = Column(Text)  # Stored as JSON
-    
+
     # Issue status (accepted, rejected, or pending)
-    status = Column(String, default='pending')  # 'accepted', 'rejected', or 'pending'
-    
+    # 'accepted', 'rejected', or 'pending'
+    status = Column(String, default='pending')
+
     # Relationships
     review = relationship("Review", back_populates="issues")
-    decisions = relationship("Decision", back_populates="issue", cascade="all, delete-orphan")
+    decisions = relationship(
+        "Decision", back_populates="issue", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert model to dictionary for API response"""
@@ -95,20 +101,23 @@ class ComplianceIssue(Base):
             "status": self.status  # Include issue status in the response
         }
 
+
 class Decision(Base):
     """
     Model for tracking decisions made on compliance issues
     Records whether an issue was accepted or rejected
     """
     __tablename__ = "decisions"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    issue_id = Column(String, ForeignKey("compliance_issues.id"), nullable=False)
+    issue_id = Column(String, ForeignKey(
+        "compliance_issues.id"), nullable=False)
     action = Column(String, nullable=False)  # "accepted" or "rejected"
-    applied_change = Column(Text)  # Stores the text that was applied when accepted
+    # Stores the text that was applied when accepted
+    applied_change = Column(Text)
     comments = Column(Text)
     timestamp = Column(DateTime, default=datetime.datetime.now)
-    
+
     # Relationships
     issue = relationship("ComplianceIssue", back_populates="decisions")
 

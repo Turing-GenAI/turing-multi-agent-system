@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ComplianceIssue } from '../types/compliance';
+import { ReviewAlertRequest } from '../types';
 
 // API base URL - reads from environment variables in production
 // Using Vite's import.meta.env instead of process.env
@@ -40,8 +41,15 @@ export const documentAPI = {
 
 export const complianceAPI = {
   // Analyze compliance using document IDs
-  analyzeCompliance: async (clinicalDocId: string, complianceDocId: string, forceRefresh: boolean = false) => {
-    const response = await api.post(`/compliance/analyze-by-ids/?clinical_doc_id=${clinicalDocId}&compliance_doc_id=${complianceDocId}&force_refresh=${forceRefresh}`);
+  analyzeCompliance: async (clinicalDocId: string, complianceDocId?: string, forceRefresh: boolean = false) => {
+    let url = `/compliance/analyze-by-ids/?clinical_doc_id=${clinicalDocId}&force_refresh=${forceRefresh}`;
+    
+    // Only add compliance_doc_id if provided
+    if (complianceDocId) {
+      url += `&compliance_doc_id=${complianceDocId}`;
+    }
+    
+    const response = await api.post(url);
     return response.data as {
       clinical_doc_id: string;
       compliance_doc_id: string;
@@ -142,6 +150,27 @@ export const complianceAPI = {
     return response.data;
   },
   
+  // Get deduplicated decisions for a review (only latest decision per issue)
+  getDeduplicatedDecisions: async (reviewId: string) => {
+    const response = await api.get(`/compliance/review/${reviewId}/decisions/`);
+    const decisions = response.data;
+    
+    // Create a map to store the latest decision for each issue
+    const issueDecisionMap = new Map();
+    
+    // Process decisions (they are already sorted newest first from backend)
+    decisions.forEach((decision: {issue?: {id?: string}}) => {
+      const issueId = decision.issue?.id;
+      // Only store the first (latest) decision for each issue
+      if (issueId && !issueDecisionMap.has(issueId)) {
+        issueDecisionMap.set(issueId, decision);
+      }
+    });
+    
+    // Convert map values back to array
+    return Array.from(issueDecisionMap.values());
+  },
+  
   // Get all decisions for a specific issue
   getIssueDecisions: async (issueId: string) => {
     const response = await api.get(`/compliance/issue/${issueId}/decisions/`);
@@ -152,5 +181,17 @@ export const complianceAPI = {
   deleteReview: async (reviewId: string) => {
     const response = await api.delete(`/compliance/review/${reviewId}/`);
     return response.data;
-  }
+  },
+  
+  // Send alert to document owners about review results
+  sendReviewAlert: async (data: ReviewAlertRequest) => {
+    const response = await api.post('/compliance/send-review-alert/', data);
+    return response;
+  },
+
+  // Generate email content for review alert
+  generateReviewAlertContent: async (data: ReviewAlertRequest) => {
+    const response = await api.post('/compliance/generate-review-alert-content/', data);
+    return response.data;
+  },
 };

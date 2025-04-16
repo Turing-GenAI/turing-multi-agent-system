@@ -1,10 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { documentAPI, complianceAPI } from '../services/api';
-import { Document } from '../types/compliance';
-import { FiUpload, FiFileText, FiCheck, FiAlertTriangle, FiPlus, FiMinus, FiTrash2, FiLoader } from 'react-icons/fi';
-import * as Checkbox from '@radix-ui/react-checkbox';
+import { FiFileText, FiCheck, FiAlertTriangle, FiTrash2, FiEye, FiPlay, FiSearch } from 'react-icons/fi';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+import { ToastContainer, ToastType } from './Toast';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { ReviewInfo, ReviewAlertRequest } from '../types';
+import { EmailAlertModal } from './EmailAlertModal';
+
+// Add global type declaration for window.globalIsAnalyzing
+declare global {
+  interface Window {
+    globalIsAnalyzing: boolean;
+  }
+}
+
+// Access window.globalIsAnalyzing with proper typing
+const getGlobalAnalyzing = () => window.globalIsAnalyzing || false;
+const setGlobalAnalyzing = (value: boolean) => { window.globalIsAnalyzing = value; };
 
 interface DocumentInfo {
   id: string;
@@ -16,6 +29,7 @@ interface DocumentInfo {
   format: string;
   created: string;
   updated: string;
+  content?: string;
 }
 
 interface ComplianceDashboardProps {
@@ -30,15 +44,135 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   const location = useLocation();
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [selectedClinicalDoc, setSelectedClinicalDoc] = useState<DocumentInfo | null>(null);
+  // We'll keep this state but won't expose it in the UI
   const [selectedComplianceDoc, setSelectedComplianceDoc] = useState<DocumentInfo | null>(null);
   const [activeTab, setActiveTab] = useState<'documents' | 'reviews'>(
     location.state?.activeTab === 'reviews' ? 'reviews' : 'documents'
   );
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState<boolean>(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
-const [success, setSuccess] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [success, setSuccess] = useState<string | null>(null);
+  // Define isAnalyzing state BEFORE any useEffect that depends on it
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Track reviews with processing status to update individually
+  const [processingReviews, setProcessingReviews] = useState<{[key: string]: boolean}>({});
+  // Change from boolean to string to track which review is being loaded
+  const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
   // Reviews will use backend-generated UUIDs
+
+  // State for reviews data and loading state
+  const [reviews, setReviews] = useState<ReviewInfo[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState<boolean>(false);
+  
+  // Track reviews that are being deleted
+  const [reviewsBeingDeleted, setReviewsBeingDeleted] = useState<string[]>([]);
+  
+  // State for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [reviewToDelete, setReviewToDelete] = useState<ReviewInfo | null>(null);
+  
+  // State for email functionality
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [emailContent, setEmailContent] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [emailAddresses, setEmailAddresses] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
+
+  // Replace inline messages with toast system
+  const [toasts, setToasts] = useState<Array<{id: string; message: string; type: ToastType}>>([]);
+  
+  // Function to add a toast
+  const addToast = (message: string, type: ToastType) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+  
+  // Function to remove a toast
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Track if window has focus
+  const [hasFocus, setHasFocus] = useState(true);
+
+  // Effect to track window focus and refresh when returning
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window regained focus - updating reviews');
+      setHasFocus(true);
+      if (activeTab === 'reviews') {
+        fetchAllReviews();
+      }
+    };
+    
+    const handleBlur = () => {
+      setHasFocus(false);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [activeTab]);
+
+  // Effect to sync with global state on component mount
+  useEffect(() => {
+    setIsAnalyzing(getGlobalAnalyzing());
+  }, []);
+
+  // Effect to refresh reviews when tab becomes active
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+    
+    // Function to check for tab visibility changes
+    const handleVisibilityChange = () => {
+      if (!document.hidden && activeTab === 'reviews') {
+        console.log('Tab became visible - refreshing reviews');
+        fetchAllReviews();
+      }
+    };
+    
+    // Add visibility change listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Set up interval to periodically refresh reviews when on reviews tab
+    if (activeTab === 'reviews') {
+      intervalId = setInterval(() => {
+        fetchAllReviews();
+      }, 5000); // Refresh every 5 seconds
+    }
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activeTab]);
+
+  // Sync local isAnalyzing state with global state
+  useEffect(() => {
+    // When component mounts or becomes visible, check global state
+    if (getGlobalAnalyzing() !== isAnalyzing) {
+      setIsAnalyzing(getGlobalAnalyzing());
+    }
+    
+    // Set up an interval to check for global state changes
+    const syncInterval = setInterval(() => {
+      if (getGlobalAnalyzing() !== isAnalyzing) {
+        setIsAnalyzing(getGlobalAnalyzing());
+      }
+    }, 1000);
+    
+    return () => clearInterval(syncInterval);
+  }, [isAnalyzing]);
 
   // Fetch documents from the backend API
   useEffect(() => {
@@ -49,7 +183,7 @@ const [success, setSuccess] = useState<string | null>(null);
         console.log('Fetched documents:', docs);
         
         // Ensure document types are properly formatted
-        const formattedDocs = docs.map((doc: any) => ({
+        const formattedDocs = docs.map((doc: DocumentInfo) => ({
           ...doc,
           type: String(doc.type).toLowerCase() as 'clinical' | 'compliance'
         }));
@@ -58,7 +192,7 @@ const [success, setSuccess] = useState<string | null>(null);
         setError(null);
       } catch (err) {
         console.error('Error fetching documents:', err);
-        setError('Failed to load documents. Please try again.');
+        addToast('Failed to load documents. Please try again.', 'error');
       } finally {
         setLoading(false);
       }
@@ -67,20 +201,6 @@ const [success, setSuccess] = useState<string | null>(null);
     fetchDocuments();
   }, []);
 
-  // State for reviews data and loading state
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [loadingReviews, setLoadingReviews] = useState<boolean>(false);
-  
-  // Track reviews with processing status to update individually
-  const [processingReviews, setProcessingReviews] = useState<{[key: string]: boolean}>({});
-  
-  // Track reviews that are being deleted
-  const [reviewsBeingDeleted, setReviewsBeingDeleted] = useState<string[]>([]);
-  
-  // State for delete confirmation dialog
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [reviewToDelete, setReviewToDelete] = useState<any | null>(null);
-  
   // Initial fetch to load all reviews - only called when tab changes or component mounts
   const fetchAllReviews = async () => {
     try {
@@ -89,8 +209,8 @@ const [success, setSuccess] = useState<string | null>(null);
       setReviews(reviewsData || []);
       
       // Track which reviews are in processing state
-      const processing = {};
-      reviewsData.forEach(review => {
+      const processing: { [key: string]: boolean } = {};
+      reviewsData.forEach((review: ReviewInfo) => {
         if (review.status === 'processing') {
           processing[review.id] = true;
         }
@@ -104,42 +224,64 @@ const [success, setSuccess] = useState<string | null>(null);
     }
   };
   
+  // Set up polling only for processing reviews - much more efficient
+  useEffect(() => {
+    if (activeTab === 'reviews' && Object.keys(processingReviews).length > 0) {
+      const statusCheckInterval = setInterval(() => {
+        checkProcessingReviews();
+      }, 3000); // Check every 3 seconds
+      
+      return () => clearInterval(statusCheckInterval);
+    }
+  }, [activeTab, processingReviews]);
+
   // Function to check status of individual processing reviews
   const checkProcessingReviews = async () => {
-    // Get IDs of all processing reviews
     const processingIds = Object.keys(processingReviews);
     
     if (processingIds.length === 0) return;
     
     try {
-      // Fetch only the processing reviews to check their status
       const updatedReviews = await complianceAPI.getReviews();
-      // Also check for any reviews being deleted
-      const deletingIds = Object.keys(deletingReviews);
       let hasStatusChanges = false;
       
-      // Update only reviews that changed status
-      setReviews(prevReviews => {
-        return prevReviews.map(review => {
-          const updatedReview = updatedReviews.find(r => r.id === review.id);
-          
-          // If this review was processing and now it's complete
-          if (updatedReview && processingReviews[review.id] && updatedReview.status === 'completed') {
-            hasStatusChanges = true;
-            return updatedReview; // Return the updated review
+      // Create a local copy of current reviews to update
+      const updatedReviewsList = [...reviews];
+      
+      // Check each processing review
+      processingIds.forEach(reviewId => {
+        const updatedReview = updatedReviews.find((r: ReviewInfo) => r.id === reviewId);
+        const existingReviewIndex = updatedReviewsList.findIndex(r => r.id === reviewId);
+        
+        if (updatedReview) {
+          if (existingReviewIndex >= 0) {
+            // Update existing review with new status
+            updatedReviewsList[existingReviewIndex] = updatedReview;
+          } else {
+            // Add new review if it doesn't exist in our list
+            updatedReviewsList.push(updatedReview);
           }
           
-          return review; // Keep the existing review unchanged
-        });
+          // Mark that status has changed for this review
+          if (processingReviews[reviewId] && updatedReview.status === 'completed') {
+            hasStatusChanges = true;
+          }
+        }
       });
       
-      // Update processing reviews tracking if any changed to completed
+      // Update reviews state with all changes
+      if (updatedReviewsList.length !== reviews.length || hasStatusChanges) {
+        console.log('Updating reviews with latest status changes', updatedReviewsList);
+        setReviews(updatedReviewsList);
+      }
+      
+      // Remove completed reviews from processing state
       if (hasStatusChanges) {
         setProcessingReviews(prev => {
           const updated = {...prev};
-          updatedReviews.forEach(review => {
+          updatedReviews.forEach((review: ReviewInfo) => {
             if (updated[review.id] && review.status === 'completed') {
-              delete updated[review.id]; // Remove from processing
+              delete updated[review.id];
             }
           });
           return updated;
@@ -156,18 +298,8 @@ const [success, setSuccess] = useState<string | null>(null);
       fetchAllReviews();
     }
   }, [activeTab]);
-  
-  // Set up polling only for processing reviews - much more efficient
-  useEffect(() => {
-    if (activeTab === 'reviews' && Object.keys(processingReviews).length > 0) {
-      const statusCheckInterval = setInterval(() => {
-        checkProcessingReviews();
-      }, 3000); // Check every 3 seconds
-      
-      return () => clearInterval(statusCheckInterval);
-    }
-  }, [activeTab, processingReviews]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleDocumentSelect = (doc: DocumentInfo) => {
     console.log('Selected document:', doc);
     // Always convert to lowercase string for consistent comparison
@@ -205,73 +337,73 @@ const [success, setSuccess] = useState<string | null>(null);
     onDocumentSelect({...doc, type: docType as 'clinical' | 'compliance'}); // Ensure consistent type in callback
   };
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
   const handleStartReview = async () => {
-    if (selectedClinicalDoc && selectedComplianceDoc) {
+    if (selectedClinicalDoc) {
       try {
         setIsAnalyzing(true);
+        // Update global variable
+        setGlobalAnalyzing(true);
         
         // Switch to the Reviews tab first to show analysis progress
         setActiveTab('reviews');
         
-        // Create review with 'processing' status before analysis
-        const placeholderUuid = 'frontend-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        // No need to create a placeholder review - we'll create the final review once we have the analysis results
         const now = new Date();
         const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
         
-        // Create initial review with processing status
-        await complianceAPI.createReview({
-          id: placeholderUuid,
-          clinical_doc_id: selectedClinicalDoc.id,
-          compliance_doc_id: selectedComplianceDoc.id,
-          clinicalDoc: selectedClinicalDoc.title,
-          complianceDoc: selectedComplianceDoc.title,
-          status: 'processing', // Show as processing initially
-          issues: 0,
-          highConfidenceIssues: 0,
-          lowConfidenceIssues: 0,
-          created: formattedDate
-        });
-        
-        // With polling enabled, we don't need to manually fetch reviews here
-        
-        // Now call the backend API to analyze compliance (this might take time)
+        // Call the backend API to analyze compliance and auto-select compliance document
+        // We only need to pass the clinical doc ID
         const complianceResult = await complianceAPI.analyzeCompliance(
-          selectedClinicalDoc.id,
-          selectedComplianceDoc.id
+          selectedClinicalDoc.id
         );
+        
+        // Get the selected compliance document ID from the result
+        const selectedComplianceDocId = complianceResult.compliance_doc_id;
         
         // Count high and low confidence issues
         const highConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'high').length;
         const lowConfidenceIssues = complianceResult.issues.filter(issue => issue.confidence === 'low').length;
         
-        // Update the review with the analysis results
+        // Get the compliance document details for the UI
+        // Find the doc by ID in the list of documents
+        const selectedComplianceDoc = documents.find(doc => 
+          doc.id === selectedComplianceDocId && doc.type.toLowerCase() === 'compliance'
+        );
+        
+        // Now create a review with completed status
         await complianceAPI.createReview({
-          id: placeholderUuid, // Same ID to update the existing review
+          id: 'will-be-replaced-by-backend', // Backend will generate a sequential ID
           clinical_doc_id: selectedClinicalDoc.id,
-          compliance_doc_id: selectedComplianceDoc.id,
+          compliance_doc_id: selectedComplianceDocId,
           clinicalDoc: selectedClinicalDoc.title,
-          complianceDoc: selectedComplianceDoc.title,
-          status: 'completed', // Now marked as completed
+          complianceDoc: selectedComplianceDoc ? selectedComplianceDoc.title : "Compliance Document",
+          status: 'completed', // Mark as completed
           issues: complianceResult.issues.length,
           highConfidenceIssues,
           lowConfidenceIssues,
           created: formattedDate
         });
         
-        // Refresh the reviews list again to show the completed review
+        // Refresh the reviews list to show the completed review
         await fetchAllReviews();
         
-        // Set success message
-        setSuccess(`Analysis complete. ${complianceResult.issues.length} issue(s) found.`);
-        setTimeout(() => setSuccess(null), 5000); // Clear after 5 seconds
+        // Use appropriate toast type based on whether issues were found
+        if (complianceResult.issues.length === 0) {
+          // No issues found - success message with green
+          addToast('Analysis complete. No compliance issues found!', 'success');
+        } else {
+          // Issues found - warning message with amber
+          addToast(`Analysis complete. ${complianceResult.issues.length} compliance issue(s) found.`, 'warning');
+        }
       } catch (error) {
         console.error('Error analyzing compliance:', error);
-        setError('Failed to analyze compliance. Please try again.');
+        // Error message with red
+        addToast('Failed to analyze compliance. Please try again.', 'error');
       } finally {
         // Finally, set analyzing to false
         setIsAnalyzing(false);
+        // Update global variable
+        setGlobalAnalyzing(false);
 
         // Clear selections and stay on reviews tab
         setSelectedDocs([]); // Using the correct state setter
@@ -282,15 +414,13 @@ const [success, setSuccess] = useState<string | null>(null);
   };
 
   // Handle continuing an existing review - this explicitly opens the document viewer
-  const handleContinueReview = async (review: any) => {
+  const handleContinueReview = async (review: ReviewInfo) => {
     try {
-      // Only allow continuing if the review is completed
-      if (review.status !== 'completed') {
-        setError('This review is still processing. Please wait until it completes.');
-        return;
-      }
+      // Store the current isAnalyzing state to restore it when returning
+      const wasAnalyzing = isAnalyzing;
       
-      setIsAnalyzing(true);
+      // Set the specific review ID that's loading
+      setLoadingReviewId(review.id);
       console.log('Continuing review:', review);
       
       // Get the complete review with document content included
@@ -348,16 +478,23 @@ const [success, setSuccess] = useState<string | null>(null);
       
       // Now that we have all the data including document content, navigate to the document viewer
       onStartReview(clinicalDoc, complianceDoc, review.id);
+      
+      // Restore the isAnalyzing state after a small delay to ensure it's set after navigation
+      setTimeout(() => {
+        setGlobalAnalyzing(wasAnalyzing);
+      }, 100);
+      
     } catch (error) {
       console.error('Error continuing review:', error);
-      setError('Failed to continue review. Please try again.');
+      addToast('Failed to continue review. Please try again.', 'error');
     } finally {
-      setIsAnalyzing(false);
+      // Clear the loading state
+      setLoadingReviewId(null);
     }
   };
 
   // Handle deleting a review - opens the confirmation dialog
-  const handleDeleteReview = (review: any) => {
+  const handleDeleteReview = (review: ReviewInfo) => {
     setReviewToDelete(review);
     setDeleteDialogOpen(true);
   };
@@ -370,8 +507,7 @@ const [success, setSuccess] = useState<string | null>(null);
       // Set loading state for this specific review
       const reviewId = reviewToDelete.id;
       setReviewsBeingDeleted(prev => [...prev, reviewId]);
-      setError(null);
-      setSuccess(null);
+      
       console.log('Deleting review:', reviewId);
       
       // Call the delete API endpoint
@@ -380,22 +516,22 @@ const [success, setSuccess] = useState<string | null>(null);
       // Remove the deleted review from the local state
       setReviews(prevReviews => prevReviews.filter(r => r.id !== reviewId));
       
-      // Show success message
-      setSuccess(`Review deleted successfully.`);
-      setTimeout(() => setSuccess(null), 3000);
+      // Show success toast
+      addToast('Review deleted successfully.', 'success');
       
       // Close the dialog
       setDeleteDialogOpen(false);
       setReviewToDelete(null);
     } catch (error) {
       console.error('Error deleting review:', error);
-      setError('Failed to delete review. Please try again.');
+      addToast('Failed to delete review. Please try again.', 'error');
     } finally {
       // Remove from loading state
       setReviewsBeingDeleted(prev => prev.filter(id => id !== reviewToDelete.id));
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCheckboxChange = (docId: string, checked: boolean) => {
     setSelectedDocs(
       checked
@@ -404,12 +540,72 @@ const [success, setSuccess] = useState<string | null>(null);
     );
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'clinical' | 'compliance') => {
-    // In a real implementation, this would handle file uploads
-    // For now, just log that a file was selected
-    if (event.target.files && event.target.files.length > 0) {
-      console.log('File selected:', event.target.files[0].name);
-      // You would typically upload this file to your backend here
+  // Alert modal state
+  const [showAlertModal, setShowAlertModal] = useState<boolean>(false);
+  const [selectedReviewForAlert, setSelectedReviewForAlert] = useState<ReviewInfo | null>(null);
+
+  // Function to open alert modal
+  const handleOpenAlertModal = (review: ReviewInfo) => {
+    setSelectedReviewForAlert(review);
+    setEmailSubject(`Compliance Review Alert - ${review.clinicalDoc}`);
+    setShowAlertModal(true);
+    generateEmailContent(review);
+  };
+
+  // Handle alert success
+  const handleAlertSuccess = (message: string) => {
+    addToast(message, 'success');
+    setShowAlertModal(false);
+    setSelectedReviewForAlert(null);
+  };
+
+  // Handle alert error
+  const handleAlertError = (message: string) => {
+    addToast(message, 'error');
+  };
+
+  // Search functionality
+  const [reviewsSearchQuery, setReviewsSearchQuery] = useState<string>('');
+  const [clinicalDocSearchQuery, setclinicalDocSearchQuery] = useState<string>('');
+  
+  // Filter documents based on search queries
+  const filteredClinicalDocs = documents
+    .filter(doc => doc.type.toLowerCase() === 'clinical')
+    .filter(doc => 
+      doc.title.toLowerCase().includes(clinicalDocSearchQuery.toLowerCase())
+    );
+    
+  // Filter reviews based on search query
+  const filteredReviews = reviews.filter(review => 
+    review.id.toLowerCase().includes(reviewsSearchQuery.toLowerCase()) ||
+    review.clinicalDoc.toLowerCase().includes(reviewsSearchQuery.toLowerCase()) ||
+    review.complianceDoc.toLowerCase().includes(reviewsSearchQuery.toLowerCase())
+  );
+
+  // Function to generate email content using LLM
+  const generateEmailContent = async (review: ReviewInfo) => {
+    setIsLoadingEmailContent(true);
+    try {
+      const response = await complianceAPI.generateReviewAlertContent({
+        to_emails: emailAddresses.split(',').map(email => email.trim()),
+        subject: emailSubject,
+        review_data: {
+          clinical_doc: review.clinicalDoc,
+          compliance_doc: review.complianceDoc,
+          issues: review.issues || 0,
+          high_confidence_issues: review.highConfidenceIssues || 0,
+          low_confidence_issues: review.lowConfidenceIssues || 0
+        }
+      });
+      
+      if (response.content) {
+        setEmailContent(response.content);
+      }
+    } catch (error) {
+      console.error('Error generating email content:', error);
+      addToast('Failed to generate email content. Please try again.', 'error');
+    } finally {
+      setIsLoadingEmailContent(false);
     }
   };
 
@@ -420,65 +616,24 @@ const [success, setSuccess] = useState<string | null>(null);
         
         <div className="flex items-center gap-3">
           <button 
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px]"
-            disabled={!selectedClinicalDoc || !selectedComplianceDoc || isAnalyzing}
+            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px] shadow-sm transition-all duration-200"
+            disabled={!selectedClinicalDoc || isAnalyzing}
             onClick={handleStartReview}
           >
             {isAnalyzing ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                <span>Analyzing...</span>
+                <span className="font-medium">Analyzing...</span>
               </>
             ) : (
-              <span>Start Compliance Review</span>
+              <>
+                <FiPlay className="w-4 h-4 mr-2" />
+                <span className="font-medium">Start Compliance Review</span>
+              </>
             )}
           </button>
         </div>
       </div>
-
-      {/* Selected documents for review */}
-      {(selectedClinicalDoc || selectedComplianceDoc) && (
-        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-3">Selected for Review</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded border">
-              <h4 className="font-medium mb-2">Clinical Document</h4>
-              {selectedClinicalDoc ? (
-                <div className="flex items-center gap-2">
-                  <FiFileText className="text-blue-500" />
-                  <span>{selectedClinicalDoc.title}</span>
-                  <button 
-                    className="ml-auto text-sm text-gray-500 hover:text-red-500"
-                    onClick={() => setSelectedClinicalDoc(null)}
-                  >
-                    Clear
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No clinical document selected</p>
-              )}
-            </div>
-            
-            <div className="bg-white p-4 rounded border">
-              <h4 className="font-medium mb-2">Compliance Document</h4>
-              {selectedComplianceDoc ? (
-                <div className="flex items-center gap-2">
-                  <FiFileText className="text-green-500" />
-                  <span>{selectedComplianceDoc.title}</span>
-                  <button 
-                    className="ml-auto text-sm text-gray-500 hover:text-red-500"
-                    onClick={() => setSelectedComplianceDoc(null)}
-                  >
-                    Clear
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No compliance document selected</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Tabs for Documents and Reviews */}
       <div className="border-b mb-6">
@@ -499,7 +654,13 @@ const [success, setSuccess] = useState<string | null>(null);
                 ? 'border-black text-black' 
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => setActiveTab('reviews')}
+            onClick={() => {
+              if (activeTab !== 'reviews') {
+                setActiveTab('reviews');
+                // Refresh reviews when switching to reviews tab
+                fetchAllReviews();
+              }
+            }}
           >
             Reviews
           </button>
@@ -509,313 +670,345 @@ const [success, setSuccess] = useState<string | null>(null);
       {/* Documents Table */}
       {activeTab === 'documents' && (
         <div className="h-[calc(100vh-200px)] flex flex-col overflow-hidden">
-          {/* Upload Buttons Row - Temporarily commented out
-          <div className="flex justify-between mb-6">
-            <div className="flex-1 mr-4">
-              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer w-full">
-                <FiUpload className="w-4 h-4" />
-                <span>Upload Clinical Document</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  onChange={(e) => handleFileUpload(e, 'clinical')}
-                  accept=".pdf,.txt,.doc,.docx"
+          {/* Documents List - now just clinical documents */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">Clinical Documents</h3>
+            
+            {/* Search bar for clinical documents */}
+            <div className="mb-4 w-full">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiSearch className="h-5 w-5 text-gray-500" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search clinical documents..."
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
+                  value={clinicalDocSearchQuery}
+                  onChange={(e) => setclinicalDocSearchQuery(e.target.value)}
                 />
-              </label>
-            </div>
-            <div className="flex-1 ml-4">
-              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer w-full">
-                <FiUpload className="w-4 h-4" />
-                <span>Upload Compliance Document</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  onChange={(e) => handleFileUpload(e, 'compliance')}
-                  accept=".pdf,.txt,.doc,.docx"
-                />
-              </label>
-            </div>
-          </div>
-          */}
-
-          {/* Documents Lists */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Clinical Documents */}
-            <div className="flex-1 mr-4 flex flex-col overflow-hidden">
-              <h3 className="text-lg font-semibold mb-4 text-blue-700">Clinical Documents</h3>
-              <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-300px)]">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr className="text-left">
-                      <th className="py-3 px-4 font-medium">Title</th>
-                      <th className="py-3 px-4 font-medium w-24">Format</th>
-                      <th className="py-3 px-4 font-medium w-32">Created</th>
-                      <th className="py-3 px-4 font-medium w-24">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents
-                      .filter(doc => doc.type.toLowerCase() === 'clinical')
-                      .map((doc) => (
-                        <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <FiFileText className="text-blue-500 mr-2" />
-                              <span className="truncate" title={doc.title}>{doc.title}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">{doc.format}</td>
-                          <td className="py-3 px-4">{doc.created}</td>
-                          <td className="py-3 px-4">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) {
-                                  setSelectedClinicalDoc(null);
-                                } else {
-                                  setSelectedClinicalDoc({...doc, type: 'clinical'});
-                                }
-                              }}
-                              className={`flex items-center justify-center gap-1 px-3 py-1 text-xs rounded-md w-full ${
-                                selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
-                                  ? 'bg-blue-600 text-white' 
-                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                              }`}
-                            >
-                              {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
-                                <>
-                                  <FiCheck className="w-3 h-3" />
-                                  <span>Selected</span>
-                                </>
-                              ) : (
-                                <span>Select Clinical</span>
-                              )}
-                            </button>
-                          </td>
-                        </tr>
-                    ))}
-                    {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="py-8 text-center text-gray-500">
-                          No clinical documents uploaded yet
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
               </div>
             </div>
-
-            {/* Compliance Documents */}
-            <div className="flex-1 ml-4 flex flex-col overflow-hidden">
-              <h3 className="text-lg font-semibold mb-4 text-green-700">Compliance Documents</h3>
-              <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-300px)]">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr className="text-left">
-                      <th className="py-3 px-4 font-medium">Title</th>
-                      <th className="py-3 px-4 font-medium w-24">Format</th>
-                      <th className="py-3 px-4 font-medium w-32">Created</th>
-                      <th className="py-3 px-4 font-medium w-24">Action</th>
+            
+            <div className="border rounded-lg overflow-auto flex-1 max-h-[calc(100vh-350px)] shadow-sm border-slate-200">
+              <table className="w-full border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                  <tr className="text-left">
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-700">Title</th>
+                    {/* Format and Created columns commented out until backend provides data */}
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-700 w-24">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClinicalDocs.map((doc) => (
+                    <tr key={doc.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+                      selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
+                        ? 'bg-gray-50 border-l-4 border-l-black' 
+                        : ''
+                    }`}>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center">
+                          <FiFileText className="text-gray-500 mr-2 flex-shrink-0" />
+                          <span className="truncate text-sm font-medium text-slate-900" title={doc.title}>{doc.title}</span>
+                        </div>
+                      </td>
+                      {/* Format and Created columns commented out until backend provides data 
+                      <td className="py-3 px-4 text-sm text-slate-700">{doc.format}</td>
+                      <td className="py-3 px-4 text-sm text-slate-700">{doc.created}</td>
+                      */}
+                      <td className="py-3 px-4">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedClinicalDoc && selectedClinicalDoc.id === doc.id) {
+                              setSelectedClinicalDoc(null);
+                            } else {
+                              setSelectedClinicalDoc({...doc, type: 'clinical'});
+                            }
+                          }}
+                          className={`flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs rounded-md shadow-sm w-full transition-colors ${
+                            selectedClinicalDoc && selectedClinicalDoc.id === doc.id 
+                              ? 'bg-black text-white' 
+                              : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
+                          }`}
+                        >
+                          {selectedClinicalDoc && selectedClinicalDoc.id === doc.id ? (
+                            <>
+                              <FiCheck className="w-3 h-3" />
+                              <span>Selected</span>
+                            </>
+                          ) : (
+                            <span>Select</span>
+                          )}
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {documents
-                      .filter(doc => doc.type.toLowerCase() === 'compliance')
-                      .map((doc) => (
-                        <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <FiFileText className="text-green-500 mr-2" />
-                              <span className="truncate" title={doc.title}>{doc.title}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">{doc.format}</td>
-                          <td className="py-3 px-4">{doc.created}</td>
-                          <td className="py-3 px-4">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (selectedComplianceDoc && selectedComplianceDoc.id === doc.id) {
-                                  setSelectedComplianceDoc(null);
-                                } else {
-                                  setSelectedComplianceDoc({...doc, type: 'compliance'});
-                                }
-                              }}
-                              className={`flex items-center justify-center gap-1 px-3 py-1 text-xs rounded-md w-full ${
-                                selectedComplianceDoc && selectedComplianceDoc.id === doc.id 
-                                  ? 'bg-green-600 text-white' 
-                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                              }`}
-                            >
-                              {selectedComplianceDoc && selectedComplianceDoc.id === doc.id ? (
-                                <>
-                                  <FiCheck className="w-3 h-3" />
-                                  <span>Selected</span>
-                                </>
-                              ) : (
-                                <span>Select Compliance</span>
-                              )}
-                            </button>
-                          </td>
-                        </tr>
-                    ))}
-                    {documents.filter(doc => doc.type.toLowerCase() === 'compliance').length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="py-8 text-center text-gray-500">
-                          No compliance documents uploaded yet
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                  {filteredClinicalDocs.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="py-8 text-center text-slate-500">
+                        {clinicalDocSearchQuery ? 'No matching clinical documents found' : 'No clinical documents uploaded yet'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
           {/* Document Count Summary */}
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
             <div>
-              Clinical Documents: {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length} | 
-              Compliance Documents: {documents.filter(doc => doc.type.toLowerCase() === 'compliance').length}
+              Clinical Documents: {filteredClinicalDocs.length}
+              {clinicalDocSearchQuery && (
+                <span className="ml-1 text-gray-800">
+                  (filtered from {documents.filter(doc => doc.type.toLowerCase() === 'clinical').length})
+                </span>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Success or Error Messages */}
-      {(success || error) && (
-        <div className={`mb-4 p-3 rounded ${success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {success || error}
-        </div>
-      )}
+      {/* Toast container - add at the end but before other dialogs */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
       
       {/* Reviews Table */}
       {activeTab === 'reviews' && (
         <>
-          {loadingReviews ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          {/* Search bar for reviews */}
+          <div className="mb-4 w-full">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="h-5 w-5 text-gray-500" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by ID, clinical or compliance document..."
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-gray-300 block w-full bg-white text-slate-900"
+                value={reviewsSearchQuery}
+                onChange={(e) => setReviewsSearchQuery(e.target.value)}
+              />
             </div>
-          ) : reviews.length === 0 ? (
+          </div>
+
+          {reviews.length === 0 && !loadingReviews && !isAnalyzing ? (
             <div className="text-center py-8 text-gray-500">
               No reviews found. Start a compliance review to see results here.
             </div>
           ) : (
-            <div className="h-[calc(100vh-250px)] overflow-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left">
-                    <th className="pb-4 font-normal">ID</th>
-                    <th className="pb-4 font-normal">Clinical Document</th>
-                    <th className="pb-4 font-normal">Compliance Document</th>
-                    <th className="pb-4 font-normal">Status</th>
-                    <th className="pb-4 font-normal">Issues</th>
-                    <th className="pb-4 font-normal">Created</th>
-                    <th className="pb-4 font-normal">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reviews.map((review) => (
-                  <tr 
-                    key={review.id} 
-                    className="border-t border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="py-4">
-                      <div className="max-w-[120px] truncate" title={review.id}>{review.id}</div>
-                    </td>
-                    <td className="py-4">
-                      <div className="max-w-[180px] truncate" title={review.clinicalDoc}>{review.clinicalDoc}</div>
-                    </td>
-                    <td className="py-4">
-                      <div className="max-w-[180px] truncate" title={review.complianceDoc}>{review.complianceDoc}</div>
-                    </td>
-                    <td className="py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                        review.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {review.status === 'completed' ? (
-                          <>
-                            <FiCheck className="mr-1 w-3 h-3" />
-                            Completed
-                          </>
-                        ) : reviewsBeingDeleted.includes(review.id) ? (
-                          <>
+            <div className="h-[calc(100vh-300px)] overflow-auto rounded-md border border-slate-200">
+              {loadingReviews && reviews.length === 0 ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-slate-700">ID</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Clinical Document</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Compliance Document</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Status</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Issues</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Created</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-slate-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isAnalyzing && (
+                      <tr className="border-b border-slate-100 bg-amber-50 animate-pulse">
+                        <td className="py-3 px-4 text-sm font-medium text-slate-900">
+                          Pending
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto" title={selectedClinicalDoc?.title}>
+                            {selectedClinicalDoc?.title}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto">Auto-selecting...</div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
                             <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
-                            Deleting...
-                          </>
-                        ) : processingReviews[review.id] ? (
-                          <>
-                            <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <FiAlertTriangle className="mr-1 w-3 h-3" />
-                            In Progress
-                          </>
-                        )}
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-                          {review.highConfidenceIssues}
-                        </span>
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                          {review.lowConfidenceIssues}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4">{review.created}</td>
-                    <td className="py-4">
-                      <div className="flex space-x-2">
-                        <button 
-                          className="text-sm text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded-md hover:bg-blue-50"
-                          onClick={() => handleContinueReview(review)}
-                          disabled={isAnalyzing}
-                        >
-                          Continue Review
-                        </button>
-                        <button 
-                          className="text-sm text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded-md hover:bg-red-50 flex items-center"
-                          onClick={() => handleDeleteReview(review)}
-                          disabled={reviewsBeingDeleted.includes(review.id)}
-                        >
-                          <FiTrash2 className="w-3 h-3 mr-1" />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  ))}
-                </tbody>
-              </table>
+                            Analyzing...
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center gap-2 justify-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 text-gray-800 border border-gray-200 text-xs font-medium">
+                              -
+                            </span>
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 text-gray-800 border border-gray-200 text-xs font-medium">
+                              -
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">Just now</td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex space-x-2 justify-center opacity-50">
+                            <button disabled className="text-xs text-blue-600 px-2 py-1 border border-blue-200 rounded flex items-center">
+                              <FiEye className="w-3 h-3 mr-1" />
+                              View
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {filteredReviews.map((review) => (
+                      <tr 
+                        key={review.id} 
+                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-3 px-4 text-sm font-medium text-slate-900">
+                          <div className="max-w-[120px] truncate" title={review.id}>{review.id}</div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto" title={review.clinicalDoc}>{review.clinicalDoc}</div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">
+                          <div className="max-w-[180px] truncate mx-auto" title={review.complianceDoc}>{review.complianceDoc}</div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            review.status === 'completed' 
+                              ? 'bg-green-100 text-green-800 border border-green-200' 
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}>
+                            {review.status === 'completed' ? (
+                              <>
+                                <FiCheck className="mr-1 w-3 h-3" />
+                                Completed
+                              </>
+                            ) : reviewsBeingDeleted.includes(review.id) ? (
+                              <>
+                                <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                                Deleting...
+                              </>
+                            ) : processingReviews[review.id] ? (
+                              <>
+                                <div className="animate-spin h-3 w-3 border-b-2 border-amber-800 rounded-full mr-1"></div>
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <FiAlertTriangle className="mr-1 w-3 h-3" />
+                                In Progress
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center gap-2 justify-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-800 border border-red-200 text-xs font-medium" title="High confidence issues">
+                              {review.highConfidenceIssues}
+                            </span>
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs font-medium" title="Low confidence issues">
+                              {review.lowConfidenceIssues}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-700 text-center">{review.created}</td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex space-x-2 justify-center">
+                            <button 
+                              className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center"
+                              onClick={() => handleContinueReview(review)}
+                              disabled={loadingReviewId === review.id}
+                              title="View compliance review details"
+                            >
+                              {loadingReviewId === review.id ? (
+                                <>
+                                  <div className="animate-spin h-3 w-3 border-b-2 border-blue-800 rounded-full mr-1"></div>
+                                  Loading...
+                                </>
+                              ) : (
+                                <>
+                                  <FiEye className="w-3 h-3 mr-1" />
+                                  View
+                                </>
+                              )}
+                            </button>
+                            <button 
+                              className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded hover:bg-orange-50 flex items-center transition-colors"
+                              onClick={() => handleOpenAlertModal(review)}
+                              title="Send alert to document owners"
+                            >
+                              <FiAlertTriangle className="w-3 h-3 mr-1" />
+                              Alert
+                            </button>
+                            <button 
+                              className="text-xs text-red-600 hover:text-red-800 p-1 border border-red-200 rounded hover:bg-red-50 flex items-center justify-center transition-colors w-6 h-6"
+                              onClick={() => handleDeleteReview(review)}
+                              disabled={reviewsBeingDeleted.includes(review.id)}
+                              title="Delete"
+                            >
+                              <FiTrash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredReviews.length === 0 && !isAnalyzing && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-500">
+                          {reviewsSearchQuery ? 'No matching reviews found' : 'No reviews available'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
+          
+          {/* Count display when filtered */}
+          {reviewsSearchQuery && reviews.length > 0 && (
+            <div className="mt-4 text-sm text-slate-600">
+              Showing {filteredReviews.length} of {reviews.length} reviews
+            </div>
+          )}
+          
+          {/* Email Alert Modal */}
+          <EmailAlertModal 
+            isOpen={showAlertModal}
+            onClose={() => setShowAlertModal(false)}
+            review={selectedReviewForAlert}
+            onSendSuccess={handleAlertSuccess}
+            onError={handleAlertError}
+          />
         </>
       )}
 
       {/* Pagination */}
       {activeTab === 'documents' && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-        <span>{selectedDocs.length} of {documents.length} row(s) selected.</span>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span>Rows per page</span>
-            <select className="border border-gray-200 rounded px-2 py-1">
-              <option>10</option>
-              <option>20</option>
-              <option>50</option>
-            </select>
-          </div>
-          <div>
-            Page 1 of 1
+        <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+          <span className="font-medium">{selectedDocs.length} of {documents.length} row(s) selected.</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Rows per page</span>
+              <select className="border border-slate-200 rounded px-2 py-1 text-xs bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-black">
+                <option>10</option>
+                <option>20</option>
+                <option>50</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <button className="p-1 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              <span>Page 1 of 1</span>
+              <button className="p-1 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
       {/* Delete Confirmation Dialog */}
       {reviewToDelete && (

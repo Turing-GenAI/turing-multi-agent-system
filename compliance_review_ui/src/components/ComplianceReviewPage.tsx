@@ -11,6 +11,8 @@ interface ComplianceIssue {
   confidence: 'high' | 'low';
   regulation: string;
   status?: 'accepted' | 'rejected' | 'pending';
+  original_index?: number;
+  _originalIndex?: number;
 }
 
 interface ComplianceReviewPageProps {
@@ -27,8 +29,8 @@ interface ComplianceReviewPageProps {
   issues: ComplianceIssue[];
   onClose: () => void;
   onSaveDecisions: (
-    decisions: { issueId: string; status: 'accepted' | 'rejected'; appliedChange?: string | null }[], 
-    counts: { totalIssues: number; reviewedIssues: number; highConfidenceIssues: number; lowConfidenceIssues: number },
+    decisions: { issue_id?: string; issueId?: string; action?: string; status?: string; applied_change?: string; appliedChange?: string | null }[], 
+    counts: { totalIssues: number; reviewedIssues: number; highConfidenceIssues: number; lowConfidenceIssues: number; reviewId?: string },
     reviewStatus: 'in-progress' | 'completed'
   ) => void;
 }
@@ -168,7 +170,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         }
         
         // Scroll to highlighted text in compliance document
-        const complianceHighlightedElements = document.querySelectorAll('.bg-blue-200.hover\\:bg-blue-300.text-blue-900');
+        const complianceHighlightedElements = document.querySelectorAll('.bg-blue-200');
         
         if (complianceHighlightedElements.length > 0) {
           // Get the first highlighted element - assuming it corresponds to current issue
@@ -318,15 +320,26 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     setSavingProgress(true);
     
     try {
+      // Ensure we have a valid review ID to update
+      if (!reviewId || reviewId.trim() === '') {
+        console.error("Cannot save progress: No valid review ID found");
+        alert("Cannot save progress: No review ID found. Please reload the page and try again.");
+        setSavingProgress(false);
+        return;
+      }
+
+      console.log(`Starting to save progress for review ID: ${reviewId}`);
+      
       // Count high and low confidence issues
       const highConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'high').length;
       const lowConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'low').length;
       
       // First prepare all decisions including pending ones for our count
-      const allDecisions = reviewedIssues.map(issue => ({
+      const allDecisions = reviewedIssues.map((issue, index) => ({
         issueId: issue.id,
         status: issue.status || 'pending',
         confidence: issue.confidence,
+        original_index: issue.original_index ?? issue._originalIndex ?? index, // Use index as fallback
         appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
           ? appliedChanges.get(issue.clinical_text) 
           : undefined
@@ -335,16 +348,18 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       // Now filter to only include accepted/rejected decisions for the API
       const finalizedDecisions = allDecisions
         .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
-        .map(({ issueId, status, appliedChange }) => ({
-          issue_id: issueId, // Use snake_case to match backend expectations
+        .map(({ issueId, status, appliedChange, original_index }) => ({
+          issue_id: issueId, // Use snake_case to match backend expectations  
           action: status as 'accepted' | 'rejected',
-          applied_change: appliedChange
+          applied_change: appliedChange,
+          original_index // Keep the original index for ordering
         }));
       
       // Prepare issue statuses for saving (all issues, not just finalized ones)
-      const issueStatuses = reviewedIssues.map(issue => ({
+      const issueStatuses = reviewedIssues.map((issue, index) => ({
         issue_id: issue.id,
-        status: issue.status || 'pending'
+        status: issue.status || 'pending',
+        original_index: issue.original_index ?? issue._originalIndex ?? index // Use index as fallback
       }));
       
       // Generate the current state of the document with all applied changes
@@ -356,29 +371,44 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         try {
           // 1. Save the decisions first
           if (finalizedDecisions.length > 0) {
-            await complianceAPI.saveDecisions(reviewId, finalizedDecisions);
-            console.log('Decisions saved successfully');
+            // Log the decisions we're saving to ensure UI highlights are included
+            console.log('Saving decisions with highlights:', 
+              finalizedDecisions.map(d => ({
+                issueId: d.issue_id,
+                action: d.action,
+                hasAppliedChange: !!d.applied_change,
+                originalIndex: d.original_index
+              }))
+            );
+            
+            const saveResponse = await complianceAPI.saveDecisions(reviewId, finalizedDecisions);
+            console.log('Decisions saved successfully:', saveResponse);
+          } else {
+            console.log('No finalized decisions to save');
           }
           
           // 2. Update all issue statuses (including pending ones)
           // This ensures we know which issues were addressed when reopening
-          await complianceAPI.updateIssueStatuses(issueStatuses);
-          console.log('Issue statuses updated successfully');
+          const statusResponse = await complianceAPI.updateIssueStatuses(issueStatuses);
+          console.log('Issue statuses updated successfully:', statusResponse);
           
           // 3. Update the review with the latest document content
-          await complianceAPI.updateReviewContent(reviewId, {
+          const contentResponse = await complianceAPI.updateReviewContent(reviewId, {
             clinical_doc_content: updatedDocumentContent
           });
-          console.log('Updated document content saved successfully');
+          console.log('Updated document content saved successfully:', contentResponse);
+          
+          // Show success message
+          setProgressSaved(true);
+          setTimeout(() => setProgressSaved(false), 3000); // Hide after 3 seconds
         } catch (err) {
           console.error('Error saving to the database:', err);
+          alert('Failed to save progress. Please try again.');
         }
       } else {
         console.error('Cannot save changes: No review ID found');
+        alert('Cannot save progress: No review ID found. Please reload the page and try again.');
       }
-      
-      // We'll no longer call onSaveDecisions here since it's closing the document viewer
-      // Instead, we're now directly saving to the database with the proper review ID
       
       // Calculate the counts for logging purposes
       const counts = {
@@ -389,15 +419,9 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       };
       
       console.log('Decision counts:', counts);
-      
-      // Note: We're intentionally NOT calling onSaveDecisions here to prevent the document viewer from closing
-      // The onSaveDecisions callback will only be used when finalizing the review, not for saving progress
-      
-      // Show success message
-      setProgressSaved(true);
-      setTimeout(() => setProgressSaved(false), 3000); // Hide after 3 seconds
     } catch (error) {
       console.error('Error saving progress:', error);
+      alert('Error saving progress. Please try again.');
     } finally {
       setSavingProgress(false);
     }
@@ -431,10 +455,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       const lowConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'low').length;
       
       // First prepare all decisions including pending ones for our count
-      const allDecisions = reviewedIssues.map(issue => ({
+      const allDecisions = reviewedIssues.map((issue, index) => ({
         issueId: issue.id,
         status: issue.status || 'pending',
         confidence: issue.confidence,
+        original_index: issue.original_index ?? issue._originalIndex ?? index, // Use index as fallback
         appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
           ? appliedChanges.get(issue.clinical_text) 
           : undefined
@@ -443,10 +468,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       // Now filter to only include accepted/rejected decisions for the API
       const finalizedDecisions = allDecisions
         .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
-        .map(({ issueId, status, appliedChange }) => ({
-          issueId,
-          status: status as 'accepted' | 'rejected',
-          appliedChange
+        .map(({ issueId, status, appliedChange, original_index }) => ({
+          issue_id: issueId, // Use snake_case to match backend expectations  
+          action: status as 'accepted' | 'rejected',
+          applied_change: appliedChange,
+          original_index // Keep the original index for ordering
         }));
       
       // Close the popup first
@@ -459,13 +485,14 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           totalIssues: reviewedIssues.length,
           reviewedIssues: reviewedIssues.filter(issue => issue.status === 'accepted' || issue.status === 'rejected').length,
           highConfidenceIssues,
-          lowConfidenceIssues
+          lowConfidenceIssues,
+          reviewId // Pass the current reviewId to ensure we update the existing review
         }, 'completed');
       }, 100);
-      
-      // Don't call onClose() here - let the parent component decide whether to close
     } catch (error) {
       console.error('Error completing review:', error);
+      // Keep the popup open if there's an error
+      //setShowFinalDocument(true);
     }
   };
   
@@ -482,129 +509,191 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   // Highlight non-compliant text in clinical document - memoized to prevent re-highlighting on every render
   const highlightedClinicalContent = React.useMemo(() => {
     const highlightClinicalText = (content: string) => {
-    if (!content || content.trim() === '') return content;
-    let highlightedContent = content;
-    
-    reviewedIssues.forEach((issue, index) => {
-      if (!issue.clinical_text || issue.clinical_text.trim() === '') return;
+      if (!content || content.trim() === '') return content;
+      let highlightedContent = content;
       
-      const textToHighlight = issue.clinical_text;
-      
-      // If this text has an accepted change, use the suggested edit instead
-      if (issue.status === 'accepted' && appliedChanges.has(textToHighlight)) {
-        const suggestedEdit = appliedChanges.get(textToHighlight);
+      reviewedIssues.forEach((issue, index) => {
+        if (!issue.clinical_text || issue.clinical_text.trim() === '') return;
         
-        // Use vibrant green to indicate accepted change
-        const acceptedClass = 'bg-green-200 hover:bg-green-300 text-green-900';
-        const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-500' : '';
+        const textToHighlight = issue.clinical_text;
         
-        try {
-          // Normalize whitespace and escape regex characters
-          const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
-          const normalizedContent = normalizeText(content);
-          const normalizedTextToHighlight = normalizeText(textToHighlight);
+        // If this text has an accepted change, use the suggested edit instead
+        if (issue.status === 'accepted' && appliedChanges.has(textToHighlight)) {
+          const suggestedEdit = appliedChanges.get(textToHighlight);
           
-          const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const escapedText = escapeRegExp(normalizedTextToHighlight);
+          // Use vibrant green to indicate accepted change
+          const acceptedClass = 'bg-green-200';
+          const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-400' : '';
           
-          // Try to find the text
-          if (normalizedContent.includes(normalizedTextToHighlight)) {
-            const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+          try {
+            // Normalize whitespace and escape regex characters
+            const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+            const normalizedContent = normalizeText(content);
+            const normalizedTextToHighlight = normalizeText(textToHighlight);
             
-            highlightedContent = highlightedContent.replace(
-              flexRegex,
-              `<span 
-                id="issue-${issue.id}" 
-                class="${acceptedClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
-                onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
-              >
-                ${suggestedEdit} <span class="text-xs italic text-green-700">(edited)</span>
-              </span>`
-            );
-          }
-        } catch (error) {
-          console.error('Error applying accepted edit:', error);
-        }
-      } else {
-        // Regular highlighting for other issues
-        // Use more vibrant colors with stronger contrast
-        const confidenceClass = issue.confidence === 'high' 
-          ? 'bg-red-300 hover:bg-red-400 text-red-900' 
-          : 'bg-yellow-300 hover:bg-yellow-400 text-yellow-900';
-        const statusClass = issue.status === 'accepted' 
-          ? 'border-green-600 border-b-2' 
-          : issue.status === 'rejected' 
-            ? 'border-red-600 border-b-2' 
-            : 'border-gray-400 border-b-2';
-        const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-500' : '';
-        
-        try {
-          // Normalize whitespace in both the content and the text to highlight
-          const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
-          const normalizedContent = normalizeText(content);
-          const normalizedTextToHighlight = normalizeText(textToHighlight);
-          
-          // Escape special regex characters
-          const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const escapedText = escapeRegExp(normalizedTextToHighlight);
-          
-          // Try different matching approaches in order of precision
-          let matched = false;
-          
-          // 1. Try exact matching first (with normalized whitespace)
-          if (normalizedContent.includes(normalizedTextToHighlight)) {
-            // Use a regex that can handle flexible whitespace
-            const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+            const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedText = escapeRegExp(normalizedTextToHighlight);
             
-            highlightedContent = highlightedContent.replace(
-              flexRegex,
-              `<span 
-                id="issue-${issue.id}" 
-                class="${confidenceClass} ${statusClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
-                onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
-              >
-                $&
-              </span>`
-            );
-            matched = true;
-          }
-          
-          // 2. If exact matching fails, try fuzzy matching with word boundaries
-          if (!matched && normalizedTextToHighlight.length > 10) {
-            // For longer strings, try matching initial words (minimum 10 chars)
-            const words = normalizedTextToHighlight.split(' ');
-            const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
-            
-            if (firstFewWords.length >= 10) {
-              const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+            // Try to find the text
+            if (normalizedContent.includes(normalizedTextToHighlight)) {
+              const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
               
-      highlightedContent = highlightedContent.replace(
-                partialRegex,
-                (match) => {
-                  return `<span 
-                    id="issue-${issue.id}" 
-                    class="${confidenceClass} ${statusClass} ${isCurrentClass} px-2 py-1 border-b-2 cursor-pointer rounded-md shadow-sm transition-colors font-medium" 
-                    onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
-                  >
-                    ${match}
-                  </span>`;
-                }
+              highlightedContent = highlightedContent.replace(
+                flexRegex,
+                `<span 
+                  id="issue-${issue.id}" 
+                  class="${acceptedClass} ${isCurrentClass} px-1 cursor-pointer" 
+                  onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+                >
+                  ${suggestedEdit} <span class="text-xs italic text-green-700">(edited)</span>
+                </span>`
+              );
+            }
+          } catch (error) {
+            console.error('Error applying accepted edit:', error);
+          }
+        } else {
+          // Regular highlighting for other issues
+          // Use more vibrant colors with stronger contrast
+          const confidenceClass = issue.confidence === 'high' 
+            ? 'bg-red-200' 
+            : 'bg-yellow-200';
+          const statusClass = issue.status === 'accepted' 
+            ? 'border-green-600 border-b-2' 
+            : issue.status === 'rejected' 
+              ? 'border-red-600 border-b-2' 
+              : 'border-gray-400 border-b-2';
+          const isCurrentClass = index === currentIssueIndex ? 'ring-2 ring-blue-400' : '';
+          
+          try {
+            // Normalize whitespace in both the content and the text to highlight
+            const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+            const normalizedContent = normalizeText(content);
+            const normalizedTextToHighlight = normalizeText(textToHighlight);
+            
+            // Escape special regex characters
+            const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedText = escapeRegExp(normalizedTextToHighlight);
+            
+            // Try different matching approaches in order of precision
+            let matched = false;
+            
+            // 1. Try exact matching first (with normalized whitespace)
+            if (normalizedContent.includes(normalizedTextToHighlight)) {
+              // Use a regex that can handle flexible whitespace
+              const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+              
+              highlightedContent = highlightedContent.replace(
+                flexRegex,
+                `<span 
+                  id="issue-${issue.id}" 
+                  class="${confidenceClass} ${statusClass} ${isCurrentClass} px-1 cursor-pointer" 
+                  onclick="document.dispatchEvent(new CustomEvent('issueClick', {detail: ${index}}))"
+                >
+                  $&
+                </span>`
               );
               matched = true;
             }
+            
+            // 2. If exact matching fails, try using word boundary matching
+            if (!matched && normalizedTextToHighlight.length > 10) {
+              try {
+                // Create an array of individual words
+                const words = normalizedTextToHighlight.split(' ');
+                if (words.length >= 3) {
+                  // Create a pattern that matches these words with flexible spacing
+                  const wordsPattern = words.map(word => escapeRegExp(word)).join('\\s+');
+                  const boundaryRegex = new RegExp(`\\b${wordsPattern}\\b`, 'g');
+                  
+                  const replaced = highlightedContent.replace(
+                    boundaryRegex,
+                    (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+                  );
+                  
+                  if (replaced !== highlightedContent) {
+                    highlightedContent = replaced;
+                    matched = true;
+                  }
+                }
+              } catch (error) {
+                console.error('Error with word boundary matching:', error);
+              }
+            }
+            
+            // 3. If still not matched, try matching first few words
+            if (!matched && normalizedTextToHighlight.length > 10) {
+              // For longer strings, try matching initial words (minimum 10 chars)
+              const words = normalizedTextToHighlight.split(' ');
+              const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+              
+              if (firstFewWords.length >= 10) {
+                const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+                
+                const replaced = highlightedContent.replace(
+                  partialRegex,
+                  (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+                );
+                
+                if (replaced !== highlightedContent) {
+                  highlightedContent = replaced;
+                  matched = true;
+                }
+              }
+            }
+            
+            // 4. As a last resort, try an even looser matching approach for long texts
+            if (!matched && normalizedTextToHighlight.length > 30) {
+              // Find a significant initial portion and search for it
+              const initialPortion = normalizedTextToHighlight.substring(0, 30);
+              
+              const textIndex = normalizedContent.indexOf(initialPortion);
+              if (textIndex >= 0) {
+                // Find a natural stopping point - near the expected end or at the next punctuation
+                const expectedLength = normalizedTextToHighlight.length;
+                const maxEnd = Math.min(textIndex + expectedLength + 20, normalizedContent.length);
+                
+                let endIndex = maxEnd;
+                for (let i = textIndex + expectedLength - 10; i < maxEnd; i++) {
+                  if (i >= normalizedContent.length) break;
+                  if('.!?;:'.includes(normalizedContent[i])) {
+                    endIndex = i + 1;
+                    break;
+                  }
+                }
+                
+                // Extract the matched section and highlight it
+                const originalStart = content.indexOf(content.substring(textIndex, textIndex + 20));
+                if (originalStart >= 0) {
+                  const textToMatch = content.substring(originalStart, originalStart + (endIndex - textIndex));
+                  
+                  // Create a safe regex for this specific text
+                  const safeRegex = new RegExp(escapeRegExp(textToMatch), 'g');
+                  
+                  const replaced = highlightedContent.replace(
+                    safeRegex,
+                    (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+                  );
+                  
+                  if (replaced !== highlightedContent) {
+                    highlightedContent = replaced;
+                    matched = true;
+                  }
+                }
+              }
+            }
+            
+            // 5. Log if no match was found for debugging
+            if (!matched) {
+              console.warn(`Could not find text match for issue: "${normalizedTextToHighlight.substring(0, 50)}..."`);
+            }
+          } catch (error) {
+            console.error('Error highlighting clinical text:', error);
           }
-          
-          // 3. Log if no match was found for debugging
-          if (!matched) {
-            console.warn(`Could not find text match for issue: "${normalizedTextToHighlight.substring(0, 50)}..."`);
-          }
-        } catch (error) {
-          console.error('Error highlighting clinical text:', error);
         }
-      }
-    });
-    
-    return highlightedContent;
+      });
+      
+      return highlightedContent;
     }
     
     return highlightClinicalText(displayClinicalContent);
@@ -614,68 +703,138 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
   const highlightedComplianceContent = React.useMemo(() => {
     // Helper function to highlight compliance text
     function highlightComplianceText(content: string, issueIndex: number) {
-    if (!reviewedIssues[issueIndex] || !content || content.trim() === '') return content;
-    
-    let highlightedContent = content;
-    const textToHighlight = reviewedIssues[issueIndex].compliance_text;
-    
-    if (!textToHighlight || textToHighlight.trim() === '') return content;
-    
-    try {
-      // Normalize whitespace in both the content and the text to highlight
-      const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
-      const normalizedContent = normalizeText(content);
-      const normalizedTextToHighlight = normalizeText(textToHighlight);
+      if (!reviewedIssues[issueIndex] || !content || content.trim() === '') return content;
       
-      // Escape special regex characters
-      const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const escapedText = escapeRegExp(normalizedTextToHighlight);
+      let highlightedContent = content;
+      const textToHighlight = reviewedIssues[issueIndex].compliance_text;
       
-      // Try different matching approaches in order of precision
-      let matched = false;
+      if (!textToHighlight || textToHighlight.trim() === '') return content;
       
-      // 1. Try exact matching first (with normalized whitespace)
-      if (normalizedContent.includes(normalizedTextToHighlight)) {
-        // Use a regex that can handle flexible whitespace
-        const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
+      try {
+        // Normalize whitespace in both the content and the text to highlight
+        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
+        const normalizedContent = normalizeText(content);
+        const normalizedTextToHighlight = normalizeText(textToHighlight);
         
-        highlightedContent = highlightedContent.replace(
-          flexRegex,
-          `<span class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-2 py-1 rounded-md shadow-sm font-medium">$&</span>`
-        );
-        matched = true;
-      }
-      
-      // 2. If exact matching fails, try fuzzy matching with word boundaries
-      if (!matched && normalizedTextToHighlight.length > 10) {
-        // For longer strings, try matching initial words (minimum 10 chars)
-        const words = normalizedTextToHighlight.split(' ');
-        const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+        // Escape special regex characters
+        const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedText = escapeRegExp(normalizedTextToHighlight);
         
-        if (firstFewWords.length >= 10) {
-          const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+        // Try different matching approaches in order of precision
+        let matched = false;
+        
+        // 1. Try exact matching first (with normalized whitespace)
+        if (normalizedContent.includes(normalizedTextToHighlight)) {
+          // Use a regex that can handle flexible whitespace
+          const flexRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'g');
           
-    highlightedContent = highlightedContent.replace(
-            partialRegex,
-            (match) => `<span class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-2 py-1 rounded-md shadow-sm font-medium">${match}</span>`
+          highlightedContent = highlightedContent.replace(
+            flexRegex,
+            `<span class="bg-blue-200 px-1">$&</span>`
           );
           matched = true;
         }
+        
+        // 2. If exact matching fails, try using word boundary matching
+        if (!matched && normalizedTextToHighlight.length > 10) {
+          try {
+            // Create an array of individual words
+            const words = normalizedTextToHighlight.split(' ');
+            if (words.length >= 3) {
+              // Create a pattern that matches these words with flexible spacing
+              const wordsPattern = words.map(word => escapeRegExp(word)).join('\\s+');
+              const boundaryRegex = new RegExp(`\\b${wordsPattern}\\b`, 'g');
+              
+              const replaced = highlightedContent.replace(
+                boundaryRegex,
+                (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+              );
+              
+              if (replaced !== highlightedContent) {
+                highlightedContent = replaced;
+                matched = true;
+              }
+            }
+          } catch (error) {
+            console.error('Error with word boundary matching:', error);
+          }
+        }
+        
+        // 3. If still not matched, try matching first few words
+        if (!matched && normalizedTextToHighlight.length > 10) {
+          // For longer strings, try matching initial words (minimum 10 chars)
+          const words = normalizedTextToHighlight.split(' ');
+          const firstFewWords = words.slice(0, Math.min(5, words.length)).join(' ');
+          
+          if (firstFewWords.length >= 10) {
+            const partialRegex = new RegExp(escapeRegExp(firstFewWords) + '[\\s\\S]{0,50}', 'g');
+            
+            const replaced = highlightedContent.replace(
+              partialRegex,
+              (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+            );
+            
+            if (replaced !== highlightedContent) {
+              highlightedContent = replaced;
+              matched = true;
+            }
+          }
+        }
+        
+        // 4. As a last resort, try an even looser matching approach for long texts
+        if (!matched && normalizedTextToHighlight.length > 30) {
+          // Find a significant initial portion and search for it
+          const initialPortion = normalizedTextToHighlight.substring(0, 30);
+          
+          const textIndex = normalizedContent.indexOf(initialPortion);
+          if (textIndex >= 0) {
+            // Find a natural stopping point - near the expected end or at the next punctuation
+            const expectedLength = normalizedTextToHighlight.length;
+            const maxEnd = Math.min(textIndex + expectedLength + 20, normalizedContent.length);
+            
+            let endIndex = maxEnd;
+            for (let i = textIndex + expectedLength - 10; i < maxEnd; i++) {
+              if (i >= normalizedContent.length) break;
+              if ('.!?;:'.includes(normalizedContent[i])) {
+                endIndex = i + 1;
+                break;
+              }
+            }
+            
+            // Extract the matched section and highlight it
+            const originalStart = content.indexOf(content.substring(textIndex, textIndex + 20));
+            if (originalStart >= 0) {
+              const textToMatch = content.substring(originalStart, originalStart + (endIndex - textIndex));
+              
+              // Create a safe regex for this specific text
+              const safeRegex = new RegExp(escapeRegExp(textToMatch), 'g');
+              
+              const replaced = highlightedContent.replace(
+                safeRegex,
+                (match) => `<span class="bg-blue-200 px-1">${match}</span>`
+              );
+              
+              if (replaced !== highlightedContent) {
+                highlightedContent = replaced;
+                matched = true;
+              }
+            }
+          }
+        }
+        
+        // 5. Log if no match was found for debugging
+        if (!matched) {
+          console.warn(`Could not find compliance text match: "${normalizedTextToHighlight.substring(0, 50)}..."`);
+        }
+      } catch (error) {
+        console.error('Error highlighting compliance text:', error);
       }
       
-      // 3. Log if no match was found for debugging
-      if (!matched) {
-        console.warn(`Could not find compliance text match: "${normalizedTextToHighlight.substring(0, 50)}..."`);
-      }
-    } catch (error) {
-      console.error('Error highlighting compliance text:', error);
+      return highlightedContent;
     }
     
-    return highlightedContent;
-  };
-  
-  return currentIssue ? highlightComplianceText(displayComplianceContent, currentIssueIndex) : displayComplianceContent;
-}, [displayComplianceContent, currentIssue, currentIssueIndex, reviewedIssues]);
+    return highlightComplianceText(displayComplianceContent, currentIssueIndex);
+  }, [displayComplianceContent, currentIssue, currentIssueIndex, reviewedIssues]);
   
   // Event listener for issue clicks in the document
   useEffect(() => {
@@ -702,12 +861,39 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       if (clinicalDocument.id) {
         try {
           const reviews = await complianceAPI.getReviews();
-          const matchingReview = reviews.find(r => r.clinical_doc_id === clinicalDocument.id);
+          // Look for a review matching BOTH clinical_doc_id and compliance_doc_id to ensure we get the correct review
+          const matchingReview = reviews.find(r => 
+            r.clinical_doc_id === clinicalDocument.id && 
+            r.compliance_doc_id === complianceDocument.id
+          );
+          
           if (matchingReview && matchingReview.id) {
             console.log(`Found review ID ${matchingReview.id} for document ${clinicalDocument.id}`);
             setReviewId(matchingReview.id);
           } else {
-            console.warn(`Could not find review ID for document ${clinicalDocument.id}`);
+            console.warn(`Could not find existing review for documents ${clinicalDocument.id} and ${complianceDocument.id}`);
+            // Create a new review if one doesn't exist
+            try {
+              const newReview = await complianceAPI.createReview({
+                id: `review_${Date.now()}`,
+                clinical_doc_id: clinicalDocument.id,
+                compliance_doc_id: complianceDocument.id,
+                clinicalDoc: clinicalDocument.title,
+                complianceDoc: complianceDocument.title,
+                status: 'in-progress',
+                issues: reviewedIssues.length,
+                highConfidenceIssues: reviewedIssues.filter(i => i.confidence === 'high').length,
+                lowConfidenceIssues: reviewedIssues.filter(i => i.confidence === 'low').length,
+                created: new Date().toISOString()
+              });
+              
+              if (newReview && newReview.id) {
+                console.log(`Created new review with ID ${newReview.id}`);
+                setReviewId(newReview.id);
+              }
+            } catch (createError) {
+              console.error('Error creating new review:', createError);
+            }
           }
         } catch (error) {
           console.error('Error finding review ID:', error);
@@ -716,7 +902,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     };
     
     findReviewId();
-  }, [clinicalDocument.id]);
+  }, [clinicalDocument.id, complianceDocument.id, reviewedIssues]);
   
   // Load saved issue statuses and applied changes when review ID is available
   useEffect(() => {
@@ -724,53 +910,87 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     
     const loadSavedIssueData = async () => {
       try {
-        console.log(`Loading saved issue data for review ID: ${reviewId}`);
+        console.log('Loading saved issue data for review:', reviewId);
         
-        // Get decision history to find applied changes
+        // Get decisions for the review
         const decisions = await complianceAPI.getReviewDecisions(reviewId);
+        console.log('Loaded decisions:', decisions);
+        
         if (decisions && decisions.length > 0) {
-          console.log(`Found ${decisions.length} saved decisions`); 
+          // Create a Map to store decisions by issueId
+          const issueDecisions = new Map();
+          const issueOrderMap = new Map();
           
-          // Create a map to store the status of each issue
-          const issueStatusMap = new Map();
-          
-          // Create a map for applied changes
-          const savedAppliedChanges = new Map();
-          
-          // Process each decision to extract status and applied changes
-          decisions.forEach(item => {
-            // Store the status for each issue
-            if (item.issue && item.issue.id && item.decision.action) {
-              issueStatusMap.set(item.issue.id, item.decision.action);
-              
-              // If this is an accepted decision with an applied change, store it
-              if (item.decision.action === 'accepted' && 
-                  item.decision.applied_change && 
-                  item.issue.clinical_text) {
-                savedAppliedChanges.set(item.issue.clinical_text, item.decision.applied_change);
-                console.log(`Found applied change for issue ${item.issue.id}: ${item.decision.applied_change.substring(0, 30)}...`);
+          // Process each decision to organize by issue
+          decisions.forEach((decision: any, index: number) => {
+            const issueId = decision.issue?.id;
+            if (issueId) {
+              // Store the latest decision for each issue (decisions are ordered newest first)
+              if (!issueDecisions.has(issueId)) {
+                issueDecisions.set(issueId, decision);
+                
+                // Extract the original index from the decision if available
+                const decisionData = decision.decision || {};
+                if (decisionData.original_index !== undefined) {
+                  // Store the original index mapped to issue id
+                  issueOrderMap.set(issueId, decisionData.original_index);
+                }
               }
             }
           });
           
-          // Update the reviewed issues with their status
-          if (issueStatusMap.size > 0) {
-            const updatedIssues = reviewedIssues.map(issue => {
-              if (issueStatusMap.has(issue.id)) {
-                return { ...issue, status: issueStatusMap.get(issue.id) };
-              }
-              return issue;
-            });
+          console.log('Collected issue order information:', Array.from(issueOrderMap.entries()));
+          
+          // Apply decisions to the issues
+          let updatedIssues = [...reviewedIssues];
+          updatedIssues = updatedIssues.map(issue => {
+            const decision = issueDecisions.get(issue.id);
             
-            console.log(`Updated ${issueStatusMap.size} issue statuses`);
-            setReviewedIssues(updatedIssues);
+            if (decision) {
+              const decisionData = decision.decision || {};
+              // Support both 'action' (backend api) and 'status' (UI) naming
+              const status = decisionData.action || decisionData.status || issue.status || 'pending';
+              
+              // Support both snake_case and camelCase fields from API
+              const appliedChange = decisionData.applied_change || decisionData.appliedChange;
+              
+              // Store the original index information, preferring the one from the decision if available
+              const originalIndex = decisionData.original_index ?? issue.original_index ?? issue._originalIndex;
+              
+              // If we have applied changes, record them in our state
+              if (status === 'accepted' && appliedChange) {
+                setAppliedChanges(prev => new Map(prev).set(issue.clinical_text, appliedChange));
+                
+                // Log the first 30 chars to help with debugging
+                const originalStart = issue.clinical_text.substring(0, 30);
+                const changeStart = appliedChange.substring(0, 30);
+                console.log(`Applied change for accepted issue ${issue.id}:
+                  Original: "${originalStart}..."
+                  Changed: "${changeStart}..."`);
+              }
+              
+              return { 
+                ...issue, 
+                status,
+                original_index: originalIndex 
+              };
+            }
+            
+            return issue;
+          });
+          
+          // Sort issues based on original index if we have that information
+          if (issueOrderMap.size > 0) {
+            updatedIssues = updatedIssues.sort((a, b) => {
+              const indexA = a.original_index ?? a._originalIndex ?? issueOrderMap.get(a.id) ?? 999;
+              const indexB = b.original_index ?? b._originalIndex ?? issueOrderMap.get(b.id) ?? 999;
+              return indexA - indexB;
+            });
           }
           
-          // Update the appliedChanges map
-          if (savedAppliedChanges.size > 0) {
-            console.log(`Loaded ${savedAppliedChanges.size} applied changes`);
-            setAppliedChanges(savedAppliedChanges);
-          }
+          // Update the reviewedIssues state with our updated and sorted issues
+          setReviewedIssues(updatedIssues);
+          console.log('Updated issues with decisions:', updatedIssues);
         }
       } catch (error) {
         console.error('Error loading saved issue data:', error);
@@ -787,54 +1007,35 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         setLoadingHistory(true);
         try {
           console.log(`Fetching decision history for review ${reviewId}`);
-          const history = await complianceAPI.getReviewDecisions(reviewId);
-          
-          // Deduplicate history to show only latest decision per issue
-          const issueMap = new Map();
-          
-          // Process decisions in reverse timestamp order (newest first)
-          // This ensures we get the most recent decision for each issue
-          const sortedHistory = [...history].sort((a, b) => {
-            const dateA = new Date(a.decision.timestamp || 0).getTime();
-            const dateB = new Date(b.decision.timestamp || 0).getTime();
-            return dateB - dateA; // Descending order (newest first)
-          });
-          
-          // Keep only the newest decision for each issue
-          sortedHistory.forEach(item => {
-            if (item.issue && item.issue.id) {
-              // Only add if we haven't seen this issue before
-              if (!issueMap.has(item.issue.id)) {
-                issueMap.set(item.issue.id, item);
-              }
-            }
-          });
-          
-          // Convert map back to array
-          const deduplicatedHistory = Array.from(issueMap.values());
-          console.log(`Deduplicated history from ${history.length} to ${deduplicatedHistory.length} items`);
+          // Use the deduplicated decisions instead of all decisions
+          const history = await complianceAPI.getDeduplicatedDecisions(reviewId);
+          console.log(`Fetched ${history.length} deduplicated decisions for review ${reviewId}`);
           
           // Set the deduplicated history
-          setDecisionHistory(deduplicatedHistory);
+          setDecisionHistory(history);
           
           // Also update the appliedChanges map with any stored changes
-          // We create a new Map instead of mutating the existing one
           const newAppliedChanges = new Map();
-          deduplicatedHistory.forEach(item => {
-            if (item.decision.action === 'accepted' && item.decision.applied_change && item.issue.clinical_text) {
+          history.forEach(item => {
+            if (item.issue && 
+                item.issue.clinical_text && 
+                item.decision.action === 'accepted' && 
+                item.decision.applied_change) {
               newAppliedChanges.set(item.issue.clinical_text, item.decision.applied_change);
             }
           });
           
-          // Only update if we have changes to apply
+          // Update applied changes if we found any
           if (newAppliedChanges.size > 0) {
+            console.log(`Found ${newAppliedChanges.size} applied changes from history`);
             setAppliedChanges(prev => {
-              // Create a new map that combines previous and new changes
-              const combined = new Map(prev);
+              // Create a new map with all existing changes
+              const merged = new Map(prev);
+              // Add all changes from history
               newAppliedChanges.forEach((value, key) => {
-                combined.set(key, value);
+                merged.set(key, value);
               });
-              return combined;
+              return merged;
             });
           }
         } catch (error) {
@@ -846,7 +1047,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       
       fetchDecisionHistory();
     }
-  }, [showHistory, reviewId]); // Always fetch when showHistory changes
+  }, [showHistory, reviewId]);
   
   return (
     <div className="flex-1 bg-white">
@@ -873,13 +1074,13 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           <button 
             onClick={saveProgress}
             disabled={savingProgress}
-            className={`px-3 py-1 text-sm rounded border border-blue-300 text-blue-600 hover:bg-blue-50 ${
+            className={`px-3 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 ${
               savingProgress ? 'opacity-75 cursor-not-allowed' : ''
             }`}
           >
             {savingProgress ? (
               <span className="flex items-center">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-700 mr-2"></div>
                 Saving...
               </span>
             ) : (
@@ -888,7 +1089,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           </button>
           <button 
             onClick={finalizeReview}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
           >
             Finalize Review
           </button>
@@ -923,19 +1124,19 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
               {reviewedIssues.length > 0 && (
                 <div className="mt-6 p-3 border-t bg-gray-50 flex flex-wrap items-center gap-4 text-xs">
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 bg-red-300 rounded-sm"></span>
+                    <span className="inline-block w-3 h-3 bg-red-200 rounded-sm"></span>
                     <span>High Confidence Issue</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 bg-yellow-300 rounded-sm"></span>
+                    <span className="inline-block w-3 h-3 bg-yellow-200 rounded-sm"></span>
                     <span>Low Confidence Issue</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 border-b-2 border-green-600"></span>
-                    <span>Accepted Issue</span>
+                    <span className="inline-block w-3 h-3 bg-green-200 rounded-sm"></span>
+                    <span>Accepted Change</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="inline-block w-4 h-4 border-b-2 border-red-600"></span>
+                    <span className="inline-block w-3 h-3 border-b-2 border-red-600"></span>
                     <span>Rejected Issue</span>
                   </div>
                 </div>
@@ -1007,7 +1208,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                       <div className="flex gap-2">
                         <button 
                           className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
-                            currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300' : ''
+                            currentIssue.status === 'accepted' ? 'bg-green-50 border-green-300 text-green-700' : ''
                           }`}
                           onClick={() => handleDecision('accepted')}
                           disabled={processingEdit}
@@ -1019,19 +1220,19 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                             </>
                           ) : (
                             <>
-                          <FiCheck className="w-4 h-4" />
+                          <FiCheck className="w-4 h-4 text-green-600" />
                           Accept
                             </>
                           )}
                         </button>
                         <button 
                           className={`flex items-center gap-1 px-3 py-1 rounded border hover:bg-gray-50 ${
-                            currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300' : ''
+                            currentIssue.status === 'rejected' ? 'bg-red-50 border-red-300 text-red-700' : ''
                           }`}
                           onClick={() => handleDecision('rejected')}
                           disabled={processingEdit}
                         >
-                          <FiX className="w-4 h-4" />
+                          <FiX className="w-4 h-4 text-red-600" />
                           Reject
                         </button>
                       </div>
@@ -1167,15 +1368,17 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">Finalized Document</h3>
               <div className="flex items-center gap-3">
+                {/* Temporarily disabled to prevent creating new reviews
                 <button 
-                  className="px-3 py-1 flex items-center gap-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-3 py-1 flex items-center gap-1 text-sm bg-black text-white rounded hover:bg-gray-800"
                   onClick={completeReview}
                 >
                   <FiCheck className="w-4 h-4" />
                   Complete Review
                 </button>
+                */}
                 <button 
-                  className="px-3 py-1 flex items-center gap-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-3 py-1 flex items-center gap-1 text-sm bg-black text-white rounded hover:bg-gray-800"
                   onClick={() => {
                     // Create a blob and download link
                     const blob = new Blob([finalDocument], { type: 'text/plain' });
