@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { complianceAPI } from '../services/api';
 import { ReviewInfo, ReviewAlertRequest } from '../types';
 import { cacheEmailContent, getCachedEmailContent } from '../utils/cacheUtils';
+import DOMPurify from 'dompurify';
 
 interface EmailAlertModalProps {
   isOpen: boolean;
@@ -123,11 +124,13 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
 
     setSendingAlert(true);
     try {
-      // Fetch decision history for this review
+      // Fetch deduplicated decision history for this review (only latest decision per issue)
       let decisionHistory = [];
       try {
         if (review.id) {
-          const history = await complianceAPI.getReviewDecisions(review.id);
+          // Use getDeduplicatedDecisions instead of getReviewDecisions to only include
+          // the most recent decision for each issue
+          const history = await complianceAPI.getDeduplicatedDecisions(review.id);
           decisionHistory = history;
         }
       } catch (historyError) {
@@ -274,7 +277,8 @@ export const EmailAlertModal: React.FC<EmailAlertModalProps> = ({
       // Convert newlines to <br>
       .replace(/\n/g, '<br>');
     
-    return formatted;
+    // Sanitize HTML with DOMPurify before returning
+    return DOMPurify.sanitize(formatted);
   };
 
   if (!isOpen || !review) return null;

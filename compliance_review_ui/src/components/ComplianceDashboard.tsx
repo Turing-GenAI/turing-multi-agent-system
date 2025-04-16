@@ -8,6 +8,17 @@ import { ToastContainer, ToastType } from './Toast';
 import { ReviewInfo, ReviewAlertRequest } from '../types';
 import { EmailAlertModal } from './EmailAlertModal';
 
+// Add global type declaration for window.globalIsAnalyzing
+declare global {
+  interface Window {
+    globalIsAnalyzing: boolean;
+  }
+}
+
+// Access window.globalIsAnalyzing with proper typing
+const getGlobalAnalyzing = () => window.globalIsAnalyzing || false;
+const setGlobalAnalyzing = (value: boolean) => { window.globalIsAnalyzing = value; };
+
 interface DocumentInfo {
   id: string;
   title: string;
@@ -45,7 +56,33 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [success, setSuccess] = useState<string | null>(null);
+  // Define isAnalyzing state BEFORE any useEffect that depends on it
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Track reviews with processing status to update individually
+  const [processingReviews, setProcessingReviews] = useState<{[key: string]: boolean}>({});
+  // Change from boolean to string to track which review is being loaded
+  const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
   // Reviews will use backend-generated UUIDs
+
+  // State for reviews data and loading state
+  const [reviews, setReviews] = useState<ReviewInfo[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState<boolean>(false);
+  
+  // Track reviews that are being deleted
+  const [reviewsBeingDeleted, setReviewsBeingDeleted] = useState<string[]>([]);
+  
+  // State for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [reviewToDelete, setReviewToDelete] = useState<ReviewInfo | null>(null);
+  
+  // State for email functionality
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [emailContent, setEmailContent] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [emailAddresses, setEmailAddresses] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
 
   // Replace inline messages with toast system
   const [toasts, setToasts] = useState<Array<{id: string; message: string; type: ToastType}>>([]);
@@ -60,6 +97,82 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
+
+  // Track if window has focus
+  const [hasFocus, setHasFocus] = useState(true);
+
+  // Effect to track window focus and refresh when returning
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window regained focus - updating reviews');
+      setHasFocus(true);
+      if (activeTab === 'reviews') {
+        fetchAllReviews();
+      }
+    };
+    
+    const handleBlur = () => {
+      setHasFocus(false);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [activeTab]);
+
+  // Effect to sync with global state on component mount
+  useEffect(() => {
+    setIsAnalyzing(getGlobalAnalyzing());
+  }, []);
+
+  // Effect to refresh reviews when tab becomes active
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+    
+    // Function to check for tab visibility changes
+    const handleVisibilityChange = () => {
+      if (!document.hidden && activeTab === 'reviews') {
+        console.log('Tab became visible - refreshing reviews');
+        fetchAllReviews();
+      }
+    };
+    
+    // Add visibility change listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Set up interval to periodically refresh reviews when on reviews tab
+    if (activeTab === 'reviews') {
+      intervalId = setInterval(() => {
+        fetchAllReviews();
+      }, 5000); // Refresh every 5 seconds
+    }
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activeTab]);
+
+  // Sync local isAnalyzing state with global state
+  useEffect(() => {
+    // When component mounts or becomes visible, check global state
+    if (getGlobalAnalyzing() !== isAnalyzing) {
+      setIsAnalyzing(getGlobalAnalyzing());
+    }
+    
+    // Set up an interval to check for global state changes
+    const syncInterval = setInterval(() => {
+      if (getGlobalAnalyzing() !== isAnalyzing) {
+        setIsAnalyzing(getGlobalAnalyzing());
+      }
+    }, 1000);
+    
+    return () => clearInterval(syncInterval);
+  }, [isAnalyzing]);
 
   // Fetch documents from the backend API
   useEffect(() => {
@@ -88,20 +201,6 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     fetchDocuments();
   }, []);
 
-  // State for reviews data and loading state
-  const [reviews, setReviews] = useState<ReviewInfo[]>([]);
-  const [loadingReviews, setLoadingReviews] = useState<boolean>(false);
-  
-  // Track reviews with processing status to update individually
-  const [processingReviews, setProcessingReviews] = useState<{[key: string]: boolean}>({});
-  
-  // Track reviews that are being deleted
-  const [reviewsBeingDeleted, setReviewsBeingDeleted] = useState<string[]>([]);
-  
-  // State for delete confirmation dialog
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [reviewToDelete, setReviewToDelete] = useState<ReviewInfo | null>(null);
-  
   // Initial fetch to load all reviews - only called when tab changes or component mounts
   const fetchAllReviews = async () => {
     try {
@@ -125,41 +224,16 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     }
   };
   
-  // State for email functionality
-  const [emailSubject, setEmailSubject] = useState<string>('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [emailContent, setEmailContent] = useState<string>('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [emailAddresses, setEmailAddresses] = useState<string>('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isLoadingEmailContent, setIsLoadingEmailContent] = useState<boolean>(false);
-
-  // Function to generate email content using LLM
-  const generateEmailContent = async (review: ReviewInfo) => {
-    setIsLoadingEmailContent(true);
-    try {
-      const response = await complianceAPI.generateReviewAlertContent({
-        to_emails: emailAddresses.split(',').map(email => email.trim()),
-        subject: emailSubject,
-        review_data: {
-          clinical_doc: review.clinicalDoc,
-          compliance_doc: review.complianceDoc,
-          issues: review.issues || 0,
-          high_confidence_issues: review.highConfidenceIssues || 0,
-          low_confidence_issues: review.lowConfidenceIssues || 0
-        }
-      });
+  // Set up polling only for processing reviews - much more efficient
+  useEffect(() => {
+    if (activeTab === 'reviews' && Object.keys(processingReviews).length > 0) {
+      const statusCheckInterval = setInterval(() => {
+        checkProcessingReviews();
+      }, 3000); // Check every 3 seconds
       
-      if (response.content) {
-        setEmailContent(response.content);
-      }
-    } catch (error) {
-      console.error('Error generating email content:', error);
-      addToast('Failed to generate email content. Please try again.', 'error');
-    } finally {
-      setIsLoadingEmailContent(false);
+      return () => clearInterval(statusCheckInterval);
     }
-  };
+  }, [activeTab, processingReviews]);
 
   // Function to check status of individual processing reviews
   const checkProcessingReviews = async () => {
@@ -171,18 +245,37 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       const updatedReviews = await complianceAPI.getReviews();
       let hasStatusChanges = false;
       
-      setReviews(prevReviews => {
-        return prevReviews.map(review => {
-          const updatedReview = updatedReviews.find((r: ReviewInfo) => r.id === review.id);
-          
-          if (updatedReview && processingReviews[review.id] && updatedReview.status === 'completed') {
-            hasStatusChanges = true;
-            return updatedReview;
+      // Create a local copy of current reviews to update
+      const updatedReviewsList = [...reviews];
+      
+      // Check each processing review
+      processingIds.forEach(reviewId => {
+        const updatedReview = updatedReviews.find((r: ReviewInfo) => r.id === reviewId);
+        const existingReviewIndex = updatedReviewsList.findIndex(r => r.id === reviewId);
+        
+        if (updatedReview) {
+          if (existingReviewIndex >= 0) {
+            // Update existing review with new status
+            updatedReviewsList[existingReviewIndex] = updatedReview;
+          } else {
+            // Add new review if it doesn't exist in our list
+            updatedReviewsList.push(updatedReview);
           }
-          return review;
-        });
+          
+          // Mark that status has changed for this review
+          if (processingReviews[reviewId] && updatedReview.status === 'completed') {
+            hasStatusChanges = true;
+          }
+        }
       });
       
+      // Update reviews state with all changes
+      if (updatedReviewsList.length !== reviews.length || hasStatusChanges) {
+        console.log('Updating reviews with latest status changes', updatedReviewsList);
+        setReviews(updatedReviewsList);
+      }
+      
+      // Remove completed reviews from processing state
       if (hasStatusChanges) {
         setProcessingReviews(prev => {
           const updated = {...prev};
@@ -205,17 +298,6 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       fetchAllReviews();
     }
   }, [activeTab]);
-  
-  // Set up polling only for processing reviews - much more efficient
-  useEffect(() => {
-    if (activeTab === 'reviews' && Object.keys(processingReviews).length > 0) {
-      const statusCheckInterval = setInterval(() => {
-        checkProcessingReviews();
-      }, 3000); // Check every 3 seconds
-      
-      return () => clearInterval(statusCheckInterval);
-    }
-  }, [activeTab, processingReviews]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleDocumentSelect = (doc: DocumentInfo) => {
@@ -255,14 +337,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     onDocumentSelect({...doc, type: docType as 'clinical' | 'compliance'}); // Ensure consistent type in callback
   };
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  // Change from boolean to string to track which review is being loaded
-  const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
-  
   const handleStartReview = async () => {
     if (selectedClinicalDoc) {
       try {
         setIsAnalyzing(true);
+        // Update global variable
+        setGlobalAnalyzing(true);
         
         // Switch to the Reviews tab first to show analysis progress
         setActiveTab('reviews');
@@ -322,6 +402,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       } finally {
         // Finally, set analyzing to false
         setIsAnalyzing(false);
+        // Update global variable
+        setGlobalAnalyzing(false);
 
         // Clear selections and stay on reviews tab
         setSelectedDocs([]); // Using the correct state setter
@@ -334,11 +416,8 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
   // Handle continuing an existing review - this explicitly opens the document viewer
   const handleContinueReview = async (review: ReviewInfo) => {
     try {
-      // Only allow continuing if the review is completed
-      if (review.status !== 'completed') {
-        addToast('This review is still processing. Please wait until it completes.', 'info');
-        return;
-      }
+      // Store the current isAnalyzing state to restore it when returning
+      const wasAnalyzing = isAnalyzing;
       
       // Set the specific review ID that's loading
       setLoadingReviewId(review.id);
@@ -399,6 +478,12 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       
       // Now that we have all the data including document content, navigate to the document viewer
       onStartReview(clinicalDoc, complianceDoc, review.id);
+      
+      // Restore the isAnalyzing state after a small delay to ensure it's set after navigation
+      setTimeout(() => {
+        setGlobalAnalyzing(wasAnalyzing);
+      }, 100);
+      
     } catch (error) {
       console.error('Error continuing review:', error);
       addToast('Failed to continue review. Please try again.', 'error');
@@ -497,6 +582,33 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
     review.complianceDoc.toLowerCase().includes(reviewsSearchQuery.toLowerCase())
   );
 
+  // Function to generate email content using LLM
+  const generateEmailContent = async (review: ReviewInfo) => {
+    setIsLoadingEmailContent(true);
+    try {
+      const response = await complianceAPI.generateReviewAlertContent({
+        to_emails: emailAddresses.split(',').map(email => email.trim()),
+        subject: emailSubject,
+        review_data: {
+          clinical_doc: review.clinicalDoc,
+          compliance_doc: review.complianceDoc,
+          issues: review.issues || 0,
+          high_confidence_issues: review.highConfidenceIssues || 0,
+          low_confidence_issues: review.lowConfidenceIssues || 0
+        }
+      });
+      
+      if (response.content) {
+        setEmailContent(response.content);
+      }
+    } catch (error) {
+      console.error('Error generating email content:', error);
+      addToast('Failed to generate email content. Please try again.', 'error');
+    } finally {
+      setIsLoadingEmailContent(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -542,7 +654,13 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                 ? 'border-black text-black' 
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => setActiveTab('reviews')}
+            onClick={() => {
+              if (activeTab !== 'reviews') {
+                setActiveTab('reviews');
+                // Refresh reviews when switching to reviews tab
+                fetchAllReviews();
+              }
+            }}
           >
             Reviews
           </button>
@@ -674,7 +792,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
             </div>
           </div>
 
-          {reviews.length === 0 && !loadingReviews ? (
+          {reviews.length === 0 && !loadingReviews && !isAnalyzing ? (
             <div className="text-center py-8 text-gray-500">
               No reviews found. Start a compliance review to see results here.
             </div>
@@ -797,7 +915,7 @@ export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
                             <button 
                               className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center"
                               onClick={() => handleContinueReview(review)}
-                              disabled={isAnalyzing || loadingReviewId !== null}
+                              disabled={loadingReviewId === review.id}
                               title="View compliance review details"
                             >
                               {loadingReviewId === review.id ? (

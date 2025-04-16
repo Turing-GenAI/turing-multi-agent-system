@@ -11,6 +11,8 @@ interface ComplianceIssue {
   confidence: 'high' | 'low';
   regulation: string;
   status?: 'accepted' | 'rejected' | 'pending';
+  original_index?: number;
+  _originalIndex?: number;
 }
 
 interface ComplianceReviewPageProps {
@@ -27,8 +29,8 @@ interface ComplianceReviewPageProps {
   issues: ComplianceIssue[];
   onClose: () => void;
   onSaveDecisions: (
-    decisions: { issueId: string; status: 'accepted' | 'rejected'; appliedChange?: string | null }[], 
-    counts: { totalIssues: number; reviewedIssues: number; highConfidenceIssues: number; lowConfidenceIssues: number },
+    decisions: { issue_id?: string; issueId?: string; action?: string; status?: string; applied_change?: string; appliedChange?: string | null }[], 
+    counts: { totalIssues: number; reviewedIssues: number; highConfidenceIssues: number; lowConfidenceIssues: number; reviewId?: string },
     reviewStatus: 'in-progress' | 'completed'
   ) => void;
 }
@@ -168,7 +170,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         }
         
         // Scroll to highlighted text in compliance document
-        const complianceHighlightedElements = document.querySelectorAll('.bg-blue-200.hover\\:bg-blue-300.text-blue-900');
+        const complianceHighlightedElements = document.querySelectorAll('.bg-blue-200');
         
         if (complianceHighlightedElements.length > 0) {
           // Get the first highlighted element - assuming it corresponds to current issue
@@ -318,15 +320,26 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     setSavingProgress(true);
     
     try {
+      // Ensure we have a valid review ID to update
+      if (!reviewId || reviewId.trim() === '') {
+        console.error("Cannot save progress: No valid review ID found");
+        alert("Cannot save progress: No review ID found. Please reload the page and try again.");
+        setSavingProgress(false);
+        return;
+      }
+
+      console.log(`Starting to save progress for review ID: ${reviewId}`);
+      
       // Count high and low confidence issues
       const highConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'high').length;
       const lowConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'low').length;
       
       // First prepare all decisions including pending ones for our count
-      const allDecisions = reviewedIssues.map(issue => ({
+      const allDecisions = reviewedIssues.map((issue, index) => ({
         issueId: issue.id,
         status: issue.status || 'pending',
         confidence: issue.confidence,
+        original_index: issue.original_index ?? issue._originalIndex ?? index, // Use index as fallback
         appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
           ? appliedChanges.get(issue.clinical_text) 
           : undefined
@@ -335,16 +348,18 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       // Now filter to only include accepted/rejected decisions for the API
       const finalizedDecisions = allDecisions
         .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
-        .map(({ issueId, status, appliedChange }) => ({
-          issue_id: issueId, // Use snake_case to match backend expectations
+        .map(({ issueId, status, appliedChange, original_index }) => ({
+          issue_id: issueId, // Use snake_case to match backend expectations  
           action: status as 'accepted' | 'rejected',
-          applied_change: appliedChange
+          applied_change: appliedChange,
+          original_index // Keep the original index for ordering
         }));
       
       // Prepare issue statuses for saving (all issues, not just finalized ones)
-      const issueStatuses = reviewedIssues.map(issue => ({
+      const issueStatuses = reviewedIssues.map((issue, index) => ({
         issue_id: issue.id,
-        status: issue.status || 'pending'
+        status: issue.status || 'pending',
+        original_index: issue.original_index ?? issue._originalIndex ?? index // Use index as fallback
       }));
       
       // Generate the current state of the document with all applied changes
@@ -356,29 +371,44 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         try {
           // 1. Save the decisions first
           if (finalizedDecisions.length > 0) {
-            await complianceAPI.saveDecisions(reviewId, finalizedDecisions);
-            console.log('Decisions saved successfully');
+            // Log the decisions we're saving to ensure UI highlights are included
+            console.log('Saving decisions with highlights:', 
+              finalizedDecisions.map(d => ({
+                issueId: d.issue_id,
+                action: d.action,
+                hasAppliedChange: !!d.applied_change,
+                originalIndex: d.original_index
+              }))
+            );
+            
+            const saveResponse = await complianceAPI.saveDecisions(reviewId, finalizedDecisions);
+            console.log('Decisions saved successfully:', saveResponse);
+          } else {
+            console.log('No finalized decisions to save');
           }
           
           // 2. Update all issue statuses (including pending ones)
           // This ensures we know which issues were addressed when reopening
-          await complianceAPI.updateIssueStatuses(issueStatuses);
-          console.log('Issue statuses updated successfully');
+          const statusResponse = await complianceAPI.updateIssueStatuses(issueStatuses);
+          console.log('Issue statuses updated successfully:', statusResponse);
           
           // 3. Update the review with the latest document content
-          await complianceAPI.updateReviewContent(reviewId, {
+          const contentResponse = await complianceAPI.updateReviewContent(reviewId, {
             clinical_doc_content: updatedDocumentContent
           });
-          console.log('Updated document content saved successfully');
+          console.log('Updated document content saved successfully:', contentResponse);
+          
+          // Show success message
+          setProgressSaved(true);
+          setTimeout(() => setProgressSaved(false), 3000); // Hide after 3 seconds
         } catch (err) {
           console.error('Error saving to the database:', err);
+          alert('Failed to save progress. Please try again.');
         }
       } else {
         console.error('Cannot save changes: No review ID found');
+        alert('Cannot save progress: No review ID found. Please reload the page and try again.');
       }
-      
-      // We'll no longer call onSaveDecisions here since it's closing the document viewer
-      // Instead, we're now directly saving to the database with the proper review ID
       
       // Calculate the counts for logging purposes
       const counts = {
@@ -389,15 +419,9 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       };
       
       console.log('Decision counts:', counts);
-      
-      // Note: We're intentionally NOT calling onSaveDecisions here to prevent the document viewer from closing
-      // The onSaveDecisions callback will only be used when finalizing the review, not for saving progress
-      
-      // Show success message
-      setProgressSaved(true);
-      setTimeout(() => setProgressSaved(false), 3000); // Hide after 3 seconds
     } catch (error) {
       console.error('Error saving progress:', error);
+      alert('Error saving progress. Please try again.');
     } finally {
       setSavingProgress(false);
     }
@@ -431,10 +455,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       const lowConfidenceIssues = reviewedIssues.filter(issue => issue.confidence === 'low').length;
       
       // First prepare all decisions including pending ones for our count
-      const allDecisions = reviewedIssues.map(issue => ({
+      const allDecisions = reviewedIssues.map((issue, index) => ({
         issueId: issue.id,
         status: issue.status || 'pending',
         confidence: issue.confidence,
+        original_index: issue.original_index ?? issue._originalIndex ?? index, // Use index as fallback
         appliedChange: issue.status === 'accepted' && appliedChanges.has(issue.clinical_text) 
           ? appliedChanges.get(issue.clinical_text) 
           : undefined
@@ -443,10 +468,11 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       // Now filter to only include accepted/rejected decisions for the API
       const finalizedDecisions = allDecisions
         .filter(decision => decision.status === 'accepted' || decision.status === 'rejected')
-        .map(({ issueId, status, appliedChange }) => ({
-          issueId,
-          status: status as 'accepted' | 'rejected',
-          appliedChange
+        .map(({ issueId, status, appliedChange, original_index }) => ({
+          issue_id: issueId, // Use snake_case to match backend expectations  
+          action: status as 'accepted' | 'rejected',
+          applied_change: appliedChange,
+          original_index // Keep the original index for ordering
         }));
       
       // Close the popup first
@@ -459,13 +485,14 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
           totalIssues: reviewedIssues.length,
           reviewedIssues: reviewedIssues.filter(issue => issue.status === 'accepted' || issue.status === 'rejected').length,
           highConfidenceIssues,
-          lowConfidenceIssues
+          lowConfidenceIssues,
+          reviewId // Pass the current reviewId to ensure we update the existing review
         }, 'completed');
       }, 100);
-      
-      // Don't call onClose() here - let the parent component decide whether to close
     } catch (error) {
       console.error('Error completing review:', error);
+      // Keep the popup open if there's an error
+      //setShowFinalDocument(true);
     }
   };
   
@@ -629,7 +656,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                 let endIndex = maxEnd;
                 for (let i = textIndex + expectedLength - 10; i < maxEnd; i++) {
                   if (i >= normalizedContent.length) break;
-                  if ('.!?;:'.includes(normalizedContent[i])) {
+                  if('.!?;:'.includes(normalizedContent[i])) {
                     endIndex = i + 1;
                     break;
                   }
@@ -834,12 +861,39 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       if (clinicalDocument.id) {
         try {
           const reviews = await complianceAPI.getReviews();
-          const matchingReview = reviews.find(r => r.clinical_doc_id === clinicalDocument.id);
+          // Look for a review matching BOTH clinical_doc_id and compliance_doc_id to ensure we get the correct review
+          const matchingReview = reviews.find(r => 
+            r.clinical_doc_id === clinicalDocument.id && 
+            r.compliance_doc_id === complianceDocument.id
+          );
+          
           if (matchingReview && matchingReview.id) {
             console.log(`Found review ID ${matchingReview.id} for document ${clinicalDocument.id}`);
             setReviewId(matchingReview.id);
           } else {
-            console.warn(`Could not find review ID for document ${clinicalDocument.id}`);
+            console.warn(`Could not find existing review for documents ${clinicalDocument.id} and ${complianceDocument.id}`);
+            // Create a new review if one doesn't exist
+            try {
+              const newReview = await complianceAPI.createReview({
+                id: `review_${Date.now()}`,
+                clinical_doc_id: clinicalDocument.id,
+                compliance_doc_id: complianceDocument.id,
+                clinicalDoc: clinicalDocument.title,
+                complianceDoc: complianceDocument.title,
+                status: 'in-progress',
+                issues: reviewedIssues.length,
+                highConfidenceIssues: reviewedIssues.filter(i => i.confidence === 'high').length,
+                lowConfidenceIssues: reviewedIssues.filter(i => i.confidence === 'low').length,
+                created: new Date().toISOString()
+              });
+              
+              if (newReview && newReview.id) {
+                console.log(`Created new review with ID ${newReview.id}`);
+                setReviewId(newReview.id);
+              }
+            } catch (createError) {
+              console.error('Error creating new review:', createError);
+            }
           }
         } catch (error) {
           console.error('Error finding review ID:', error);
@@ -848,7 +902,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     };
     
     findReviewId();
-  }, [clinicalDocument.id]);
+  }, [clinicalDocument.id, complianceDocument.id, reviewedIssues]);
   
   // Load saved issue statuses and applied changes when review ID is available
   useEffect(() => {
@@ -856,53 +910,87 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
     
     const loadSavedIssueData = async () => {
       try {
-        console.log(`Loading saved issue data for review ID: ${reviewId}`);
+        console.log('Loading saved issue data for review:', reviewId);
         
-        // Get decision history to find applied changes
+        // Get decisions for the review
         const decisions = await complianceAPI.getReviewDecisions(reviewId);
+        console.log('Loaded decisions:', decisions);
+        
         if (decisions && decisions.length > 0) {
-          console.log(`Found ${decisions.length} saved decisions`); 
+          // Create a Map to store decisions by issueId
+          const issueDecisions = new Map();
+          const issueOrderMap = new Map();
           
-          // Create a map to store the status of each issue
-          const issueStatusMap = new Map();
-          
-          // Create a map for applied changes
-          const savedAppliedChanges = new Map();
-          
-          // Process each decision to extract status and applied changes
-          decisions.forEach(item => {
-            // Store the status for each issue
-            if (item.issue && item.issue.id && item.decision.action) {
-              issueStatusMap.set(item.issue.id, item.decision.action);
-              
-              // If this is an accepted decision with an applied change, store it
-              if (item.decision.action === 'accepted' && 
-                  item.decision.applied_change && 
-                  item.issue.clinical_text) {
-                savedAppliedChanges.set(item.issue.clinical_text, item.decision.applied_change);
-                console.log(`Found applied change for issue ${item.issue.id}: ${item.decision.applied_change.substring(0, 30)}...`);
+          // Process each decision to organize by issue
+          decisions.forEach((decision: any, index: number) => {
+            const issueId = decision.issue?.id;
+            if (issueId) {
+              // Store the latest decision for each issue (decisions are ordered newest first)
+              if (!issueDecisions.has(issueId)) {
+                issueDecisions.set(issueId, decision);
+                
+                // Extract the original index from the decision if available
+                const decisionData = decision.decision || {};
+                if (decisionData.original_index !== undefined) {
+                  // Store the original index mapped to issue id
+                  issueOrderMap.set(issueId, decisionData.original_index);
+                }
               }
             }
           });
           
-          // Update the reviewed issues with their status
-          if (issueStatusMap.size > 0) {
-            const updatedIssues = reviewedIssues.map(issue => {
-              if (issueStatusMap.has(issue.id)) {
-                return { ...issue, status: issueStatusMap.get(issue.id) };
-              }
-              return issue;
-            });
+          console.log('Collected issue order information:', Array.from(issueOrderMap.entries()));
+          
+          // Apply decisions to the issues
+          let updatedIssues = [...reviewedIssues];
+          updatedIssues = updatedIssues.map(issue => {
+            const decision = issueDecisions.get(issue.id);
             
-            console.log(`Updated ${issueStatusMap.size} issue statuses`);
-            setReviewedIssues(updatedIssues);
+            if (decision) {
+              const decisionData = decision.decision || {};
+              // Support both 'action' (backend api) and 'status' (UI) naming
+              const status = decisionData.action || decisionData.status || issue.status || 'pending';
+              
+              // Support both snake_case and camelCase fields from API
+              const appliedChange = decisionData.applied_change || decisionData.appliedChange;
+              
+              // Store the original index information, preferring the one from the decision if available
+              const originalIndex = decisionData.original_index ?? issue.original_index ?? issue._originalIndex;
+              
+              // If we have applied changes, record them in our state
+              if (status === 'accepted' && appliedChange) {
+                setAppliedChanges(prev => new Map(prev).set(issue.clinical_text, appliedChange));
+                
+                // Log the first 30 chars to help with debugging
+                const originalStart = issue.clinical_text.substring(0, 30);
+                const changeStart = appliedChange.substring(0, 30);
+                console.log(`Applied change for accepted issue ${issue.id}:
+                  Original: "${originalStart}..."
+                  Changed: "${changeStart}..."`);
+              }
+              
+              return { 
+                ...issue, 
+                status,
+                original_index: originalIndex 
+              };
+            }
+            
+            return issue;
+          });
+          
+          // Sort issues based on original index if we have that information
+          if (issueOrderMap.size > 0) {
+            updatedIssues = updatedIssues.sort((a, b) => {
+              const indexA = a.original_index ?? a._originalIndex ?? issueOrderMap.get(a.id) ?? 999;
+              const indexB = b.original_index ?? b._originalIndex ?? issueOrderMap.get(b.id) ?? 999;
+              return indexA - indexB;
+            });
           }
           
-          // Update the appliedChanges map
-          if (savedAppliedChanges.size > 0) {
-            console.log(`Loaded ${savedAppliedChanges.size} applied changes`);
-            setAppliedChanges(savedAppliedChanges);
-          }
+          // Update the reviewedIssues state with our updated and sorted issues
+          setReviewedIssues(updatedIssues);
+          console.log('Updated issues with decisions:', updatedIssues);
         }
       } catch (error) {
         console.error('Error loading saved issue data:', error);
@@ -919,54 +1007,35 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
         setLoadingHistory(true);
         try {
           console.log(`Fetching decision history for review ${reviewId}`);
-          const history = await complianceAPI.getReviewDecisions(reviewId);
-          
-          // Deduplicate history to show only latest decision per issue
-          const issueMap = new Map();
-          
-          // Process decisions in reverse timestamp order (newest first)
-          // This ensures we get the most recent decision for each issue
-          const sortedHistory = [...history].sort((a, b) => {
-            const dateA = new Date(a.decision.timestamp || 0).getTime();
-            const dateB = new Date(b.decision.timestamp || 0).getTime();
-            return dateB - dateA; // Descending order (newest first)
-          });
-          
-          // Keep only the newest decision for each issue
-          sortedHistory.forEach(item => {
-            if (item.issue && item.issue.id) {
-              // Only add if we haven't seen this issue before
-              if (!issueMap.has(item.issue.id)) {
-                issueMap.set(item.issue.id, item);
-              }
-            }
-          });
-          
-          // Convert map back to array
-          const deduplicatedHistory = Array.from(issueMap.values());
-          console.log(`Deduplicated history from ${history.length} to ${deduplicatedHistory.length} items`);
+          // Use the deduplicated decisions instead of all decisions
+          const history = await complianceAPI.getDeduplicatedDecisions(reviewId);
+          console.log(`Fetched ${history.length} deduplicated decisions for review ${reviewId}`);
           
           // Set the deduplicated history
-          setDecisionHistory(deduplicatedHistory);
+          setDecisionHistory(history);
           
           // Also update the appliedChanges map with any stored changes
-          // We create a new Map instead of mutating the existing one
           const newAppliedChanges = new Map();
-          deduplicatedHistory.forEach(item => {
-            if (item.decision.action === 'accepted' && item.decision.applied_change && item.issue.clinical_text) {
+          history.forEach(item => {
+            if (item.issue && 
+                item.issue.clinical_text && 
+                item.decision.action === 'accepted' && 
+                item.decision.applied_change) {
               newAppliedChanges.set(item.issue.clinical_text, item.decision.applied_change);
             }
           });
           
-          // Only update if we have changes to apply
+          // Update applied changes if we found any
           if (newAppliedChanges.size > 0) {
+            console.log(`Found ${newAppliedChanges.size} applied changes from history`);
             setAppliedChanges(prev => {
-              // Create a new map that combines previous and new changes
-              const combined = new Map(prev);
+              // Create a new map with all existing changes
+              const merged = new Map(prev);
+              // Add all changes from history
               newAppliedChanges.forEach((value, key) => {
-                combined.set(key, value);
+                merged.set(key, value);
               });
-              return combined;
+              return merged;
             });
           }
         } catch (error) {
@@ -978,7 +1047,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
       
       fetchDecisionHistory();
     }
-  }, [showHistory, reviewId]); // Always fetch when showHistory changes
+  }, [showHistory, reviewId]);
   
   return (
     <div className="flex-1 bg-white">
@@ -1299,6 +1368,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">Finalized Document</h3>
               <div className="flex items-center gap-3">
+                {/* Temporarily disabled to prevent creating new reviews
                 <button 
                   className="px-3 py-1 flex items-center gap-1 text-sm bg-black text-white rounded hover:bg-gray-800"
                   onClick={completeReview}
@@ -1306,6 +1376,7 @@ export const ComplianceReviewPage: React.FC<ComplianceReviewPageProps> = ({
                   <FiCheck className="w-4 h-4" />
                   Complete Review
                 </button>
+                */}
                 <button 
                   className="px-3 py-1 flex items-center gap-1 text-sm bg-black text-white rounded hover:bg-gray-800"
                   onClick={() => {

@@ -7,6 +7,16 @@ import { Document } from '../types/compliance';
 import { complianceAPI } from '../services/api';
 import { format } from 'date-fns';
 
+// Add global type declaration for window.globalIsAnalyzing
+declare global {
+  interface Window {
+    globalIsAnalyzing: boolean;
+  }
+}
+
+// Create a global variable to track analyzing state
+window.globalIsAnalyzing = false;
+
 // Define proper types for decisions and reviews
 interface ReviewIssue {
   id: string;
@@ -76,6 +86,40 @@ export const ComplianceContainer: React.FC = () => {
       // Fetch review decisions from the backend
       const reviews = await complianceAPI.getReviews();
       
+      // Get the latest review to fetch deduplicated decisions
+      if (reviews && reviews.length > 0) {
+        // Sort reviews by created date (newest first)
+        const sortedReviews = [...reviews].sort((a, b) => {
+          return new Date(b.created).getTime() - new Date(a.created).getTime();
+        });
+        
+        const latestReview = sortedReviews[0];
+        
+        // If there's a review with decisions, fetch deduplicated decisions
+        if (latestReview && latestReview.id) {
+          // Use deduplicated decisions to avoid duplicates in the history
+          const deduplicatedDecisions = await complianceAPI.getDeduplicatedDecisions(latestReview.id);
+          
+          // Transform decisions into the format expected by HistoryDialog
+          const formattedDecisions = deduplicatedDecisions.map((item: any) => ({
+            id: `${latestReview.id}_${item.issue.id}`,
+            issueId: item.issue.id,
+            documentTitle: latestReview.clinicalDoc || 'Unknown Document',
+            reviewId: latestReview.id,
+            text: item.issue.clinical_text || 'No text available',
+            regulation: item.issue.regulation || 'Regulation not specified',
+            status: item.decision.action || item.decision.status || 'pending',
+            decidedAt: item.decision.timestamp || format(new Date(), 'MMM dd yyyy, h:mm a'),
+            decidedBy: 'Current User'
+          }));
+          
+          setReviewDecisions(formattedDecisions);
+          setShowHistoryDialog(true);
+          return;
+        }
+      }
+      
+      // Fallback to previous implementation if no latest review found
       // Transform the reviews data into the format expected by HistoryDialog
       const decisions = reviews.flatMap((review: Review) => {
         // Each review might have multiple issues/decisions
@@ -159,7 +203,20 @@ export const ComplianceContainer: React.FC = () => {
           console.log('Loaded complete review with document content:', completeReview);
           
           // Set the review issues
-          setReviewIssues(completeReview.issues || []);
+          const issuesWithMetadata = (completeReview.issues || []).map((issue, index) => ({
+            ...issue,
+            _originalIndex: index, // Store the original index position
+            original_index: index  // Also store as original_index for backend compatibility
+          }));
+          
+          // Sort using the original index to maintain the ordering
+          const sortedIssues = [...issuesWithMetadata].sort((a, b) => 
+            (a._originalIndex ?? 0) - (b._originalIndex ?? 0)
+          );
+          
+          // Keep the metadata fields to ensure they're available for the backend
+          console.log(`Setting ${sortedIssues.length} review issues with original order preserved`);
+          setReviewIssues(sortedIssues);
           
           // Update the document objects with content from the database
           if (completeReview.clinical_doc_content) {
@@ -244,7 +301,20 @@ export const ComplianceContainer: React.FC = () => {
         }
         
         // Set the review issues
-        setReviewIssues(result.issues || []);
+        const issuesWithMetadata = (result.issues || []).map((issue, index) => ({
+          ...issue,
+          _originalIndex: index, // Store the original index position
+          original_index: index  // Also store as original_index for backend compatibility
+        }));
+        
+        // Sort using the original index to maintain the ordering
+        const sortedIssues = [...issuesWithMetadata].sort((a, b) => 
+          (a._originalIndex ?? 0) - (b._originalIndex ?? 0)
+        );
+        
+        // Keep the metadata fields to ensure they're available for the backend
+        console.log(`Setting ${sortedIssues.length} review issues with original order preserved`);
+        setReviewIssues(sortedIssues);
         
         // Show the review page
         setShowComplianceReview(true);
@@ -309,8 +379,23 @@ export const ComplianceContainer: React.FC = () => {
               setSelectedClinicalDoc(clinicalDoc);
               setSelectedComplianceDoc(complianceDoc);
               
-              // Set the review issues
-              setReviewIssues(fullReview.issues || []);
+              // Set the review issues - ensure we maintain original order regardless of status
+              // We'll sort issues based on the original index positions that were stored
+              // This way issues that are accepted/rejected won't be moved to the end
+              const issuesWithMetadata = (fullReview.issues || []).map((issue, index) => ({
+                ...issue,
+                _originalIndex: index, // Store the original index position
+                original_index: index  // Also store as original_index for backend compatibility
+              }));
+              
+              // Sort using the original index to maintain the ordering
+              const sortedIssues = [...issuesWithMetadata].sort((a, b) => 
+                (a._originalIndex ?? 0) - (b._originalIndex ?? 0)
+              );
+              
+              // Keep the metadata fields to ensure they're available for the backend
+              console.log(`Setting ${sortedIssues.length} review issues with original order preserved`);
+              setReviewIssues(sortedIssues);
               
               // Show the review
               setShowComplianceReview(true);
@@ -386,31 +471,63 @@ export const ComplianceContainer: React.FC = () => {
             setSelectedComplianceDoc(null);
             navigate('/compliance', { state: { activeTab: 'reviews' } });
           }}
-          onSaveDecisions={async (decisions) => {
+          onSaveDecisions={async (decisions, counts, status = 'completed') => {
             console.log('Saved decisions:', decisions);
             
             try {
-              // Create a review record in the backend
-              if (selectedClinicalDoc && selectedComplianceDoc) {
-                await complianceAPI.createReview({
-                  id: `review_${Date.now()}`,
-                  clinical_doc_id: selectedClinicalDoc.id,
-                  compliance_doc_id: selectedComplianceDoc.id,
-                  clinicalDoc: selectedClinicalDoc.title,
-                  complianceDoc: selectedComplianceDoc.title,
-                  status: 'completed',
-                  issues: reviewIssues.length,
-                  highConfidenceIssues: reviewIssues.filter(i => i.confidence === 'high').length,
-                  lowConfidenceIssues: reviewIssues.filter(i => i.confidence === 'low').length,
-                  created: new Date().toISOString()
-                });
-              }
+              // Check if we have a reviewId passed - if so, use it to update existing review
+              const existingReviewId = counts.reviewId;
               
-              setShowComplianceReview(false);
-              setSelectedClinicalDoc(null);
-              setSelectedComplianceDoc(null);
-              navigate('/compliance');
-              await handleViewHistory(); // Show the history dialog after saving decisions
+              if (existingReviewId) {
+                console.log(`Updating existing review: ${existingReviewId}`);
+                
+                // Instead of updateReviewStatus endpoint, use existing endpoints:
+                
+                // 1. Save the decisions (this maintains the original_index)
+                if (decisions.length > 0) {
+                  await complianceAPI.saveDecisions(existingReviewId, decisions);
+                }
+                
+                // 2. Update issue statuses to reflect the review status
+                const issueStatuses = reviewIssues.map(issue => ({
+                  issue_id: issue.id,
+                  status: issue.status || 'pending',
+                  original_index: issue.original_index ?? issue._originalIndex ?? 0
+                }));
+                await complianceAPI.updateIssueStatuses(issueStatuses);
+                
+                // 3. Implicitly update the review status by checking if all issues have decisions
+                // This relies on the backend's existing logic in the saveDecisions endpoint
+                
+                // Navigate away after saving
+                setShowComplianceReview(false);
+                setSelectedClinicalDoc(null);
+                setSelectedComplianceDoc(null);
+                navigate('/compliance');
+                await handleViewHistory();
+              } else {
+                // Create a new review record in the backend for first-time reviews
+                if (selectedClinicalDoc && selectedComplianceDoc) {
+                  await complianceAPI.createReview({
+                    id: `review_${Date.now()}`,
+                    clinical_doc_id: selectedClinicalDoc.id,
+                    compliance_doc_id: selectedComplianceDoc.id,
+                    clinicalDoc: selectedClinicalDoc.title,
+                    complianceDoc: selectedComplianceDoc.title,
+                    status: status,
+                    issues: reviewIssues.length,
+                    highConfidenceIssues: reviewIssues.filter(i => i.confidence === 'high').length,
+                    lowConfidenceIssues: reviewIssues.filter(i => i.confidence === 'low').length,
+                    created: new Date().toISOString()
+                  });
+                }
+                
+                setShowComplianceReview(false);
+                setSelectedClinicalDoc(null);
+                setSelectedComplianceDoc(null);
+                navigate('/compliance');
+                await handleViewHistory();
+              }
             } catch (error) {
               console.error('Error saving review decisions:', error);
               alert('Failed to save review decisions. Please try again.');

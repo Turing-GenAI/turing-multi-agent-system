@@ -150,6 +150,27 @@ export const complianceAPI = {
     return response.data;
   },
   
+  // Get deduplicated decisions for a review (only latest decision per issue)
+  getDeduplicatedDecisions: async (reviewId: string) => {
+    const response = await api.get(`/compliance/review/${reviewId}/decisions/`);
+    const decisions = response.data;
+    
+    // Create a map to store the latest decision for each issue
+    const issueDecisionMap = new Map();
+    
+    // Process decisions (they are already sorted newest first from backend)
+    decisions.forEach((decision: {issue?: {id?: string}}) => {
+      const issueId = decision.issue?.id;
+      // Only store the first (latest) decision for each issue
+      if (issueId && !issueDecisionMap.has(issueId)) {
+        issueDecisionMap.set(issueId, decision);
+      }
+    });
+    
+    // Convert map values back to array
+    return Array.from(issueDecisionMap.values());
+  },
+  
   // Get all decisions for a specific issue
   getIssueDecisions: async (issueId: string) => {
     const response = await api.get(`/compliance/issue/${issueId}/decisions/`);
@@ -172,5 +193,5 @@ export const complianceAPI = {
   generateReviewAlertContent: async (data: ReviewAlertRequest) => {
     const response = await api.post('/compliance/generate-review-alert-content/', data);
     return response.data;
-  }
+  },
 };
